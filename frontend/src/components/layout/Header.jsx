@@ -15,8 +15,10 @@ export default function Header() {
     ? user.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()
     : 'YA';
 
-  const handleLogout = () => {
-    logout();
+  // Awaited so the server-side revocation is actually requested before we
+  // navigate away — logout() now revokes the refresh token, not just local state.
+  const handleLogout = async () => {
+    await logout();
     navigate('/login', { replace: true });
   };
 

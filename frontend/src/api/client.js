@@ -1,27 +1,76 @@
 import axios from 'axios';
+import { getAccessToken, setAccessToken, useAuth } from '../store/useAuth.js';
 
 export const api = axios.create({
   baseURL: '/api',
+  // Required for the httpOnly refresh cookie to be sent on /auth/refresh.
+  withCredentials: true,
 });
 
-// Attach the access token to every request once auth is wired up.
+// A bare client with no interceptors, used only to call /auth/refresh. Reusing
+// `api` here would recurse: a failing refresh returns 401, which would trigger
+// the interceptor, which would call refresh again.
+const refreshClient = axios.create({ baseURL: '/api', withCredentials: true });
+
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken'); // swap for in-memory store later — see note in useAuth.js
+  const token = getAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// A 401 means the token is missing/expired — clear it and bounce to
-// login rather than letting every page silently fail its queries.
+// One shared in-flight refresh. Without this, a page that fires six queries at
+// once (the Dashboard does) would send six refresh calls the moment the access
+// token expires — and because refresh tokens rotate, five of them would present
+// an already-rotated token, which the server correctly treats as a replay and
+// answers by revoking every session. The user gets logged out by their own app.
+let refreshPromise = null;
+
+function refreshSession() {
+  refreshPromise ??= refreshClient
+    .post('/auth/refresh')
+    .then(({ data }) => {
+      setAccessToken(data.accessToken);
+      useAuth.getState().setSession({ user: data.user, accessToken: data.accessToken });
+      return data.accessToken;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+  return refreshPromise;
+}
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('accessToken');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+  async (error) => {
+    const { response, config } = error;
+
+    if (response?.status !== 401 || !config) return Promise.reject(error);
+
+    // Never try to refresh a failed auth call — a bad password is not a stale
+    // token, and retrying it would just burn the rate limit.
+    if (config.url?.includes('/auth/login') || config.url?.includes('/auth/refresh')) {
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
+
+    // Retry each request at most once, so a persistently-401 endpoint cannot
+    // spin forever.
+    if (config._retried) {
+      useAuth.getState().setAnonymous();
+      return Promise.reject(error);
+    }
+    config._retried = true;
+
+    try {
+      const token = await refreshSession();
+      config.headers.Authorization = `Bearer ${token}`;
+      return api(config);
+    } catch (refreshError) {
+      // Refresh itself failed — the session is genuinely over. Clear state and
+      // let ProtectedRoute redirect through the router, rather than the previous
+      // `window.location.href = '/login'`, which forced a full page reload and
+      // discarded any unsaved form the user was in the middle of.
+      useAuth.getState().setAnonymous();
+      return Promise.reject(refreshError);
+    }
   }
 );

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { login } from '../../api/auth.js';
 import { useAuth } from '../../store/useAuth.js';
 
@@ -8,10 +8,13 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const setSession = useAuth((s) => s.setSession);
+  const status = useAuth((s) => s.status);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const mutation = useMutation({
+    // login() returns { accessToken, user } — the refresh token is now an
+    // httpOnly cookie the browser stores for us, not a value in this payload.
     mutationFn: () => login(email, password),
     onSuccess: (data) => {
       setSession(data);
@@ -19,6 +22,10 @@ export default function LoginPage() {
       navigate(redirectTo, { replace: true });
     },
   });
+
+  // /login sits outside ProtectedRoute, so without this an already-signed-in
+  // user (or one who just refreshed) would be shown the form again.
+  if (status === 'authenticated') return <Navigate to="/dashboard" replace />;
 
   const handleSubmit = (e) => {
     e.preventDefault();

@@ -1,11 +1,33 @@
+import axios from 'axios';
 import { api } from './client.js';
 
+// login/refresh/logout use a plain client rather than `api`, because `api`'s
+// response interceptor treats a 401 as "refresh and retry" — which is wrong for
+// these three: a bad password is not a stale token, and refreshing a failed
+// refresh would recurse.
+const authClient = axios.create({ baseURL: '/api', withCredentials: true });
+
 export async function login(email, password) {
-  const { data } = await api.post('/auth/login', { email, password });
-  return data; // { accessToken, refreshToken, user }
+  const { data } = await authClient.post('/auth/login', { email, password });
+  return data; // { accessToken, user } — the refresh token is an httpOnly cookie
+}
+
+export async function refresh() {
+  const { data } = await authClient.post('/auth/refresh');
+  return data; // { accessToken, user }
+}
+
+export async function logout() {
+  await authClient.post('/auth/logout');
 }
 
 export async function register(payload) {
-  const { data } = await api.post('/auth/register', payload);
+  const { data } = await authClient.post('/auth/register', payload);
   return data;
+}
+
+// Authenticated, so it goes through `api` to pick up the bearer token.
+export async function fetchMe() {
+  const { data } = await api.get('/auth/me');
+  return data.user;
 }
