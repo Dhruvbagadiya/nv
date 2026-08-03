@@ -65,7 +65,9 @@ export default function CourseFinder() {
         ))}
       </div>
 
-      {isError && <p className="empty-state">Couldn't load courses — check the API is running.</p>}
+      {isError && (
+        <p className="empty-state">Couldn&rsquo;t load courses — check the API is running.</p>
+      )}
       {isLoading && <p className="empty-state">Loading courses...</p>}
 
       {data && (

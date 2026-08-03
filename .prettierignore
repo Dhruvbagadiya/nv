@@ -1,0 +1,6 @@
+node_modules/
+dist/
+build/
+package-lock.json
+backend/prisma/migrations/
+frontend/src/index.css

@@ -22,7 +22,7 @@ export default function NewApplication() {
       <div className="page-head">
         <div>
           <h1>New application</h1>
-          <p>Let's start by setting your preferences</p>
+          <p>Let&rsquo;s start by setting your preferences</p>
         </div>
       </div>
 
@@ -66,7 +66,9 @@ export default function NewApplication() {
           </div>
         </div>
 
-        {mutation.isError && <p className="empty-state">Couldn't submit — check all fields are filled.</p>}
+        {mutation.isError && (
+          <p className="empty-state">Couldn&rsquo;t submit — check all fields are filled.</p>
+        )}
 
         <div className="submit-row">
           <button className="btn btn-primary" type="submit" disabled={mutation.isPending}>

@@ -18,7 +18,7 @@ export default function ApplicationHistory() {
       <div className="page-head">
         <div>
           <h1>Application history</h1>
-          <p>Track all your students' applications with ease</p>
+          <p>Track all your students&rsquo; applications with ease</p>
         </div>
         <button className="btn btn-primary">Add new application</button>
       </div>

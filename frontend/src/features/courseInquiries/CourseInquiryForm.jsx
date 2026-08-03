@@ -17,7 +17,7 @@ export default function CourseInquiryForm() {
       <div className="page-head">
         <div>
           <h1>New course inquiry</h1>
-          <p>Let's start by setting your preferences</p>
+          <p>Let&rsquo;s start by setting your preferences</p>
         </div>
       </div>
 
