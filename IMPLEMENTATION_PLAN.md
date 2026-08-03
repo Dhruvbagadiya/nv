@@ -8,10 +8,21 @@ migration, seed, CSS, and the 20 reference screenshots of `instantapply.net/part
 
 # Progress
 
-**Phase 0 (safety net) and Phase 1 (auth correctness) are done**, on branch
-`refactor/foundation`, six commits off the `main` baseline. Closed: F-01, F-02,
-F-03, F-04 (mechanism), F-05, F-06 (partly), F-25, F-26. `npm run verify` runs
-lint + 8 tests + build, all green.
+**Done: Phase 0 (safety net), Phase 1 (auth correctness), Phase 4 (frontend
+primitives).** Branch `refactor/foundation`, 8 commits off the `main` baseline.
+Closed: F-01, F-02, F-03, F-04 (mechanism), F-05, F-06 (partly), F-11, F-12
+(structurally), F-16 (partly), F-21, F-22, F-23, F-25, F-26. `npm run verify`
+runs lint + 40 tests + build, all green.
+
+Phase 4 was pulled ahead of Phases 2/3 because it needs no database. The
+primitives now exist in `components/ui/` (`Page`, `FilterBar`, `DataTable`,
+`Pagination`, `DocumentGrid`) plus `hooks/useUrlFilters`, with `MoiAccepted`
+converted as the reference implementation. The CSS split was verified by diffing
+the built bundle — byte-identical, so no visual risk.
+
+**Still open in Phase 4:** `CountrySelect`/`InstitutionSelect` over a real
+`/api/countries` (task 21) — currently served by `constants/referenceData.js` as
+an interim shared list. Flag chips (F-10) also still pending.
 
 **One thing is blocked.** Postgres 18 runs on the Windows host and listens on
 `0.0.0.0:5432`, but TCP from the WSL subnet is refused — Windows Firewall. No
