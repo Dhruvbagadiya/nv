@@ -6,6 +6,29 @@ migration, seed, CSS, and the 20 reference screenshots of `instantapply.net/part
 
 ---
 
+# Progress
+
+**Phase 0 (safety net) and Phase 1 (auth correctness) are done**, on branch
+`refactor/foundation`, six commits off the `main` baseline. Closed: F-01, F-02,
+F-03, F-04 (mechanism), F-05, F-06 (partly), F-25, F-26. `npm run verify` runs
+lint + 8 tests + build, all green.
+
+**One thing is blocked.** Postgres 18 runs on the Windows host and listens on
+`0.0.0.0:5432`, but TCP from the WSL subnet is refused — Windows Firewall. No
+Docker and no sudo in this shell, so there is no substitute (PGlite over a socket
+was tried; Prisma's connection pattern closes it, P1017). Consequences:
+
+- The `RefreshToken` migration is **written but not applied**. Run
+  `npm run prisma:migrate` from Windows, or open the firewall — the command is in
+  `backend/.env.example`.
+- Rotation and replay-revocation logic is **unverified against a real database**.
+  Everything ahead of the DB call is verified against a running server: the
+  escalation payload is rejected 400, `/auth/users` is 401/403/past-RBAC by role,
+  expired vs invalid vs missing tokens are distinguishable, logout is idempotent.
+- Phase 2 onward needs the DB, so that is the gate on continuing.
+
+---
+
 # Part 0 — Where the project actually stands
 
 The scaffold is well organised: one folder per business area on both sides,
