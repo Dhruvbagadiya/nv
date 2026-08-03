@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchInstitutions, createInstitution, setBlacklist } from '../../api/institutions.js';
+import Page from '../../components/ui/Page.jsx';
 
 export default function AdminInstitutions() {
   const queryClient = useQueryClient();
@@ -25,13 +26,10 @@ export default function AdminInstitutions() {
   });
 
   return (
-    <div className="view active">
-      <div className="page-head">
-        <div>
-          <h1>Institutions</h1>
-          <p>Manage the partner institutions your agents can search and apply to</p>
-        </div>
-      </div>
+    <Page
+      title="Institutions"
+      subtitle="Manage the partner institutions your agents can search and apply to"
+    >
 
       <div className="form-card" style={{ maxWidth: 480, marginBottom: 20 }}>
         <h2 style={{ fontSize: 16 }}>Add institution</h2>
@@ -113,6 +111,6 @@ export default function AdminInstitutions() {
           </tbody>
         </table>
       </div>
-    </div>
+    </Page>
   );
 }

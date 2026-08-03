@@ -28,7 +28,11 @@ export default function App() {
         path="/*"
         element={
           <ProtectedRoute>
-            <div className="app-shell">
+            {/* Was <div className="app-shell">, a class with no styles anywhere —
+                the seam where the HTML mockup was cut. The shell's geometry comes
+                from .app-header (sticky), .sidebar (fixed) and .main, so the
+                wrapper element was carrying nothing. */}
+            <>
               <Header />
               <div className="layout">
                 <Sidebar />
@@ -60,7 +64,7 @@ export default function App() {
                   </Routes>
                 </main>
               </div>
-            </div>
+            </>
           </ProtectedRoute>
         }
       />

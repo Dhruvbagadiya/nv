@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { fetchApplications } from '../../api/applications.js';
+import Page from '../../components/ui/Page.jsx';
 
 export default function ApplicationHistory() {
+  const navigate = useNavigate();
   const [filters, setFilters] = useState({ country: '', passportNo: '', studentName: '', page: 1 });
 
   const { data, isLoading } = useQuery({
@@ -14,14 +17,17 @@ export default function ApplicationHistory() {
   const updateFilter = (key, value) => setFilters((f) => ({ ...f, [key]: value, page: 1 }));
 
   return (
-    <div className="view active" id="view-app-history">
-      <div className="page-head">
-        <div>
-          <h1>Application history</h1>
-          <p>Track all your students&rsquo; applications with ease</p>
-        </div>
-        <button className="btn btn-primary">Add new application</button>
-      </div>
+    <Page
+      title="Application history"
+      subtitle="Track all your students’ applications with ease"
+      actions={
+        // Was a button with no onClick — the page advertised an action it
+        // could not perform.
+        <button className="btn btn-primary" onClick={() => navigate('/add-application')}>
+          Add new application
+        </button>
+      }
+    >
 
       <div className="filter-card">
         <div className="filter-grid">
@@ -95,6 +101,6 @@ export default function ApplicationHistory() {
           </tbody>
         </table>
       </div>
-    </div>
+    </Page>
   );
 }

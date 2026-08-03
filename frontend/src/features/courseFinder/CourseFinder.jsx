@@ -1,13 +1,18 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { fetchCourses } from '../../api/courses.js';
 import { useCountryFilter } from '../../store/useCountryFilter.js';
+import { useAuth } from '../../store/useAuth.js';
 import CourseCard from './CourseCard.jsx';
-import Pagination from './Pagination.jsx';
+import Pagination from '../../components/ui/Pagination.jsx';
+import Page from '../../components/ui/Page.jsx';
 
 const QUICK_FILTERS = ['Prime', 'Instant Submission', 'Scholarships Available'];
 
 export default function CourseFinder() {
+  const navigate = useNavigate();
+  const user = useAuth((s) => s.user);
   const { selectedCountry } = useCountryFilter();
   const [search, setSearch] = useState('');
   const [tag, setTag] = useState(null);
@@ -22,17 +27,22 @@ export default function CourseFinder() {
   });
 
   return (
-    <div className="view active" id="view-dashboard">
-      <div className="page-head">
-        <div>
-          <h1>Dashboard</h1>
-          <p>Welcome back, agent name</p>
-        </div>
-        <div className="head-actions">
-          <button className="btn btn-outline">Ask our team</button>
-          <button className="btn btn-primary">+ Add new application</button>
-        </div>
-      </div>
+    <Page
+      title="Dashboard"
+      // Was the literal string "Welcome back, agent name".
+      subtitle={`Welcome back, ${user?.name ?? 'partner'}`}
+      actions={
+        <>
+          {/* Both of these were buttons with no onClick. */}
+          <button className="btn btn-outline" onClick={() => navigate('/ask-team')}>
+            Ask our team
+          </button>
+          <button className="btn btn-primary" onClick={() => navigate('/add-application')}>
+            + Add new application
+          </button>
+        </>
+      }
+    >
 
       <div className="filter-row">
         <input
@@ -81,6 +91,6 @@ export default function CourseFinder() {
           <Pagination page={data.page} totalPages={data.totalPages} onChange={setPage} />
         </>
       )}
-    </div>
+    </Page>
   );
 }

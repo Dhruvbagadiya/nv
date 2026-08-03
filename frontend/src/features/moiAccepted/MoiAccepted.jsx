@@ -1,72 +1,95 @@
-import { useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { fetchMoiAcceptances } from '../../api/moiInstitutions.js';
+import Page from '../../components/ui/Page.jsx';
+import FilterBar from '../../components/ui/FilterBar.jsx';
+import DataTable from '../../components/ui/DataTable.jsx';
+import { useUrlFilters } from '../../hooks/useUrlFilters.js';
+import { COUNTRY_OPTIONS, DEGREE_LEVEL_OPTIONS } from '../../constants/referenceData.js';
+
+// Reference conversion for the Phase 4 primitives. What changed:
+//   - both filter dropdowns were empty <select>s with a single static <option>,
+//     so neither filter could ever be used (F-09)
+//   - no pagination, though the service returns totalPages (F-11)
+//   - no error state: a failed request rendered as "No data available", which
+//     tells the user something false
+//   - filter state was component-local, so a filtered view could not be linked
+//     or restored with the back button
+const FILTER_DEFAULTS = { country: '', courseType: '', page: 1 };
+
+const FIELDS = [
+  {
+    name: 'country',
+    label: 'Country',
+    type: 'select',
+    placeholder: 'Select country',
+    options: COUNTRY_OPTIONS,
+  },
+  {
+    name: 'courseType',
+    label: 'Course type',
+    type: 'select',
+    placeholder: 'All course types',
+    options: DEGREE_LEVEL_OPTIONS,
+  },
+];
+
+const COLUMNS = [
+  { key: 'country', header: 'Country', render: (m) => m.institution.country.name },
+  {
+    key: 'institution',
+    header: 'University name',
+    className: 'cell-strong',
+    render: (m) => m.institution.name,
+  },
+  { key: 'courseType', header: 'Course type' },
+  { key: 'years', header: 'Years' },
+  {
+    key: 'document',
+    header: 'Document',
+    render: (m) =>
+      m.documentUrl ? (
+        <a href={m.documentUrl} target="_blank" rel="noopener noreferrer">
+          View
+        </a>
+      ) : (
+        '—'
+      ),
+  },
+];
 
 export default function MoiAccepted() {
-  const [filters, setFilters] = useState({ country: '', courseType: '' });
+  const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['moi-institutions', filters],
-    queryFn: () => fetchMoiAcceptances(filters),
+  const { data, isLoading, isError, error, isFetching } = useQuery({
+    queryKey: ['moi-institutions', applied],
+    queryFn: () => fetchMoiAcceptances(applied),
     placeholderData: keepPreviousData,
   });
 
   return (
-    <div className="view active" id="view-moi-accepted">
-      <div className="page-head">
-        <div>
-          <h1>MOI accepted universities</h1>
-          <p>Universities list</p>
-        </div>
-      </div>
+    <Page title="MOI accepted universities" subtitle="Universities list">
+      <FilterBar
+        fields={FIELDS}
+        values={draft}
+        onChange={setField}
+        onApply={apply}
+        onClear={clear}
+        busy={isFetching}
+      />
 
-      <div className="filter-card">
-        <div className="filter-grid">
-          <div className="filter-field">
-            <label>Country</label>
-            <select value={filters.country} onChange={(e) => setFilters((f) => ({ ...f, country: e.target.value }))}>
-              <option value="">Select country</option>
-            </select>
-          </div>
-          <div className="filter-field">
-            <label>Course type</label>
-            <select value={filters.courseType} onChange={(e) => setFilters((f) => ({ ...f, courseType: e.target.value }))}>
-              <option value="">Course type</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="table-card">
-        <table>
-          <thead>
-            <tr>
-              <th>Country</th>
-              <th>University name</th>
-              <th>Course type</th>
-              <th>Years</th>
-              <th>Document</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && <tr><td colSpan={5}>Loading...</td></tr>}
-            {data?.items.length === 0 && <tr><td colSpan={5}>No data available</td></tr>}
-            {data?.items.map((m) => (
-              <tr key={m.id}>
-                <td>{m.institution.country.name}</td>
-                <td className="cell-strong">{m.institution.name}</td>
-                <td>{m.courseType}</td>
-                <td>{m.years}</td>
-                <td>
-                  {m.documentUrl ? (
-                    <a href={m.documentUrl} target="_blank" rel="noreferrer">View</a>
-                  ) : '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      <DataTable
+        columns={COLUMNS}
+        rows={data?.items}
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        emptyMessage="No MOI-accepted institutions match these filters."
+        page={data?.page}
+        totalPages={data?.totalPages}
+        total={data?.total}
+        pageSize={data?.pageSize}
+        onPageChange={setPage}
+      />
+    </Page>
   );
 }

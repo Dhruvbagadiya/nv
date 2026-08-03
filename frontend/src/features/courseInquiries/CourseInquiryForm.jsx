@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { createInquiry } from '../../api/courseInquiries.js';
+import Page from '../../components/ui/Page.jsx';
 
 export default function CourseInquiryForm() {
   const navigate = useNavigate();
@@ -13,13 +14,7 @@ export default function CourseInquiryForm() {
   });
 
   return (
-    <div className="view active" id="view-ask-team">
-      <div className="page-head">
-        <div>
-          <h1>New course inquiry</h1>
-          <p>Let&rsquo;s start by setting your preferences</p>
-        </div>
-      </div>
+    <Page title="New course inquiry" subtitle="Let’s start by setting your preferences">
 
       <form
         className="form-card"
@@ -70,6 +65,6 @@ export default function CourseInquiryForm() {
           </button>
         </div>
       </form>
-    </div>
+    </Page>
   );
 }

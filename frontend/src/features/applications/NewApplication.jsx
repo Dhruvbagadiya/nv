@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { createApplication } from '../../api/applications.js';
+import Page from '../../components/ui/Page.jsx';
 
 export default function NewApplication() {
   const navigate = useNavigate();
@@ -18,13 +19,7 @@ export default function NewApplication() {
   };
 
   return (
-    <div className="view active" id="view-add-application">
-      <div className="page-head">
-        <div>
-          <h1>New application</h1>
-          <p>Let&rsquo;s start by setting your preferences</p>
-        </div>
-      </div>
+    <Page title="New application" subtitle="Let’s start by setting your preferences">
 
       <form className="form-card" onSubmit={handleSubmit}>
         <h2>Give us your choice of study</h2>
@@ -76,6 +71,6 @@ export default function NewApplication() {
           </button>
         </div>
       </form>
-    </div>
+    </Page>
   );
 }

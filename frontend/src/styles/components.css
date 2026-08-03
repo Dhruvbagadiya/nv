@@ -1,0 +1,217 @@
+/* components.css — Buttons, filters, course cards, form card, tables, document bank tiles.
+   Extracted verbatim from the original index.css (lines 279-490).
+   Rule order is load-bearing for the cascade: index.css imports these
+   in sequence, so do not reorder the @import list. */
+
+  /* ===================== BUTTONS ===================== */
+  .btn {
+    border-radius: var(--radius-sm); padding: 0 11px; height: 31px; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-sans); transition: background .13s, border-color .13s, transform .05s, box-shadow .13s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--accent-700); color: #fff; box-shadow: var(--shadow-xs); }
+  .btn-primary:hover { background: var(--accent-800); }
+  .btn-outline { background: var(--surface); border-color: var(--border-strong); color: var(--ink-700); }
+  .btn-outline:hover { background: var(--canvas); border-color: var(--ink-300); }
+  .btn-ghost { background: transparent; color: var(--ink-600); }
+  .btn-ghost:hover { background: var(--canvas); }
+
+  /* ===================== DASHBOARD FILTERS ===================== */
+  .filter-row {
+    display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; align-items: center;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px; box-shadow: var(--shadow-xs);
+  }
+  .filter-row input, .filter-row select {
+    height: 31px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 0 9px; font-size: 12.5px; background: var(--canvas); color: var(--ink-900); font-family: var(--font-sans);
+    transition: border-color .13s, box-shadow .13s;
+  }
+  .filter-row input:focus, .filter-row select:focus { outline: none; border-color: var(--accent-500); box-shadow: 0 0 0 3px var(--accent-100); background: var(--surface); }
+  .filter-row input[type="text"] { flex: 2; min-width: 180px; }
+  .filter-row select { flex: 1; min-width: 120px; }
+
+  .quick-filters { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+  .quick-filters .label { font-size: 11.5px; color: var(--ink-500); margin-right: 2px; font-weight: 600; }
+  .chip {
+    border: 1px solid var(--border); color: var(--ink-700); background: var(--surface);
+    border-radius: var(--radius-pill); padding: 4px 10px; font-size: 11.5px; cursor: pointer; font-weight: 600;
+    transition: all .12s;
+  }
+  .chip:hover { border-color: var(--ink-300); }
+  .chip.chip-active { border-color: var(--accent-700); color: #fff; background: var(--accent-700); }
+
+  .result-count { font-size: 12px; color: var(--ink-500); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .result-count b { color: var(--ink-950); font-weight: 700; }
+  .country-active-tag { font-size: 11px; font-weight: 700; color: var(--accent-700); background: var(--accent-50); border: 1px solid var(--accent-100); border-radius: var(--radius-pill); padding: 2px 9px; }
+
+  /* ===================== COURSE CARDS ===================== */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 9px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); 
+    padding: 0; display: flex; flex-direction: column; overflow: hidden;
+    transition: box-shadow .14s, border-color .14s, transform .14s;
+  }
+  .card:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); transform: translateY(-1px); }
+  .card-body { padding: 10px 11px 10px; display: flex; flex-direction: column; flex: 1; }
+
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; gap: 6px; }
+  .school-row { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .school-logo {
+    width: 25px; height: 25px; border-radius: var(--radius-sm); flex-shrink: 0;
+    background: var(--ink-800); color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; letter-spacing: .01em;
+  }
+  .school-name { color: var(--ink-600); font-size: 11px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status-stack { display:flex; gap:3px; flex-wrap:wrap; justify-content:flex-end; flex-shrink: 0; }
+  .status-pill { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: var(--radius-pill); white-space: nowrap; letter-spacing: .01em; }
+  .status-pill.offer { background: var(--success-100); color: var(--success-700); }
+  .status-pill.submission { background: var(--info-100); color: var(--info-700); }
+
+  .degree-label { font-size: 10px; color: var(--ink-500); margin-bottom: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  .course-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; line-height: 1.25; color: var(--ink-950); }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 7px; }
+  .tag-pill { font-size: 9px; padding: 2px 7px; border-radius: var(--radius-pill); font-weight: 700; }
+  .tag-pill.green { background: var(--success-100); color: var(--success-700); }
+  .tag-pill.amber { background: var(--warning-100); color: var(--warning-700); }
+  .tag-pill.blue { background: var(--info-100); color: var(--info-700); }
+  .tag-pill.purple { background: var(--purple-100); color: var(--purple-700); }
+  .tag-pill.teal { background: var(--teal-100); color: var(--teal-700); }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; padding: 6px 0; border-top: 1px solid var(--border); }
+  .info-tile .i-label { font-size: 9px; color: var(--ink-400); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 1px; }
+  .info-tile .i-value { font-size: 11px; color: var(--ink-900); font-weight: 600; }
+  .info-tile .i-value.mono { font-family: var(--font-mono); font-size: 10.5px; }
+
+  .success-row { padding-top: 6px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-size:11px; }
+  .success-row .s-label { color: var(--ink-500); font-weight: 600; }
+  .success-high { color: var(--success-700); font-weight:700; display: flex; align-items: center; gap: 4px; }
+  .success-high .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success-600); display: inline-block; }
+
+  .intakes { margin-top:6px; padding-top:6px; border-top:1px solid var(--border); }
+  .intakes-label { font-size:9px; color:var(--ink-400); margin-bottom:4px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  .intake-list { display:flex; gap:4px; flex-wrap:wrap; }
+  .intake-list span { font-size: 9.5px; font-family: var(--font-mono); font-weight: 600; color: var(--ink-700); background: var(--canvas); border: 1px solid var(--border); border-radius: 5px; padding: 2px 5px; }
+
+  .card-actions { display:flex; gap:5px; align-items:center; margin-top:7px; }
+  .card-actions .btn-primary { flex:1; width:auto; justify-content:center; height: 31px; font-size: 12px; }
+  .heart-btn { width:31px; height:31px; border:1px solid var(--border); border-radius:var(--radius-sm); background:#fff; cursor:pointer; font-size:15px; color:var(--ink-400); flex-shrink: 0; transition: all .13s; }
+  .heart-btn:hover { border-color: var(--danger-700); color: var(--danger-700); }
+  .heart-btn.active { color: var(--danger-700); background: var(--danger-100); border-color: var(--danger-100); }
+
+  .pagination-wrap { margin-top:9px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:7px 10px; }
+  .pagination-info { display:flex; align-items:center; gap:7px; color:var(--ink-500); font-size:11.5px; }
+  .pagination-info select { height:28px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--canvas); padding:0 6px; font-family: var(--font-sans); }
+  .pagination { display:flex; gap:4px; flex-wrap:wrap; }
+  .page-btn { min-width:28px; height:28px; border:1px solid var(--border); border-radius:var(--radius-sm); background:#fff; color:var(--ink-700); cursor:pointer; font-size:11.5px; font-family: var(--font-mono); font-weight: 600; }
+  .page-btn:hover:not(:disabled) { border-color: var(--ink-300); }
+  .page-btn.active { background:var(--accent-700); color:#fff; border-color:var(--accent-700); }
+  .page-btn:disabled { opacity:.4; cursor:not-allowed; }
+
+  /* ===================== FORM CARD (inquiry / new application) ===================== */
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 22px; max-width: 560px; margin: 0 auto; text-align: center; box-shadow: var(--shadow-xs); }
+  .form-icon { width: 38px; height: 38px; border-radius: 11px; background: var(--accent-50); color: var(--accent-700); display: flex; align-items: center; justify-content: center; font-size: 18px; margin: 0 auto 10px; }
+  .form-card h2 { color: var(--ink-950); font-size: 15.5px; font-weight: 800; margin: 0 0 3px; letter-spacing: -0.01em; }
+  .form-card .sub { color: var(--ink-500); font-size: 12px; margin-bottom: 14px; }
+  .field {
+    text-align: left; background: var(--canvas); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 8px 11px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    margin-bottom: 6px; cursor: pointer; transition: border-color .13s, background .13s;
+  }
+  .field:hover { border-color: var(--accent-500); background: var(--surface); }
+  .field .f-icon { width: 27px; height: 27px; border-radius: 7px; background: var(--surface); border: 1px solid var(--border); color: var(--ink-500); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; }
+  .field .flabel { color: var(--ink-950); font-weight: 700; font-size: 12px; margin-bottom: 1px; }
+  .field .hint { color: var(--ink-500); font-size: 11px; }
+  .field .chevron { color: var(--ink-300); flex-shrink: 0; }
+  .field input, .field select {
+    width: 100%; border: none; background: transparent; font-size: 12px; color: var(--ink-950);
+    font-family: inherit; padding: 0; outline: none;
+  }
+  .field input::placeholder { color: var(--ink-400); }
+  .submit-row { margin-top: 12px; }
+  .submit-row .btn-primary { width: 100%; justify-content: center; height: 37px; font-size: 13px; }
+
+  /* ===================== FILTER CARD + TABLES ===================== */
+  .filter-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; box-shadow: var(--shadow-xs); }
+  .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-bottom: 8px; }
+  .filter-field label { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink-700); margin-bottom: 3px; text-transform: uppercase; letter-spacing: .02em; }
+  .filter-field input, .filter-field select {
+    width: 100%; height: 31px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 0 9px; font-size: 12.5px; background: var(--canvas); color: var(--ink-900); font-family: var(--font-sans);
+    transition: border-color .13s, box-shadow .13s;
+  }
+  .filter-field input:focus, .filter-field select:focus { outline: none; border-color: var(--accent-500); box-shadow: 0 0 0 3px var(--accent-100); background: var(--surface); }
+  .filter-submit, .filter-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+  .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-xs); overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 640px; }
+  thead th {
+    text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--ink-500); background: var(--canvas); padding: 7px 11px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  tbody td { padding: 7px 11px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--ink-700); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--canvas); }
+  tbody td.center { text-align: center; }
+  .cell-strong { color: var(--ink-950); font-weight: 700; }
+  .cell-mono { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-600); }
+  .cell-flag { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-950); font-weight: 600; }
+  .status-line { font-size: 11px; margin-bottom: 2px; color: var(--ink-500); }
+  .status-line b { color: var(--ink-950); font-weight: 700; }
+  .action-row { display: flex; gap: 5px; }
+  .action-icon-btn {
+    width: 26px; height: 26px; border-radius: var(--radius-sm); border: 1px solid transparent;
+    background: var(--accent-50); color: var(--accent-700); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: background .13s, color .13s;
+  }
+  .action-icon-btn:hover { background: var(--accent-700); color: #fff; }
+
+  .empty-state { padding: 32px 18px; text-align: center; }
+  .empty-state .e-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--canvas); color: var(--ink-400); display: flex; align-items: center; justify-content: center; font-size: 18px; margin: 0 auto 10px; }
+  .empty-state h3 { font-size: 13px; font-weight: 700; color: var(--ink-950); margin: 0 0 3px; }
+  .empty-state p { font-size: 11.5px; color: var(--ink-500); margin: 0; }
+
+  /* ===================== DOCUMENT BANK =====================
+     New UI — the five Document Bank screens (Visa Documents, Refund Forms,
+     Institute Brochures, SOP, LOR) render a grid of PDF tiles inside a white
+     panel. Built from the existing tokens so it sits in the same visual system
+     as .card / .table-card rather than introducing a second look. */
+  .doc-panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px; box-shadow: var(--shadow-xs);
+  }
+  .doc-grid {
+    display: grid; gap: 12px;
+    /* auto-fit rather than a fixed 4 columns: the tiles reflow to 3, 2 and 1 on
+       narrower viewports without needing a breakpoint for each step. */
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  }
+  .doc-tile {
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    gap: 10px; padding: 20px 14px; min-height: 132px;
+    background: var(--canvas); border: 1px solid transparent; border-radius: var(--radius);
+    text-decoration: none; text-align: center; cursor: pointer;
+    transition: background .13s, border-color .13s, box-shadow .13s, transform .13s;
+  }
+  .doc-tile:hover {
+    background: var(--surface); border-color: var(--border-strong);
+    box-shadow: var(--shadow-sm); transform: translateY(-1px);
+  }
+  /* Keyboard focus must be visible — these tiles are links, and the only
+     affordance in the reference screenshots is a hover state. */
+  .doc-tile:focus-visible {
+    outline: none; border-color: var(--accent-500); box-shadow: 0 0 0 3px var(--accent-100);
+  }
+  .doc-tile-icon { color: var(--brand-800); flex-shrink: 0; }
+  .doc-tile-icon svg { width: 38px; height: 38px; display: block; }
+  .doc-tile-title {
+    font-size: 12px; font-weight: 700; line-height: 1.35; color: var(--brand-700);
+    /* Titles run long ("MASTER'S IN HEALTH SCIENCE IN EASTERN INSTITUTE OF
+       TECHNOLOGY"). Clamp to keep the grid on a consistent baseline; the full
+       string stays available via the title attribute. */
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden; overflow-wrap: anywhere;
+  }
+

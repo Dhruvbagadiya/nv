@@ -1,24 +1,10 @@
 import { useCountryFilter } from '../../store/useCountryFilter.js';
+import { COUNTRIES } from '../../constants/referenceData.js';
 
-// Each flag is the same hand-drawn inline SVG from the mockup —
-// zero external image dependency, copy-pasted as-is.
-const countries = [
-  { code: 'UK', title: 'United Kingdom' },
-  { code: 'GR', title: 'Germany' },
-  { code: 'NZ', title: 'New Zealand' },
-  { code: 'FR', title: 'France' },
-  { code: 'SP', title: 'Spain' },
-  { code: 'UAE', title: 'United Arab Emirates' },
-  { code: 'MT', title: 'Malta' },
-  { code: 'IR', title: 'Ireland' },
-  { code: 'AT', title: 'Austria' },
-  { code: 'HU', title: 'Hungary' },
-  { code: 'CA', title: 'Canada' },
-  { code: 'AU', title: 'Australia' },
-  { code: 'US', title: 'United States' },
-  { code: 'NE', title: 'Netherlands' },
-  { code: 'IL', title: 'Israel' },
-];
+// The list used to be inlined here, which is why the header offered 15
+// destinations while every dropdown elsewhere was empty. Now shared, so the strip
+// and the filters cannot drift apart.
+const countries = COUNTRIES.map((c) => ({ code: c.code, title: c.name }));
 
 export default function CountryStrip() {
   const { selectedCountry, setSelectedCountry } = useCountryFilter();

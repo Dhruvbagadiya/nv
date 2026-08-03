@@ -1,0 +1,95 @@
+/* tokens.css — Design tokens, reset, base element styles.
+   Extracted verbatim from the original index.css (lines 1-90).
+   Rule order is load-bearing for the cascade: index.css imports these
+   in sequence, so do not reorder the @import list. */
+
+
+  /* =========================================================
+     DESIGN TOKENS
+  ========================================================= */
+  :root {
+    --ink-950:#0B0E14;
+    --ink-800:#1C2230;
+    --ink-700:#333B4D;
+    --ink-600:#4A5468;
+    --ink-500:#616B80;
+    --ink-400:#8891A3;
+    --ink-300:#AEB5C4;
+    --ink-200:#D8DCE4;
+    --ink-100:#EAECF1;
+
+    --surface:#FFFFFF;
+    --canvas:#F4F5F9;
+    --border:#E4E7ED;
+    --border-strong:#D2D6E1;
+
+    --brand-950:#101B30;
+    --brand-900:#152340;
+    --brand-800:#182A47;
+    --brand-700:#22375A;
+    --brand-600:#324A72;
+
+    --accent-800:#A85A0E;
+    --accent-700:#C96E0E;
+    --accent-600:#E78518;
+    --accent-500:#E78518;
+    --accent-100:#FFF3E3;
+    --accent-50:#FFF8F0;
+
+    --success-700:#0B6B4E;
+    --success-600:#0F7A5C;
+    --success-100:#E1F3EC;
+
+    --info-700:#1B5AA0;
+    --info-600:#2569B5;
+    --info-100:#E5F0FB;
+
+    --warning-700:#8A5B00;
+    --warning-100:#FCF0D9;
+
+    --danger-700:#A32419;
+    --danger-100:#FBEAE8;
+
+    --purple-700:#6E2C9C;
+    --purple-100:#F2E9FB;
+
+    --teal-700:#0A7F6B;
+    --teal-100:#E0F5F0;
+
+    --radius-sm:7px;
+    --radius:12px;
+    --radius-lg:16px;
+    --radius-pill:999px;
+
+    --shadow-xs: 0 1px 2px rgba(16,22,38,0.05);
+    --shadow-sm: 0 2px 8px rgba(16,22,38,0.06);
+    --shadow-md: 0 8px 24px rgba(16,22,38,0.10);
+    --shadow-lg: 0 16px 40px rgba(16,22,38,0.16);
+
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+
+    --sidebar-w: 204px;
+    --sidebar-w-collapsed: 56px;
+    --header-h: 54px;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; }
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background: var(--canvas);
+    color: var(--ink-800);
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+  a { color: inherit; }
+  ::selection { background: var(--accent-100); color: var(--accent-800); }
+  :focus-visible { outline: 2px solid var(--accent-500); outline-offset: 2px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+  .icon-svg { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; }
+  button { font-family: var(--font-sans); }
+

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchCourses, createCourse, deleteCourse } from '../../api/courses.js';
 import { fetchInstitutions } from '../../api/institutions.js';
+import Page from '../../components/ui/Page.jsx';
 
 const emptyForm = {
   institutionId: '',
@@ -48,13 +49,7 @@ export default function AdminCourses() {
   });
 
   return (
-    <div className="view active">
-      <div className="page-head">
-        <div>
-          <h1>Courses</h1>
-          <p>Manage the course catalog agents search from the Dashboard</p>
-        </div>
-      </div>
+    <Page title="Courses" subtitle="Manage the course catalog agents search from the Dashboard">
 
       <div className="form-card" style={{ maxWidth: 560, marginBottom: 20 }}>
         <h2 style={{ fontSize: 16 }}>Add course</h2>
@@ -175,6 +170,6 @@ export default function AdminCourses() {
           </tbody>
         </table>
       </div>
-    </div>
+    </Page>
   );
 }

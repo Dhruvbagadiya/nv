@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchInquiries } from '../../api/courseInquiries.js';
+import Page from '../../components/ui/Page.jsx';
 
 export default function CourseInquiryHistory() {
   const { data, isLoading } = useQuery({
@@ -8,13 +9,7 @@ export default function CourseInquiryHistory() {
   });
 
   return (
-    <div className="view active" id="view-history">
-      <div className="page-head">
-        <div>
-          <h1>Course inquiry history</h1>
-          <p>Track all your course inquiries</p>
-        </div>
-      </div>
+    <Page title="Course inquiry history" subtitle="Track all your course inquiries">
 
       <div className="table-card">
         <table>
@@ -40,6 +35,6 @@ export default function CourseInquiryHistory() {
           </tbody>
         </table>
       </div>
-    </div>
+    </Page>
   );
 }
