@@ -1,5 +1,9 @@
 generator client {
   provider = "prisma-client-js"
+  // This tree lives on a Windows drive but is also worked on from WSL, so the
+  // client has to carry both engines. Generating for one platform only makes
+  // every query fail on the other with "could not locate the Query Engine".
+  binaryTargets = ["native", "windows", "debian-openssl-3.0.x"]
 }
 
 datasource db {
