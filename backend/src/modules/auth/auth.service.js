@@ -1,39 +1,147 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
 import { prisma } from '../../utils/prisma.js';
+import { config } from '../../config.js';
+import { ConflictError, UnauthorizedError } from '../../utils/httpErrors.js';
+
+const PUBLIC_USER_FIELDS = { id: true, name: true, email: true, role: true, createdAt: true };
+
+// A hash of a value no password will ever produce. Used to spend comparable CPU
+// on a missing-user login so response time doesn't leak whether an email exists.
+const DUMMY_HASH = '$2a$12$C6UzMDM.H6dfI/f/IKcEe.wsQBpQmvJTFTOxDvsFdmgtrLu5cKUJa';
+
+function signAccessToken(user) {
+  return jwt.sign({ sub: user.id, role: user.role, name: user.name }, config.jwt.accessSecret, {
+    expiresIn: config.jwt.accessTtl,
+  });
+}
+
+// Opaque random string, not a JWT. Its only job is to match a stored hash, and
+// staying opaque means a leaked refresh token discloses no claims.
+const generateRefreshToken = () => crypto.randomBytes(48).toString('base64url');
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+const refreshExpiry = () =>
+  new Date(Date.now() + config.jwt.refreshTtlDays * 24 * 60 * 60 * 1000);
+
+async function issueRefreshToken(userId, tx = prisma) {
+  const token = generateRefreshToken();
+  const row = await tx.refreshToken.create({
+    data: { userId, tokenHash: hashToken(token), expiresAt: refreshExpiry() },
+  });
+  return { token, expiresAt: row.expiresAt };
+}
 
 export async function login(email, password) {
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) throw { status: 401, message: 'Invalid email or password' };
+
+  // Same message and comparable work either way, so the response cannot be used
+  // to enumerate which emails exist.
+  if (!user) {
+    await bcrypt.compare(password, DUMMY_HASH);
+    throw new UnauthorizedError('Invalid email or password');
+  }
 
   const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) throw { status: 401, message: 'Invalid email or password' };
+  if (!valid) throw new UnauthorizedError('Invalid email or password');
 
-  const accessToken = jwt.sign(
-    { sub: user.id, role: user.role, name: user.name },
-    process.env.JWT_ACCESS_SECRET,
-    { expiresIn: '15m' }
-  );
-  const refreshToken = jwt.sign(
-    { sub: user.id },
-    process.env.JWT_REFRESH_SECRET,
-    { expiresIn: '7d' }
-  );
+  const { token: refreshToken, expiresAt } = await issueRefreshToken(user.id);
 
   return {
-    accessToken,
-    refreshToken,
+    accessToken: signAccessToken(user),
+    refreshToken, // the controller puts this in an httpOnly cookie, never the body
+    refreshExpiresAt: expiresAt,
     user: { id: user.id, name: user.name, email: user.email, role: user.role },
   };
 }
 
-export async function register({ name, email, password, role = 'AGENT' }) {
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) throw { status: 409, message: 'Email already in use' };
+// Exchange a refresh token for a new access token, rotating the refresh token as
+// we go. Rotation matters: without it a stolen token is usable for its whole
+// lifetime and there is no way to tell it was stolen.
+export async function refresh(presentedToken) {
+  if (!presentedToken) throw new UnauthorizedError('No refresh token provided');
 
-  const passwordHash = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({
-    data: { name, email, passwordHash, role },
+  const existing = await prisma.refreshToken.findUnique({
+    where: { tokenHash: hashToken(presentedToken) },
+    include: { user: true },
   });
-  return { id: user.id, name: user.name, email: user.email, role: user.role };
+
+  if (!existing) throw new UnauthorizedError('Invalid refresh token');
+
+  // A token that was already rotated away is being replayed, which means it
+  // leaked. Kill every session for that user rather than just refusing this one.
+  if (existing.revokedAt) {
+    await prisma.refreshToken.updateMany({
+      where: { userId: existing.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    throw new UnauthorizedError('Refresh token was already used — all sessions revoked');
+  }
+
+  if (existing.expiresAt < new Date()) throw new UnauthorizedError('Refresh token expired');
+
+  // Revoke-and-reissue atomically, so a crash between the two cannot leave the
+  // user with no valid refresh token (logged out) or two (defeating rotation).
+  const { token: nextToken, expiresAt } = await prisma.$transaction(async (tx) => {
+    await tx.refreshToken.update({
+      where: { id: existing.id },
+      data: { revokedAt: new Date() },
+    });
+    return issueRefreshToken(existing.userId, tx);
+  });
+
+  return {
+    accessToken: signAccessToken(existing.user),
+    refreshToken: nextToken,
+    refreshExpiresAt: expiresAt,
+    user: {
+      id: existing.user.id,
+      name: existing.user.name,
+      email: existing.user.email,
+      role: existing.user.role,
+    },
+  };
+}
+
+export async function logout(presentedToken) {
+  if (!presentedToken) return;
+  // updateMany, not update: logging out twice must not 404.
+  await prisma.refreshToken.updateMany({
+    where: { tokenHash: hashToken(presentedToken), revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}
+
+export async function getUserById(id) {
+  const user = await prisma.user.findUnique({ where: { id }, select: PUBLIC_USER_FIELDS });
+  // The token verified but the account is gone — treat as unauthenticated so the
+  // client clears its session instead of retrying forever.
+  if (!user) throw new UnauthorizedError('Account no longer exists');
+  return user;
+}
+
+// PUBLIC self-registration. Role is hard-coded and deliberately not a parameter.
+// The old signature was `register({ ..., role = 'AGENT' })` — a default, not a
+// constraint — trivially overridden by putting `role` in the body of an endpoint
+// that required no authentication at all. Staff accounts go through createUser.
+export async function register({ name, email, password }) {
+  return createUserWithRole({ name, email, password, role: 'AGENT' });
+}
+
+// PRIVILEGED. Callers must already be SUPER_ADMIN — enforced at the route.
+export async function createUser({ name, email, password, role }) {
+  return createUserWithRole({ name, email, password, role });
+}
+
+async function createUserWithRole({ name, email, password, role }) {
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) throw new ConflictError('Email already in use');
+
+  // 12 rounds rather than the previous 10 — still a few hundred ms, and the
+  // hashes outlive the hardware they were made on.
+  const passwordHash = await bcrypt.hash(password, 12);
+  return prisma.user.create({
+    data: { name, email, passwordHash, role },
+    select: PUBLIC_USER_FIELDS,
+  });
 }

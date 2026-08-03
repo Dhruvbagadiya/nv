@@ -1,15 +1,21 @@
 import jwt from 'jsonwebtoken';
+import { config } from '../config.js';
+import { UnauthorizedError } from '../utils/httpErrors.js';
 
-export function requireAuth(req, res, next) {
+export function requireAuth(req, _res, next) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing access token' });
+    return next(new UnauthorizedError('Missing access token'));
   }
   try {
-    const token = header.split(' ')[1];
-    req.user = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+    req.user = jwt.verify(header.slice('Bearer '.length), config.jwt.accessSecret);
     next();
-  } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+  } catch (err) {
+    // Distinguished so the client knows to try /auth/refresh rather than
+    // bouncing the user to the login screen for a merely-stale token.
+    if (err.name === 'TokenExpiredError') {
+      return next(new UnauthorizedError('Access token expired'));
+    }
+    next(new UnauthorizedError('Invalid access token'));
   }
 }

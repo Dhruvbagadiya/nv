@@ -28,6 +28,27 @@ model User {
 
   applications    Application[]
   courseInquiries CourseInquiry[]
+  refreshTokens   RefreshToken[]
+}
+
+// Refresh tokens are stored (hashed) rather than being stateless, because a
+// stateless refresh token cannot be revoked — "log out" would be a client-side
+// lie while the token stayed valid for its full 7 days. Rows are also what let
+// us detect replay of an already-rotated token.
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  // SHA-256 of the token, never the token itself: a leaked database dump then
+  // does not hand over live sessions.
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Country {
