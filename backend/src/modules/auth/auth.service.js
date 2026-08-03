@@ -68,14 +68,22 @@ export async function refresh(presentedToken) {
 
   if (!existing) throw new UnauthorizedError('Invalid refresh token');
 
-  // A token that was already rotated away is being replayed, which means it
-  // leaked. Kill every session for that user rather than just refusing this one.
   if (existing.revokedAt) {
-    await prisma.refreshToken.updateMany({
-      where: { userId: existing.userId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-    throw new UnauthorizedError('Refresh token was already used — all sessions revoked');
+    // Only a ROTATED token implies theft: it was already exchanged, so whoever
+    // still holds it should not. Revoke every session for that user.
+    if (existing.revokedReason === 'ROTATED') {
+      await prisma.refreshToken.updateMany({
+        where: { userId: existing.userId, revokedAt: null },
+        data: { revokedAt: new Date(), revokedReason: 'REPLAY' },
+      });
+      throw new UnauthorizedError('Refresh token was already used — all sessions revoked');
+    }
+
+    // Anything else (a deliberate logout, or collateral from someone else's
+    // replay) is mundane. Refusing this one request is the whole response —
+    // logging out on your phone must not sign you out on your laptop, and a
+    // stale tab retrying after logout is not an attack.
+    throw new UnauthorizedError('Refresh token is no longer valid');
   }
 
   if (existing.expiresAt < new Date()) throw new UnauthorizedError('Refresh token expired');
@@ -85,7 +93,7 @@ export async function refresh(presentedToken) {
   const { token: nextToken, expiresAt } = await prisma.$transaction(async (tx) => {
     await tx.refreshToken.update({
       where: { id: existing.id },
-      data: { revokedAt: new Date() },
+      data: { revokedAt: new Date(), revokedReason: 'ROTATED' },
     });
     return issueRefreshToken(existing.userId, tx);
   });
@@ -108,7 +116,7 @@ export async function logout(presentedToken) {
   // updateMany, not update: logging out twice must not 404.
   await prisma.refreshToken.updateMany({
     where: { tokenHash: hashToken(presentedToken), revokedAt: null },
-    data: { revokedAt: new Date() },
+    data: { revokedAt: new Date(), revokedReason: 'LOGOUT' },
   });
 }
 

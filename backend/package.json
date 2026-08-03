@@ -8,7 +8,9 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "node prisma/seed.js"
+    "prisma:seed": "node prisma/seed.js",
+    "prisma:deploy": "prisma migrate deploy",
+    "verify:auth": "node scripts/verify-auth.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.18.0",

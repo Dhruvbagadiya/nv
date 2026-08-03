@@ -35,6 +35,12 @@ model User {
 // stateless refresh token cannot be revoked — "log out" would be a client-side
 // lie while the token stayed valid for its full 7 days. Rows are also what let
 // us detect replay of an already-rotated token.
+enum RefreshRevokeReason {
+  ROTATED // superseded by a newer token during a normal refresh
+  LOGOUT // the user deliberately ended this session
+  REPLAY // revoked as collateral when a rotated token was replayed
+}
+
 model RefreshToken {
   id        String   @id @default(uuid())
   userId    String
@@ -43,6 +49,12 @@ model RefreshToken {
   tokenHash String   @unique
   expiresAt DateTime
   revokedAt DateTime?
+  // Why it was revoked matters. Only a ROTATED token being presented again
+  // implies theft — that token was replaced, so whoever still holds it either
+  // raced us or stole it, and revoking every session is the right response.
+  // A LOGOUT token being presented again is mundane (a stale tab retrying) and
+  // must NOT take down the user's other devices.
+  revokedReason RefreshRevokeReason?
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

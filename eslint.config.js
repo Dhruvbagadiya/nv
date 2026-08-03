@@ -13,7 +13,8 @@ export default [
 
   // ---- backend: Node ----
   {
-    files: ['backend/**/*.js'],
+    // .mjs included for the scripts/ helpers, which are explicitly ESM.
+    files: ['backend/**/*.js', 'backend/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',
