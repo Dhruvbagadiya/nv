@@ -6,7 +6,33 @@ migration, seed, CSS, and the 20 reference screenshots of `instantapply.net/part
 
 ---
 
-# Progress
+# Progress — read this first
+
+**Done: Phases 0, 1, 2, 3, 4, 6.** Branch `refactor/foundation`, 15 commits off the
+`main` baseline. Every API the design-set screens need now exists, is seeded, and
+has been verified against the live database.
+
+Closed: F-01 … F-05, F-09 … F-13, F-16 … F-23, F-25, F-26. `npm run verify` runs
+lint + 40 tests + build; `npm --prefix backend run verify:auth` runs 30 auth
+integration checks.
+
+**Remaining: Phase 5 (repair the last of the existing screens), Phase 7 (build the
+11 screens), Phase 8 (shell: banners, expandable sidebar, messages, sub-agent
+invite), Phase 9 (hardening).** Phase 7 is now purely frontend assembly —
+primitives exist, endpoints exist, data exists.
+
+Environment notes that will bite anyone picking this up:
+- Postgres runs on the Windows host and is NOT reachable from inside WSL. Use the
+  Windows node for anything touching the DB: `node.exe prisma/seed.js`,
+  `node.exe node_modules/prisma/build/index.js migrate deploy`. See
+  `backend/.env.example`.
+- Windows and WSL share `node_modules`, but native modules are per-platform.
+  Whichever side installed last wins; the other fails with "Cannot find native
+  binding". Re-run `npm install` on the side you are working from.
+
+---
+
+# Original plan and audit
 
 **Done: Phase 0 (safety net), Phase 1 (auth correctness), Phase 4 (frontend
 primitives).** Branch `refactor/foundation`, 8 commits off the `main` baseline.
