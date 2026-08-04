@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchInquiries } from '../../api/courseInquiries.js';
 import Page from '../../components/ui/Page.jsx';
+import { courseInquiryStageLabel } from '../../constants/referenceData.js';
 
 export default function CourseInquiryHistory() {
   const { data, isLoading } = useQuery({
@@ -29,7 +30,7 @@ export default function CourseInquiryHistory() {
                 <td>{inq.nationality}</td>
                 <td>{inq.intake || '—'}</td>
                 <td>{inq.courseType || '—'}</td>
-                <td>{inq.status}</td>
+                <td>{courseInquiryStageLabel(inq.stage)}</td>
               </tr>
             ))}
           </tbody>

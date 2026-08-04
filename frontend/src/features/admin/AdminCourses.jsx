@@ -34,7 +34,7 @@ export default function AdminCourses() {
         tuitionFee: Number(payload.tuitionFee),
         applicationFee: Number(payload.applicationFee),
         tags: [],
-        status: [],
+        badges: [], // renamed from `status`
         intakes: [],
       }),
     onSuccess: () => {

@@ -1,7 +1,27 @@
 // Props shape matches the Prisma Course model (see backend/prisma/schema.prisma)
 // joined with its institution — this is exactly the JSON shape courses.service.js returns.
+
+// Fees were printed as "$12000 CAD" for every course regardless of destination,
+// so every UK course quoted Canadian dollars. Currency comes from the country;
+// Intl handles both the symbol and the thousands separators.
+function formatFee(amount, currency) {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return '—';
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    }).format(value);
+  } catch {
+    // An unrecognised ISO code should not blank out the card.
+    return `${value.toLocaleString()} ${currency}`;
+  }
+}
+
 export default function CourseCard({ course }) {
   const initials = course.institution.name.slice(0, 2).toUpperCase();
+  const currency = course.institution.country?.currencyCode ?? 'USD';
 
   return (
     <div className="card">
@@ -12,7 +32,9 @@ export default function CourseCard({ course }) {
             <div className="school-name">{course.institution.name}</div>
           </div>
           <div className="status-stack">
-            {course.status.map((s) => (
+            {/* Renamed from course.status — these are display pills, and the old
+                name read like a lifecycle field next to Application.stage. */}
+            {course.badges.map((s) => (
               <span key={s} className={`status-pill ${s === 'Instant Offer' ? 'offer' : 'submission'}`}>
                 {s}
               </span>
@@ -40,11 +62,13 @@ export default function CourseCard({ course }) {
           </div>
           <div className="info-tile">
             <div className="i-label">Tuition (1st yr)</div>
-            <div className="i-value mono">${course.tuitionFee} CAD</div>
+            <div className="i-value mono">{formatFee(course.tuitionFee, currency)}</div>
           </div>
           <div className="info-tile">
             <div className="i-label">Application fee</div>
-            <div className="i-value mono">${course.applicationFee} CAD</div>
+            <div className="i-value mono">
+              {Number(course.applicationFee) === 0 ? 'None' : formatFee(course.applicationFee, currency)}
+            </div>
           </div>
           <div className="info-tile">
             <div className="i-label">Duration</div>

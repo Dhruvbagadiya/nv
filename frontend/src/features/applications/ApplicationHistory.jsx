@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { fetchApplications } from '../../api/applications.js';
 import Page from '../../components/ui/Page.jsx';
+import { applicationStageLabel } from '../../constants/referenceData.js';
 
 export default function ApplicationHistory() {
   const navigate = useNavigate();
@@ -88,8 +89,12 @@ export default function ApplicationHistory() {
                   <div className="cell-strong">{app.course.title}</div>
                 </td>
                 <td>
-                  <div className="status-line"><b>Primary:</b> {app.primaryStatus}</div>
-                  <div className="status-line"><b>Secondary:</b> {app.secondaryStatus}</div>
+                  {/* primaryStatus/secondaryStatus became stage (an enum the
+                      Report screen can group by) + stageNote (the human detail). */}
+                  <div className="status-line">
+                    <b>Stage:</b> {applicationStageLabel(app.stage)}
+                  </div>
+                  {app.stageNote && <div className="status-line">{app.stageNote}</div>}
                 </td>
                 <td>
                   <div className="action-row">

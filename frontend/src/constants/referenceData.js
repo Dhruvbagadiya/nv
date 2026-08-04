@@ -42,3 +42,33 @@ export const DEGREE_LEVELS = [
 
 export const COUNTRY_OPTIONS = COUNTRIES.map((c) => ({ value: c.code, label: c.name }));
 export const DEGREE_LEVEL_OPTIONS = DEGREE_LEVELS.map((d) => ({ value: d, label: d }));
+
+// Application.stage replaced the free-text primaryStatus. Declared in the order
+// the Report screen shows its 8 tiles, so that screen can iterate this directly
+// instead of restating the sequence.
+export const APPLICATION_STAGES = [
+  { value: 'PROFILE_ASSESSMENT', label: 'Profile Assessment' },
+  { value: 'APPLICATION', label: 'Applications' },
+  { value: 'CONDITIONAL_OFFER', label: 'Conditional Offers' },
+  { value: 'UNCONDITIONAL_OFFER', label: 'Unconditional Offers' },
+  { value: 'FEES_PAYMENT', label: 'Fees Payment' },
+  { value: 'CAS_LETTER', label: 'CAS Letters' },
+  { value: 'VISA_APPLICATION', label: 'Visa Application' },
+  { value: 'VISA_APPROVAL', label: 'Visa Approval' },
+];
+
+export const COURSE_INQUIRY_STAGES = [
+  { value: 'INQUIRY', label: 'Course Inquiry' },
+  { value: 'PENDING', label: 'Pending Course' },
+  { value: 'OFFERED', label: 'Offered Course' },
+  { value: 'APPLIED', label: 'Applied Course' },
+];
+
+const labelLookup = (list) => Object.fromEntries(list.map((s) => [s.value, s.label]));
+const APPLICATION_STAGE_LABELS = labelLookup(APPLICATION_STAGES);
+const COURSE_INQUIRY_STAGE_LABELS = labelLookup(COURSE_INQUIRY_STAGES);
+
+// Falls back to the raw enum value rather than rendering blank, so a stage added
+// to the backend before the frontend still shows something intelligible.
+export const applicationStageLabel = (stage) => APPLICATION_STAGE_LABELS[stage] ?? stage ?? '—';
+export const courseInquiryStageLabel = (stage) => COURSE_INQUIRY_STAGE_LABELS[stage] ?? stage ?? '—';

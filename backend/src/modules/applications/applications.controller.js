@@ -1,38 +1,37 @@
 import * as applicationsService from './applications.service.js';
 
-export async function createApplicationHandler(req, res, next) {
-  try {
-    const { studentName, passportNo, courseId } = req.body;
-    const application = await applicationsService.createApplication({
-      agentId: req.user.sub,
-      studentName,
-      passportNo,
-      courseId,
-    });
-    res.status(201).json(application);
-  } catch (err) {
-    next(err);
-  }
+// Agents only ever see their own applications; admins see all. Derived from the
+// verified token here rather than trusting a query parameter.
+const scopeFor = (user) => (user.role === 'AGENT' ? user.sub : undefined);
+
+export async function createApplicationHandler(req, res) {
+  const application = await applicationsService.createApplication({
+    agentId: req.user.sub,
+    ...req.body,
+  });
+  res.status(201).json(application);
 }
 
-export async function listApplicationsHandler(req, res, next) {
-  try {
-    const { country, institutionId, status, passportNo, studentName, page } = req.query;
-    // Agents only ever see their own applications; admins see all —
-    // enforce that here rather than trusting a query param.
-    const scopeToAgent = req.user.role === 'AGENT' ? req.user.sub : undefined;
+export async function listApplicationsHandler(req, res) {
+  res.json(
+    await applicationsService.listApplications({
+      ...req.query,
+      agentId: scopeFor(req.user),
+    })
+  );
+}
 
-    const result = await applicationsService.listApplications({
-      agentId: scopeToAgent,
-      country,
-      institutionId,
-      status,
-      passportNo,
-      studentName,
-      page: page ? Number(page) : 1,
-    });
-    res.json(result);
-  } catch (err) {
-    next(err);
-  }
+export async function getApplicationHandler(req, res) {
+  res.json(
+    await applicationsService.getApplication({
+      id: req.params.id,
+      agentId: scopeFor(req.user),
+    })
+  );
+}
+
+// Admin-only — see the route. An agent advancing their own application to
+// VISA_APPROVAL would make the Report screen fiction.
+export async function updateStageHandler(req, res) {
+  res.json(await applicationsService.updateApplicationStage({ id: req.params.id, ...req.body }));
 }

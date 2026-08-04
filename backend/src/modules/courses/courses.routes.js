@@ -1,23 +1,53 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.js';
 import { requireRole } from '../../middleware/rbac.js';
+import { validate } from '../../middleware/validate.js';
+import { asyncHandler } from '../../utils/asyncHandler.js';
+import {
+  listCoursesQuery,
+  createCourseBody,
+  updateCourseBody,
+  bulkImportBody,
+  idParam,
+} from './courses.schemas.js';
 import {
   listCoursesHandler,
   createCourseHandler,
   updateCourseHandler,
-  deleteCourseHandler,
+  archiveCourseHandler,
+  restoreCourseHandler,
   bulkImportHandler,
 } from './courses.controller.js';
 
 const router = Router();
+const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
 
-// GET /api/courses?country=CA&search=data&tag=Prime&page=1
-router.get('/', requireAuth, listCoursesHandler);
+// GET /api/courses?country=CA&search=data&tag=Prime&degreeLevel=&institutionId=&page=1
+router.get('/', requireAuth, validate(listCoursesQuery, 'query'), asyncHandler(listCoursesHandler));
 
-// Admin-only writes
-router.post('/', requireAuth, requireRole('ADMIN', 'SUPER_ADMIN'), createCourseHandler);
-router.put('/:id', requireAuth, requireRole('ADMIN', 'SUPER_ADMIN'), updateCourseHandler);
-router.delete('/:id', requireAuth, requireRole('ADMIN', 'SUPER_ADMIN'), deleteCourseHandler);
-router.post('/bulk-import', requireAuth, requireRole('ADMIN', 'SUPER_ADMIN'), bulkImportHandler);
+// Admin-only writes.
+// bulk-import must be declared before /:id, or "bulk-import" is parsed as an id
+// and rejected by the uuid check.
+router.post('/bulk-import', ...admin, validate(bulkImportBody), asyncHandler(bulkImportHandler));
+
+router.post('/', ...admin, validate(createCourseBody), asyncHandler(createCourseHandler));
+
+router.put(
+  '/:id',
+  ...admin,
+  validate(idParam, 'params'),
+  validate(updateCourseBody),
+  asyncHandler(updateCourseHandler)
+);
+
+// Archives rather than hard-deletes; applications keep resolving their course.
+router.delete('/:id', ...admin, validate(idParam, 'params'), asyncHandler(archiveCourseHandler));
+
+router.post(
+  '/:id/restore',
+  ...admin,
+  validate(idParam, 'params'),
+  asyncHandler(restoreCourseHandler)
+);
 
 export default router;

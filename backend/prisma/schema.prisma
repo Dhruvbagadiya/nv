@@ -11,6 +11,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================================================
+// Indexing note
+//
+// The first migration created 6 foreign keys and 0 indexes. Postgres, unlike
+// MySQL, does NOT index a foreign key column automatically, so every
+// `where: { agentId }`, every `institution: { country: { code } }` join and
+// every `orderBy: { createdAt: 'desc' }` was a sequential scan. Each @@index
+// below backs a query the app actually issues.
+// ============================================================================
+
 enum Role {
   SUPER_ADMIN
   ADMIN
@@ -23,18 +33,25 @@ model User {
   email        String   @unique
   passwordHash String
   role         Role     @default(AGENT)
-  parentAgentId String?
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Sub-agents: the header in the reference screenshots has an "invite
+  // sub-agent" action. This was a bare `parentAgentId String?` with no relation,
+  // so nothing stopped it pointing at a non-existent user.
+  parentAgentId String?
+  parentAgent   User?   @relation("AgencyHierarchy", fields: [parentAgentId], references: [id], onDelete: SetNull)
+  subAgents     User[]  @relation("AgencyHierarchy")
 
   applications    Application[]
   courseInquiries CourseInquiry[]
   refreshTokens   RefreshToken[]
+  notifications   Notification[]
+
+  @@index([parentAgentId])
+  @@index([role])
 }
 
-// Refresh tokens are stored (hashed) rather than being stateless, because a
-// stateless refresh token cannot be revoked — "log out" would be a client-side
-// lie while the token stayed valid for its full 7 days. Rows are also what let
-// us detect replay of an already-rotated token.
 enum RefreshRevokeReason {
   ROTATED // superseded by a newer token during a normal refresh
   LOGOUT // the user deliberately ended this session
@@ -42,11 +59,11 @@ enum RefreshRevokeReason {
 }
 
 model RefreshToken {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
   // SHA-256 of the token, never the token itself: a leaked database dump then
   // does not hand over live sessions.
-  tokenHash String   @unique
+  tokenHash String    @unique
   expiresAt DateTime
   revokedAt DateTime?
   // Why it was revoked matters. Only a ROTATED token being presented again
@@ -55,7 +72,7 @@ model RefreshToken {
   // A LOGOUT token being presented again is mundane (a stale tab retrying) and
   // must NOT take down the user's other devices.
   revokedReason RefreshRevokeReason?
-  createdAt DateTime @default(now())
+  createdAt     DateTime             @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -63,41 +80,273 @@ model RefreshToken {
   @@index([expiresAt])
 }
 
+// ============================================================================
+// Reference data
+// ============================================================================
+
 model Country {
   id   String @id @default(uuid())
   name String
   code String @unique // "UK", "CA", "AU" — matches the country-strip chips
 
-  institutions Institution[]
+  // The header strip rendered 15 hardcoded text chips while the database held 4
+  // rows and no flags, so 11 of them silently returned nothing.
+  flagEmoji String?
+  // Fees were printed as "$X CAD" for every course regardless of destination;
+  // the reference screenshots show GBP for UK institutions. Currency belongs to
+  // the country rather than the course — tuition for two courses in the same
+  // country is not quoted in different currencies.
+  currencyCode String @default("USD")
+  sortOrder    Int    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  institutions    Institution[]
+  courseInquiries CourseInquiry[]
+  importantUpdates ImportantUpdate[]
+  documents       Document[]
+
+  @@index([sortOrder])
 }
 
 model Institution {
-  id            String   @id @default(uuid())
+  id            String  @id @default(uuid())
   name          String
   countryId     String
-  isBlacklisted Boolean  @default(false)
+  isBlacklisted Boolean @default(false)
   logoUrl       String?
+  // Drives the "Trending Universities" carousel on the Report screen.
+  isTrending Boolean   @default(false)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  country Country @relation(fields: [countryId], references: [id])
-  courses Course[]
-  moiAcceptances MoiAcceptance[]
+  country          Country               @relation(fields: [countryId], references: [id])
+  courses          Course[]
+  moiAcceptances   MoiAcceptance[]
+  commission       UniversityCommission?
+  entryRequirements EntryRequirement[]
+  importantUpdates ImportantUpdate[]
+  documents        Document[]
+
+  @@index([countryId])
+  @@index([isBlacklisted])
+  @@index([isTrending])
+  @@index([archivedAt])
 }
 
 model Course {
-  id             String   @id @default(uuid())
+  id             String  @id @default(uuid())
   institutionId  String
   title          String
-  degreeLevel    String   // "Master's Degree", "Bachelor's Degree", ...
+  degreeLevel    String // "Master's Degree", "Bachelor's Degree", ...
   city           String
   tuitionFee     Decimal
   applicationFee Decimal
-  durationText   String   // "12 - 24 months"
+  durationText   String // "12 - 24 months"
   tags           String[] // ["High Job Demand", "Prime", ...]
-  status         String[] // ["Instant Offer", "Instant Submission"]
-  intakes        String[] // ["Jan 2027", "May 2027", ...]
+  // Renamed from `status`. It holds display pills ("Instant Offer", "Instant
+  // Submission") and sat next to Application.primaryStatus, where it read like a
+  // lifecycle field. It is decoration, so it is now named as such.
+  badges  String[]
+  intakes String[] // ["Jan 2027", "May 2027", ...]
+
+  // Soft delete. A hard `prisma.course.delete` on a course with applications hit
+  // the FK constraint and surfaced as a 500. It is also wrong on the merits:
+  // applications must keep pointing at the course they were submitted against,
+  // so withdrawing a course from the catalogue cannot mean erasing it.
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   institution  Institution   @relation(fields: [institutionId], references: [id])
   applications Application[]
+
+  @@index([institutionId])
+  @@index([degreeLevel])
+  @@index([archivedAt])
+  @@index([createdAt])
+}
+
+model MoiAcceptance {
+  id            String  @id @default(uuid())
+  institutionId String
+  courseType    String
+  years         Int
+  documentUrl   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([courseType])
+}
+
+// Commission tiers per institution — images 1 and 2. Tiers are Json because the
+// reference data is genuinely irregular: some institutions quote one flat rate
+// ("7%"), others band by volume ("1-5 students: 15%, 6+: 17%"), others by
+// programme ("IFY/IY1: 12%"). Modelling that as columns would mean a column per
+// shape; as rows it would need a tier table whose only consumer renders it as a
+// list anyway.
+model UniversityCommission {
+  id            String  @id @default(uuid())
+  institutionId String  @unique
+  tiers         Json // [{ label: "1-5 Students", rate: "15%" }, ...]
+  notes         String?
+  archivedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+}
+
+enum StudyLevel {
+  UG
+  PG
+}
+
+// Images 3 and 4 — the UG and PG Entry Requirements tables. One row per
+// institution per level; the two screens are the same component with a
+// different `level`.
+model EntryRequirement {
+  id                   String     @id @default(uuid())
+  institutionId        String
+  level                StudyLevel
+  englishRequirement   String
+  academicRequirement  String
+  offerTimeline        String // "48 to 72 hours", "1 Week"
+  credibilityInterview Boolean    @default(false)
+  financialInformation String
+  archivedAt           DateTime?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, level])
+  @@index([level])
+  @@index([credibilityInterview])
+}
+
+// Images 5 and 6 — Important Updates, filtered by publish date, country and
+// institution. attachmentUrl drives the download icon, which the screenshots
+// show on some rows and not others.
+model ImportantUpdate {
+  id            String    @id @default(uuid())
+  title         String
+  body          String
+  publishDate   DateTime
+  countryId     String?
+  institutionId String?
+  attachmentUrl String?
+  archivedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  country     Country?     @relation(fields: [countryId], references: [id], onDelete: SetNull)
+  institution Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+
+  @@index([publishDate])
+  @@index([countryId])
+  @@index([institutionId])
+}
+
+enum DocumentCategory {
+  VISA_DOCUMENT
+  REFUND_FORM
+  INSTITUTE_BROCHURE
+  SOP
+  LOR
+}
+
+// Images 7 to 18 — all five Document Bank screens are this one table filtered by
+// category. `fileUrl` is deliberately an opaque string rather than a storage key
+// or a path, so switching between local disk and S3/R2 presigned URLs later is a
+// service-layer change and not a migration.
+model Document {
+  id            String           @id @default(uuid())
+  category      DocumentCategory
+  title         String
+  fileUrl       String
+  countryId     String?
+  institutionId String?
+  sortOrder     Int              @default(0)
+  archivedAt    DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  country     Country?     @relation(fields: [countryId], references: [id], onDelete: SetNull)
+  institution Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+
+  // Composite: every Document Bank screen queries by category first, then
+  // narrows by country and institution.
+  @@index([category, countryId, institutionId])
+  @@index([category, sortOrder])
+}
+
+// Image 21 — the Help & Support contact cards.
+model SupportContact {
+  id         String    @id @default(uuid())
+  name       String
+  phone      String
+  avatarUrl  String?
+  sortOrder  Int       @default(0)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([sortOrder])
+}
+
+// The two banners pinned above every screen in the reference portal: a red
+// blacklist warning with a "Click for list" action, and a blue declaration-form
+// notice with a download. Modelled rather than hardcoded so ops can change the
+// wording without a deploy.
+enum AnnouncementVariant {
+  DANGER
+  INFO
+  WARNING
+}
+
+model Announcement {
+  id        String              @id @default(uuid())
+  variant   AnnouncementVariant
+  message   String
+  ctaLabel  String?
+  ctaUrl    String?
+  isActive  Boolean             @default(true)
+  sortOrder Int                 @default(0)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+// The "Useful Informations" panel on the Report screen (empty in image 19, so
+// the empty state is a designed state).
+model UsefulInformation {
+  id        String    @id @default(uuid())
+  title     String
+  body      String
+  linkUrl   String?
+  sortOrder Int       @default(0)
+  archivedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([sortOrder])
+}
+
+// ============================================================================
+// Agent workflow
+// ============================================================================
+
+enum CourseInquiryStage {
+  INQUIRY
+  PENDING
+  OFFERED
+  APPLIED
 }
 
 model CourseInquiry {
@@ -107,32 +356,96 @@ model CourseInquiry {
   countryId   String?
   intake      String?
   courseType  String?
-  status      String   @default("open")
-  createdAt   DateTime @default(now())
+  // Was a free-text `status` defaulting to "open". The Report screen counts
+  // inquiries by stage (Course Inquiry / Pending / Offered / Applied), which a
+  // free-text column cannot answer without guessing at spellings.
+  stage     CourseInquiryStage @default(INQUIRY)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 
-  agent User @relation(fields: [agentId], references: [id])
+  agent User @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  // countryId existed with no relation, so it had no referential integrity and
+  // the history table could not display a country name.
+  country Country? @relation(fields: [countryId], references: [id], onDelete: SetNull)
+
+  @@index([agentId, createdAt])
+  @@index([countryId])
+  @@index([stage])
+}
+
+// The 8 stat tiles across the top of the Report screen, in order. Making this an
+// enum is what turns that screen into a single groupBy instead of eight
+// hand-counted queries.
+enum ApplicationStage {
+  PROFILE_ASSESSMENT
+  APPLICATION
+  CONDITIONAL_OFFER
+  UNCONDITIONAL_OFFER
+  FEES_PAYMENT
+  CAS_LETTER
+  VISA_APPLICATION
+  VISA_APPROVAL
 }
 
 model Application {
-  id              String   @id @default(uuid())
-  agentId         String
-  studentName     String
-  passportNo      String
-  courseId        String
-  primaryStatus   String   // "Application Request"
-  secondaryStatus String   // "Profile Under Review"
-  createdAt       DateTime @default(now())
+  id          String @id @default(uuid())
+  // The "POEC ID: 4367" the reference portal shows on every application. A
+  // sequential integer because agents read these out on the phone; a uuid is not
+  // something anyone dictates.
+  reference   Int    @unique @default(autoincrement())
+  agentId     String
+  studentName String
+  passportNo  String
+  courseId    String
+  intakeLabel String? // "March 2027", as displayed alongside the reference
 
-  agent  User   @relation(fields: [agentId], references: [id])
-  course Course @relation(fields: [courseId], references: [id])
+  // Replaces primaryStatus/secondaryStatus. `stage` is the queryable state that
+  // drives the Report tiles; `stageNote` keeps the human detail the UI shows on
+  // a second line ("Profile Under Review"), which no code needs to interpret.
+  stage      ApplicationStage @default(PROFILE_ASSESSMENT)
+  stageNote  String?
+  deadlineAt DateTime? // "Upcoming Application Deadlines" panel
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  agent         User           @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  course        Course         @relation(fields: [courseId], references: [id])
+  notifications Notification[]
+
+  @@index([agentId, createdAt])
+  @@index([courseId])
+  @@index([stage])
+  @@index([deadlineAt])
+  @@index([passportNo])
 }
 
-model MoiAcceptance {
-  id            String  @id @default(uuid())
-  institutionId String
-  courseType    String
-  years         Int
-  documentUrl   String?
+// Replaces the derived stub in notifications.service.js, which synthesised a
+// single item from a blacklist count. The reference portal shows a bell badge, a
+// messages badge, and a "Recent Application Notifications" feed with per-item
+// read state — none of which a computed count can express.
+enum NotificationKind {
+  NEW_APPLICATION
+  INFO_QUERY
+  DOCUMENT_QUERY
+  STAGE_CHANGE
+  SYSTEM
+}
 
-  institution Institution @relation(fields: [institutionId], references: [id])
+model Notification {
+  id            String           @id @default(uuid())
+  userId        String
+  applicationId String?
+  kind          NotificationKind
+  title         String
+  body          String
+  readAt        DateTime?
+  createdAt     DateTime         @default(now())
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  // Backs both the unread badge count and the feed ordering.
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@index([applicationId])
 }
