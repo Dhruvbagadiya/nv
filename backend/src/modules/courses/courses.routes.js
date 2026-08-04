@@ -12,6 +12,7 @@ import {
 } from './courses.schemas.js';
 import {
   listCoursesHandler,
+  getCourseHandler,
   createCourseHandler,
   updateCourseHandler,
   archiveCourseHandler,
@@ -24,6 +25,11 @@ const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
 
 // GET /api/courses?country=CA&search=data&tag=Prime&degreeLevel=&institutionId=&page=1
 router.get('/', requireAuth, validate(listCoursesQuery, 'query'), asyncHandler(listCoursesHandler));
+
+// Course detail, used by the New Application screen. Declared after the list
+// route and before the admin writes; "bulk-import" is a POST so it cannot be
+// swallowed by this GET.
+router.get('/:id', requireAuth, validate(idParam, 'params'), asyncHandler(getCourseHandler));
 
 // Admin-only writes.
 // bulk-import must be declared before /:id, or "bulk-import" is parsed as an id

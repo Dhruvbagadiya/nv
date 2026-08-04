@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { formatFee, isFree } from '../../utils/format.js';
 
 // Props shape matches the Prisma Course model (see backend/prisma/schema.prisma)
@@ -68,8 +69,14 @@ export default function CourseCard({ course }) {
         </div>
 
         <div className="card-actions">
-          <button className="btn btn-primary">Create application</button>
-          <button className="heart-btn" aria-label="Save">♡</button>
+          {/* Had no onClick, so the intended entry point into the application flow
+              was inert — and the flow itself had no other working path. */}
+          <Link className="btn btn-primary" to={`/add-application?courseId=${course.id}`}>
+            Create application
+          </Link>
+          {/* The save/favourite button has no backend behind it. Rather than leave
+              a control that silently does nothing, it is gone until there is a
+              shortlist model to back it. */}
         </div>
       </div>
     </div>

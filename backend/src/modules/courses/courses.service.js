@@ -2,6 +2,7 @@ import { prisma } from '../../utils/prisma.js';
 // Page size defaults live in courses.schemas.js (12, to fill the card grid) —
 // the service takes whatever the validated query supplies.
 import { paginateQuery } from '../../utils/pagination.js';
+import { NotFoundError } from '../../utils/httpErrors.js';
 
 const COURSE_INCLUDE = { institution: { include: { country: true } } };
 
@@ -50,6 +51,19 @@ export async function searchCourses({
     },
     { page, pageSize }
   );
+}
+
+// Needed by the New Application screen, which resolves the course chosen from a
+// card or a ?courseId= link so it can show what was picked and offer its intakes.
+// Archived courses are excluded: you cannot apply to something withdrawn from the
+// catalogue.
+export async function getCourse(id) {
+  const course = await prisma.course.findFirst({
+    where: { id, archivedAt: null },
+    include: COURSE_INCLUDE,
+  });
+  if (!course) throw new NotFoundError('Course not found or no longer available');
+  return course;
 }
 
 export async function createCourse(data) {

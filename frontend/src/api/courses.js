@@ -1,14 +1,23 @@
 import { api } from './client.js';
 
 // Mirrors GET /api/courses?country=&search=&tag=&page= from the backend.
-export async function fetchCourses({ country, search, tag, page = 1 }) {
+export async function fetchCourses({ country, search, tag, institutionId, degreeLevel, page = 1 }) {
   const params = { page };
+  // Omitted rather than sent empty: the API's zod schemas reject a non-uuid
+  // institutionId, and "" is not a uuid.
   if (country && country !== 'ALL') params.country = country;
   if (search) params.search = search;
   if (tag) params.tag = tag;
+  if (institutionId) params.institutionId = institutionId;
+  if (degreeLevel) params.degreeLevel = degreeLevel;
 
   const { data } = await api.get('/courses', { params });
   return data; // { items, meta: { total, page, pageSize, totalPages } }
+}
+
+export async function fetchCourse(id) {
+  const { data } = await api.get(`/courses/${id}`);
+  return data;
 }
 
 export async function createCourse(payload) {

@@ -1,41 +1,100 @@
-import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { fetchInquiries } from '../../api/courseInquiries.js';
 import Page from '../../components/ui/Page.jsx';
-import { courseInquiryStageLabel } from '../../constants/referenceData.js';
+import FilterBar from '../../components/ui/FilterBar.jsx';
+import DataTable from '../../components/ui/DataTable.jsx';
+import { useUrlFilters } from '../../hooks/useUrlFilters.js';
+import { useCountries } from '../../hooks/useReferenceData.js';
+import { COURSE_INQUIRY_STAGES, courseInquiryStageLabel } from '../../constants/referenceData.js';
+import { formatDate } from '../../utils/format.js';
+
+// This screen had no filters at all despite the API accepting countryId and intake,
+// and no pagination despite the service returning totalPages. The Report screen's
+// inquiry tiles now link in here with ?stage=…
+const FILTER_DEFAULTS = { countryId: '', intake: '', stage: '', page: 1 };
+
+const INTAKES = ['Jan 2027', 'May 2027', 'Sep 2027'];
 
 export default function CourseInquiryHistory() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['course-inquiries'],
-    queryFn: () => fetchInquiries({}),
+  const navigate = useNavigate();
+  const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
+  const { countries } = useCountries();
+
+  const fields = [
+    {
+      name: 'countryId',
+      label: 'Country',
+      type: 'select',
+      placeholder: 'Select country',
+      // countryId, not code: CourseInquiry has a direct relation to Country.
+      options: countries.map((c) => ({ value: c.id, label: c.name })),
+    },
+    {
+      name: 'intake',
+      label: 'Intake',
+      type: 'select',
+      placeholder: 'Any intake',
+      options: INTAKES.map((i) => ({ value: i, label: i })),
+    },
+    {
+      name: 'stage',
+      label: 'Stage',
+      type: 'select',
+      placeholder: 'Any stage',
+      options: COURSE_INQUIRY_STAGES,
+    },
+  ];
+
+  const { data, isLoading, isError, error, isFetching } = useQuery({
+    queryKey: ['course-inquiries', applied],
+    queryFn: () => fetchInquiries(applied),
+    placeholderData: keepPreviousData,
   });
 
-  return (
-    <Page title="Course inquiry history" subtitle="Track all your course inquiries">
+  const columns = [
+    { key: 'nationality', header: 'Nationality', className: 'cell-strong' },
+    {
+      key: 'country',
+      header: 'Destination',
+      // The country name, which this screen could not show at all before —
+      // CourseInquiry.countryId had no relation, so there was nothing to join.
+      render: (i) => (i.country ? `${i.country.flagEmoji ?? ''} ${i.country.name}` : '—'),
+    },
+    { key: 'intake', header: 'Intake', render: (i) => i.intake || '—' },
+    { key: 'courseType', header: 'Course type', render: (i) => i.courseType || '—' },
+    { key: 'stage', header: 'Stage', render: (i) => courseInquiryStageLabel(i.stage) },
+    { key: 'createdAt', header: 'Raised', render: (i) => formatDate(i.createdAt) },
+  ];
 
-      <div className="table-card">
-        <table>
-          <thead>
-            <tr>
-              <th>Nationality</th>
-              <th>Intake</th>
-              <th>Course type</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && <tr><td colSpan={4}>Loading...</td></tr>}
-            {data?.items.length === 0 && <tr><td colSpan={4}>No data available</td></tr>}
-            {data?.items.map((inq) => (
-              <tr key={inq.id}>
-                <td>{inq.nationality}</td>
-                <td>{inq.intake || '—'}</td>
-                <td>{inq.courseType || '—'}</td>
-                <td>{courseInquiryStageLabel(inq.stage)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+  return (
+    <Page
+      title="Course inquiry history"
+      subtitle="Track all your course inquiries"
+      actions={
+        <button className="btn btn-primary" onClick={() => navigate('/ask-team')}>
+          New inquiry
+        </button>
+      }
+    >
+      <FilterBar
+        fields={fields}
+        values={draft}
+        onChange={setField}
+        onApply={apply}
+        onClear={clear}
+        busy={isFetching}
+      />
+      <DataTable
+        columns={columns}
+        rows={data?.items}
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        emptyMessage="No course inquiries match these filters."
+        meta={data?.meta}
+        onPageChange={setPage}
+      />
     </Page>
   );
 }

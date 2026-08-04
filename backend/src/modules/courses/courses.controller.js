@@ -10,6 +10,10 @@ export async function listCoursesHandler(req, res) {
   res.json(await coursesService.searchCourses(req.query));
 }
 
+export async function getCourseHandler(req, res) {
+  res.json(await coursesService.getCourse(req.params.id));
+}
+
 export async function createCourseHandler(req, res) {
   res.status(201).json(await coursesService.createCourse(req.body));
 }

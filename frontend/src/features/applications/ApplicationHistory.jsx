@@ -1,111 +1,155 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { fetchApplications } from '../../api/applications.js';
 import Page from '../../components/ui/Page.jsx';
-import { applicationStageLabel } from '../../constants/referenceData.js';
+import FilterBar from '../../components/ui/FilterBar.jsx';
+import DataTable from '../../components/ui/DataTable.jsx';
+import { useUrlFilters } from '../../hooks/useUrlFilters.js';
+import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
+import { APPLICATION_STAGES, applicationStageLabel } from '../../constants/referenceData.js';
+import { formatDate } from '../../utils/format.js';
+
+// What changed here:
+//  - the Country filter was an empty <select> with one static <option>
+//  - the API accepted institutionId and stage filters that the UI never offered
+//  - `page` was tracked in state and no pagination control was ever rendered, so
+//    page 2 was unreachable (F-11)
+//  - a failed request rendered as "No applications found", which is a lie
+//  - filters were component-local, so a filtered view could not be linked. The
+//    Report screen's tiles now link straight into this screen with ?stage=…
+const FILTER_DEFAULTS = {
+  country: '',
+  institutionId: '',
+  stage: '',
+  passportNo: '',
+  studentName: '',
+  page: 1,
+};
 
 export default function ApplicationHistory() {
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({ country: '', passportNo: '', studentName: '', page: 1 });
+  const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
+  const { options: countryOptions } = useCountries();
+  const { options: institutionOptions } = useInstitutions(
+    applied.country ? { country: applied.country } : {}
+  );
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['applications', filters],
-    queryFn: () => fetchApplications(filters),
+  const fields = [
+    {
+      name: 'country',
+      label: 'Country',
+      type: 'select',
+      placeholder: 'Select country',
+      options: countryOptions,
+    },
+    {
+      name: 'institutionId',
+      label: 'Institution',
+      type: 'select',
+      placeholder: 'All institutions',
+      options: institutionOptions,
+    },
+    {
+      name: 'stage',
+      label: 'Stage',
+      type: 'select',
+      placeholder: 'Any stage',
+      options: APPLICATION_STAGES,
+    },
+    { name: 'passportNo', label: 'Passport no.', type: 'text', placeholder: 'Enter passport number' },
+    {
+      name: 'studentName',
+      label: 'Student name',
+      type: 'text',
+      placeholder: 'First name, last name, or both',
+    },
+  ];
+
+  const { data, isLoading, isError, error, isFetching } = useQuery({
+    queryKey: ['applications', applied],
+    queryFn: () => fetchApplications(applied),
     placeholderData: keepPreviousData,
   });
 
-  const updateFilter = (key, value) => setFilters((f) => ({ ...f, [key]: value, page: 1 }));
+  const columns = [
+    {
+      key: 'reference',
+      header: 'POEC ID',
+      className: 'cell-mono',
+      // The sequential reference agents read out, rather than the first 8
+      // characters of a uuid, which is what this column used to show.
+      render: (a) => a.reference,
+    },
+    {
+      key: 'student',
+      header: 'Student name & info',
+      render: (a) => (
+        <>
+          <div className="cell-strong">{a.studentName}</div>
+          <div className="picker-sub">Passport: {a.passportNo}</div>
+        </>
+      ),
+    },
+    {
+      key: 'course',
+      header: 'Institution / course',
+      render: (a) => (
+        <>
+          <div>
+            {a.course.institution.country.flagEmoji} {a.course.institution.name}
+          </div>
+          <div className="cell-strong">{a.course.title}</div>
+          {a.intakeLabel && <div className="picker-sub">{a.intakeLabel}</div>}
+        </>
+      ),
+    },
+    {
+      key: 'stage',
+      header: 'Status',
+      render: (a) => (
+        <>
+          <div className="status-line">
+            <b>{applicationStageLabel(a.stage)}</b>
+          </div>
+          {a.stageNote && <div className="picker-sub">{a.stageNote}</div>}
+        </>
+      ),
+    },
+    {
+      key: 'deadline',
+      header: 'Deadline',
+      render: (a) => (a.deadlineAt ? formatDate(a.deadlineAt) : '—'),
+    },
+  ];
 
   return (
     <Page
       title="Application history"
       subtitle="Track all your students’ applications with ease"
       actions={
-        // Was a button with no onClick — the page advertised an action it
-        // could not perform.
         <button className="btn btn-primary" onClick={() => navigate('/add-application')}>
           Add new application
         </button>
       }
     >
-
-      <div className="filter-card">
-        <div className="filter-grid">
-          <div className="filter-field">
-            <label>Country</label>
-            <select value={filters.country} onChange={(e) => updateFilter('country', e.target.value)}>
-              <option value="">Select country</option>
-            </select>
-          </div>
-          <div className="filter-field">
-            <label>Passport no.</label>
-            <input
-              type="text"
-              placeholder="Enter passport number"
-              value={filters.passportNo}
-              onChange={(e) => updateFilter('passportNo', e.target.value)}
-            />
-          </div>
-          <div className="filter-field">
-            <label>Student name</label>
-            <input
-              type="text"
-              placeholder="First name, last name, or both"
-              value={filters.studentName}
-              onChange={(e) => updateFilter('studentName', e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="table-card">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Student name &amp; info</th>
-              <th>Institution / course</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && (
-              <tr><td colSpan={5}>Loading...</td></tr>
-            )}
-            {data?.items.length === 0 && (
-              <tr><td colSpan={5}>No applications found</td></tr>
-            )}
-            {data?.items.map((app) => (
-              <tr key={app.id}>
-                <td className="cell-strong">{app.id.slice(0, 8)}</td>
-                <td>
-                  <div className="cell-strong">{app.studentName}</div>
-                  <div>Passport: {app.passportNo}</div>
-                </td>
-                <td>
-                  <div>{app.course.institution.name}</div>
-                  <div className="cell-strong">{app.course.title}</div>
-                </td>
-                <td>
-                  {/* primaryStatus/secondaryStatus became stage (an enum the
-                      Report screen can group by) + stageNote (the human detail). */}
-                  <div className="status-line">
-                    <b>Stage:</b> {applicationStageLabel(app.stage)}
-                  </div>
-                  {app.stageNote && <div className="status-line">{app.stageNote}</div>}
-                </td>
-                <td>
-                  <div className="action-row">
-                    <button className="action-icon-btn" title="View">View</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <FilterBar
+        fields={fields}
+        values={draft}
+        onChange={setField}
+        onApply={apply}
+        onClear={clear}
+        busy={isFetching}
+      />
+      <DataTable
+        columns={columns}
+        rows={data?.items}
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        emptyMessage="No applications match these filters."
+        meta={data?.meta}
+        onPageChange={setPage}
+      />
     </Page>
   );
 }
