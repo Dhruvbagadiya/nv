@@ -20,10 +20,10 @@ export default function DataTable({
   emptyMessage = 'No data found',
   errorMessage = 'Couldn’t load this list.',
   getRowKey = (row) => row.id,
-  page,
-  totalPages,
-  total,
-  pageSize,
+  // Pass the API's `meta` object straight through instead of spreading four
+  // pagination props at every call site. List responses are uniformly
+  // { items, meta: { total, page, pageSize, totalPages } }.
+  meta,
   onPageChange,
 }) {
   const colSpan = columns.length;
@@ -88,12 +88,12 @@ export default function DataTable({
         </table>
       </div>
 
-      {onPageChange && (
+      {onPageChange && meta && (
         <Pagination
-          page={page}
-          totalPages={totalPages}
-          total={total}
-          pageSize={pageSize}
+          page={meta.page}
+          totalPages={meta.totalPages}
+          total={meta.total}
+          pageSize={meta.pageSize}
           onChange={onPageChange}
         />
       )}

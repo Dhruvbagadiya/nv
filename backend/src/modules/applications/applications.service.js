@@ -1,5 +1,6 @@
 import { prisma } from '../../utils/prisma.js';
 import { NotFoundError } from '../../utils/httpErrors.js';
+import { paginateQuery } from '../../utils/pagination.js';
 
 const APPLICATION_INCLUDE = {
   course: { include: { institution: { include: { country: true } } } },
@@ -48,8 +49,8 @@ export async function listApplications({
   stage,
   passportNo,
   studentName,
-  page = 1,
-  pageSize = 20,
+  page,
+  pageSize,
 }) {
   const courseFilter = {
     ...(institutionId && { institutionId }),
@@ -68,18 +69,11 @@ export async function listApplications({
     ...(Object.keys(courseFilter).length > 0 && { course: courseFilter }),
   };
 
-  const [items, total] = await Promise.all([
-    prisma.application.findMany({
-      where,
-      include: APPLICATION_INCLUDE,
-      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.application.count({ where }),
-  ]);
-
-  return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+  return paginateQuery(
+    prisma.application,
+    { where, include: APPLICATION_INCLUDE, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }] },
+    { page, pageSize }
+  );
 }
 
 // Scoped by agentId for agents, so one partner cannot read another's students by

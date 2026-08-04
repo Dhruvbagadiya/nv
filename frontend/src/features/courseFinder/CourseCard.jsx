@@ -1,23 +1,7 @@
+import { formatFee, isFree } from '../../utils/format.js';
+
 // Props shape matches the Prisma Course model (see backend/prisma/schema.prisma)
 // joined with its institution — this is exactly the JSON shape courses.service.js returns.
-
-// Fees were printed as "$12000 CAD" for every course regardless of destination,
-// so every UK course quoted Canadian dollars. Currency comes from the country;
-// Intl handles both the symbol and the thousands separators.
-function formatFee(amount, currency) {
-  const value = Number(amount);
-  if (!Number.isFinite(value)) return '—';
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 0,
-    }).format(value);
-  } catch {
-    // An unrecognised ISO code should not blank out the card.
-    return `${value.toLocaleString()} ${currency}`;
-  }
-}
 
 export default function CourseCard({ course }) {
   const initials = course.institution.name.slice(0, 2).toUpperCase();
@@ -67,7 +51,7 @@ export default function CourseCard({ course }) {
           <div className="info-tile">
             <div className="i-label">Application fee</div>
             <div className="i-value mono">
-              {Number(course.applicationFee) === 0 ? 'None' : formatFee(course.applicationFee, currency)}
+              {isFree(course.applicationFee) ? 'None' : formatFee(course.applicationFee, currency)}
             </div>
           </div>
           <div className="info-tile">

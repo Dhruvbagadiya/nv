@@ -1,4 +1,7 @@
 import { prisma } from '../../utils/prisma.js';
+// Page size defaults live in courses.schemas.js (12, to fill the card grid) —
+// the service takes whatever the validated query supplies.
+import { paginateQuery } from '../../utils/pagination.js';
 
 const COURSE_INCLUDE = { institution: { include: { country: true } } };
 
@@ -12,8 +15,8 @@ export async function searchCourses({
   tag,
   degreeLevel,
   institutionId,
-  page = 1,
-  pageSize = 12,
+  page,
+  pageSize,
 }) {
   const where = {
     ...NOT_ARCHIVED,
@@ -35,21 +38,18 @@ export async function searchCourses({
       }),
   };
 
-  const [items, total] = await Promise.all([
-    prisma.course.findMany({
+  return paginateQuery(
+    prisma.course,
+    {
       where,
       include: COURSE_INCLUDE,
       // Was unordered, which in Postgres means no guaranteed order at all — the
       // same query could return the same course on page 1 and page 2, or skip one
       // entirely. Pagination is only coherent over a stable sort.
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.course.count({ where }),
-  ]);
-
-  return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+    },
+    { page, pageSize }
+  );
 }
 
 export async function createCourse(data) {

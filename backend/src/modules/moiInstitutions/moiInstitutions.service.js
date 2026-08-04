@@ -1,23 +1,36 @@
 import { prisma } from '../../utils/prisma.js';
+import { paginateQuery } from '../../utils/pagination.js';
 
-export async function listMoiAcceptances({ country, institutionId, courseType, page = 1, pageSize = 20 }) {
-  const where = {
-    ...(courseType && { courseType }),
-    institution: {
-      ...(institutionId && { id: institutionId }),
-      ...(country && { country: { code: country } }),
-    },
+export async function listMoiAcceptances({ country, institutionId, courseType, page, pageSize }) {
+  const institutionFilter = {
+    archivedAt: null,
+    ...(institutionId && { id: institutionId }),
+    ...(country && { country: { code: country } }),
   };
 
-  const [items, total] = await Promise.all([
-    prisma.moiAcceptance.findMany({
-      where,
+  return paginateQuery(
+    prisma.moiAcceptance,
+    {
+      where: {
+        ...(courseType && { courseType }),
+        institution: institutionFilter,
+      },
       include: { institution: { include: { country: true } } },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.moiAcceptance.count({ where }),
-  ]);
+      // Was unordered, so page 2 could repeat a row from page 1.
+      orderBy: [{ institution: { name: 'asc' } }, { courseType: 'asc' }, { id: 'asc' }],
+    },
+    { page, pageSize }
+  );
+}
 
-  return { items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
+// Distinct course types actually present, so the filter dropdown offers only
+// values that can return something. courseType is free text, so hardcoding a list
+// in the UI would drift from the data.
+export async function listCourseTypes() {
+  const rows = await prisma.moiAcceptance.findMany({
+    distinct: ['courseType'],
+    select: { courseType: true },
+    orderBy: { courseType: 'asc' },
+  });
+  return rows.map((r) => r.courseType);
 }

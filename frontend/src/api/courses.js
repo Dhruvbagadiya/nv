@@ -8,7 +8,7 @@ export async function fetchCourses({ country, search, tag, page = 1 }) {
   if (tag) params.tag = tag;
 
   const { data } = await api.get('/courses', { params });
-  return data; // { items, total, page, pageSize, totalPages }
+  return data; // { items, meta: { total, page, pageSize, totalPages } }
 }
 
 export async function createCourse(payload) {
@@ -21,6 +21,13 @@ export async function updateCourse(id, payload) {
   return data;
 }
 
-export async function deleteCourse(id) {
+// Archives rather than hard-deletes server-side; applications keep resolving
+// their course. Named for what the caller intends.
+export async function archiveCourse(id) {
   await api.delete(`/courses/${id}`);
+}
+
+export async function restoreCourse(id) {
+  const { data } = await api.post(`/courses/${id}/restore`);
+  return data;
 }

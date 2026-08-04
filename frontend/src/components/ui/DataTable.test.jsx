@@ -48,7 +48,7 @@ describe('DataTable', () => {
   });
 
   it('renders no pagination when onPageChange is omitted', () => {
-    render(<DataTable columns={COLUMNS} rows={ROWS} page={1} totalPages={5} />);
+    render(<DataTable columns={COLUMNS} rows={ROWS} meta={{ page: 1, totalPages: 5 }} />);
     expect(screen.queryByLabelText('Pagination')).toBeNull();
   });
 
@@ -58,10 +58,7 @@ describe('DataTable', () => {
       <DataTable
         columns={COLUMNS}
         rows={ROWS}
-        page={1}
-        totalPages={5}
-        total={100}
-        pageSize={20}
+        meta={{ page: 1, totalPages: 5, total: 100, pageSize: 20 }}
         onPageChange={onPageChange}
       />
     );

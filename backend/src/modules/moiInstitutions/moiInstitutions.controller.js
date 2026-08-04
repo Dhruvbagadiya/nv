@@ -1,16 +1,11 @@
 import * as moiService from './moiInstitutions.service.js';
 
-export async function listMoiHandler(req, res, next) {
-  try {
-    const { country, institutionId, courseType, page } = req.query;
-    const result = await moiService.listMoiAcceptances({
-      country,
-      institutionId,
-      courseType,
-      page: page ? Number(page) : 1,
-    });
-    res.json(result);
-  } catch (err) {
-    next(err);
-  }
+export async function listMoiHandler(req, res) {
+  res.json(await moiService.listMoiAcceptances(req.query));
+}
+
+// Feeds the "Course type" dropdown, which was an empty <select> because there was
+// nothing to populate it from.
+export async function listCourseTypesHandler(req, res) {
+  res.json({ items: await moiService.listCourseTypes() });
 }

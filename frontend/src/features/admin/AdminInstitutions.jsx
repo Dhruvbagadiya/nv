@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchInstitutions, createInstitution, setBlacklist } from '../../api/institutions.js';
 import Page from '../../components/ui/Page.jsx';
+import { useCountries } from '../../hooks/useReferenceData.js';
 
 export default function AdminInstitutions() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ name: '', countryId: '' });
+  const { countries, isLoading: countriesLoading } = useCountries();
 
   const { data: institutions = [], isLoading } = useQuery({
     queryKey: ['institutions'],
@@ -53,14 +55,23 @@ export default function AdminInstitutions() {
           </div>
           <div className="field">
             <div style={{ width: '100%' }}>
-              <div className="flabel">Country ID</div>
-              <input
-                type="text"
+              <div className="flabel">Country</div>
+              {/* Was a free-text box asking the operator to paste a UUID out of
+                  Prisma Studio, because no /api/countries endpoint existed to
+                  populate a picker. It does now. */}
+              <select
                 value={form.countryId}
                 onChange={(e) => setForm((f) => ({ ...f, countryId: e.target.value }))}
-                placeholder="Country UUID — see Prisma Studio until a country picker is built"
                 required
-              />
+                disabled={countriesLoading}
+              >
+                <option value="">{countriesLoading ? 'Loading countries…' : 'Select country'}</option>
+                {countries.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.flagEmoji ? `${c.flagEmoji} ${c.name}` : c.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="submit-row">

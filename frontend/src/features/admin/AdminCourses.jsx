@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchCourses, createCourse, deleteCourse } from '../../api/courses.js';
-import { fetchInstitutions } from '../../api/institutions.js';
+import { fetchCourses, createCourse, archiveCourse } from '../../api/courses.js';
 import Page from '../../components/ui/Page.jsx';
+import { useInstitutions } from '../../hooks/useReferenceData.js';
+import { formatFee } from '../../utils/format.js';
 
 const emptyForm = {
   institutionId: '',
@@ -22,10 +23,7 @@ export default function AdminCourses() {
     queryKey: ['courses', 'admin-list'],
     queryFn: () => fetchCourses({ page: 1 }),
   });
-  const { data: institutions = [] } = useQuery({
-    queryKey: ['institutions'],
-    queryFn: () => fetchInstitutions(),
-  });
+  const { institutions } = useInstitutions();
 
   const createMutation = useMutation({
     mutationFn: (payload) =>
@@ -43,8 +41,8 @@ export default function AdminCourses() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteCourse,
+  const archiveMutation = useMutation({
+    mutationFn: archiveCourse,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['courses'] }),
   });
 
@@ -155,14 +153,14 @@ export default function AdminCourses() {
               <tr key={c.id}>
                 <td className="cell-strong">{c.title}</td>
                 <td>{c.institution.name}</td>
-                <td>${c.tuitionFee} CAD</td>
+                <td>{formatFee(c.tuitionFee, c.institution.country?.currencyCode)}</td>
                 <td>
                   <button
                     className="btn btn-outline"
-                    onClick={() => deleteMutation.mutate(c.id)}
-                    disabled={deleteMutation.isPending}
+                    onClick={() => archiveMutation.mutate(c.id)}
+                    disabled={archiveMutation.isPending}
                   >
-                    Delete
+                    Archive
                   </button>
                 </td>
               </tr>

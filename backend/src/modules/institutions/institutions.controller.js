@@ -1,32 +1,26 @@
 import * as institutionsService from './institutions.service.js';
 
-export async function listInstitutionsHandler(req, res, next) {
-  try {
-    const { country, search } = req.query;
-    const items = await institutionsService.listInstitutions({ country, search });
-    res.json({ items });
-  } catch (err) {
-    next(err);
-  }
+export async function listInstitutionsHandler(req, res) {
+  res.json({ items: await institutionsService.listInstitutions(req.query) });
 }
 
-export async function createInstitutionHandler(req, res, next) {
-  try {
-    const { name, countryId, logoUrl } = req.body;
-    const institution = await institutionsService.createInstitution({ name, countryId, logoUrl });
-    res.status(201).json(institution);
-  } catch (err) {
-    next(err);
-  }
+export async function listTrendingHandler(req, res) {
+  res.json({ items: await institutionsService.listTrending() });
 }
 
-export async function setBlacklistHandler(req, res, next) {
-  try {
-    const { id } = req.params;
-    const { isBlacklisted } = req.body;
-    const institution = await institutionsService.setBlacklistStatus(id, isBlacklisted);
-    res.json(institution);
-  } catch (err) {
-    next(err);
-  }
+export async function createInstitutionHandler(req, res) {
+  res.status(201).json(await institutionsService.createInstitution(req.body));
+}
+
+export async function updateInstitutionHandler(req, res) {
+  res.json(await institutionsService.updateInstitution(req.params.id, req.body));
+}
+
+export async function setBlacklistHandler(req, res) {
+  res.json(await institutionsService.setBlacklistStatus(req.params.id, req.body.isBlacklisted));
+}
+
+export async function archiveInstitutionHandler(req, res) {
+  await institutionsService.archiveInstitution(req.params.id);
+  res.status(204).send();
 }

@@ -50,6 +50,10 @@
   }
   .country-chip .flag-svg { width: 18px; height: 18px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 1px var(--border); display: block; flex-shrink: 0; }
   .country-chip .flag-globe { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--accent-600); }
+  /* Flag emoji sit on a different baseline to the surrounding text and render at
+     inconsistent widths across platforms, so they get a fixed box and their own
+     line-height rather than being allowed to shift the chip's height. */
+  .country-chip .flag-emoji { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; flex-shrink: 0; }
   .country-chip:hover { background: var(--canvas); color: var(--ink-800); }
   .country-chip.active { background: var(--accent-50); color: var(--accent-700); border-color: var(--accent-100); }
 

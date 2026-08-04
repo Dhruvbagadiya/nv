@@ -11,6 +11,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { NotFoundError } from './utils/httpErrors.js';
 
 import authRoutes from './modules/auth/auth.routes.js';
+import countryRoutes from './modules/countries/countries.routes.js';
 import courseRoutes from './modules/courses/courses.routes.js';
 import institutionRoutes from './modules/institutions/institutions.routes.js';
 import applicationRoutes from './modules/applications/applications.routes.js';
@@ -69,6 +70,8 @@ app.get('/api/health', async (req, res) => {
 
 // Each module owns its routes + controller + service — this file only wires them.
 app.use('/api/auth', authLimiter, authRoutes);
+// The endpoint whose absence left every country dropdown in the app empty.
+app.use('/api/countries', countryRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/institutions', institutionRoutes);
 app.use('/api/applications', applicationRoutes);

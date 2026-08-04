@@ -82,13 +82,19 @@ export default function CourseFinder() {
 
       {data && (
         <>
-          <div className="result-count"><b>{data.total}</b> programs found</div>
+          <div className="result-count"><b>{data.meta.total}</b> programs found</div>
           <div className="grid">
             {data.items.map((course) => (
               <CourseCard key={course.id} course={course} />
             ))}
           </div>
-          <Pagination page={data.page} totalPages={data.totalPages} onChange={setPage} />
+          <Pagination
+            page={data.meta.page}
+            totalPages={data.meta.totalPages}
+            total={data.meta.total}
+            pageSize={data.meta.pageSize}
+            onChange={setPage}
+          />
         </>
       )}
     </Page>
