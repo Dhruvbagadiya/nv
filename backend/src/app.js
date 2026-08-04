@@ -18,6 +18,13 @@ import applicationRoutes from './modules/applications/applications.routes.js';
 import courseInquiryRoutes from './modules/courseInquiries/courseInquiries.routes.js';
 import moiRoutes from './modules/moiInstitutions/moiInstitutions.routes.js';
 import notificationRoutes from './modules/notifications/notifications.routes.js';
+import commissionRoutes from './modules/commissions/commissions.routes.js';
+import entryRequirementRoutes from './modules/entryRequirements/entryRequirements.routes.js';
+import importantUpdateRoutes from './modules/importantUpdates/importantUpdates.routes.js';
+import documentRoutes from './modules/documents/documents.routes.js';
+import announcementRoutes from './modules/announcements/announcements.routes.js';
+import supportRoutes from './modules/support/support.routes.js';
+import reportRoutes from './modules/reports/reports.routes.js';
 
 const app = express();
 
@@ -78,6 +85,17 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/course-inquiries', courseInquiryRoutes);
 app.use('/api/moi-institutions', moiRoutes);
 app.use('/api/notifications', notificationRoutes);
+
+// Reference data behind the screens from the design set: Universities Commission,
+// UG/PG Entry Requirements, Important Updates, the five Document Bank categories,
+// the global banners, Help & Support, and the Report dashboard.
+app.use('/api/commissions', commissionRoutes);
+app.use('/api/entry-requirements', entryRequirementRoutes);
+app.use('/api/important-updates', importantUpdateRoutes);
+app.use('/api/documents', documentRoutes);
+app.use('/api/announcements', announcementRoutes);
+app.use('/api/support-contacts', supportRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Unknown /api/* used to fall through to Express's default HTML 404, which a
 // JSON client cannot parse. Must stay above errorHandler.
