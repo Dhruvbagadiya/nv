@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CountryStrip from './CountryStrip.jsx';
 import NotificationDropdown from './NotificationDropdown.jsx';
+import SubAgentButton from './SubAgentButton.jsx';
 import { useAuth } from '../../store/useAuth.js';
 
 export default function Header() {
@@ -114,6 +115,9 @@ export default function Header() {
       </form>
 
       <div className="header-right">
+        {/* The person+ action from the reference header. Renders only for top-level
+            agents, since only they can have sub-agents. */}
+        <SubAgentButton />
         <NotificationDropdown />
         <div className="notif-wrap">
           <div

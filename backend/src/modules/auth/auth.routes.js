@@ -3,7 +3,12 @@ import { requireAuth } from '../../middleware/auth.js';
 import { requireRole } from '../../middleware/rbac.js';
 import { validate } from '../../middleware/validate.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
-import { loginSchema, registerSchema, createUserSchema } from './auth.schemas.js';
+import {
+  loginSchema,
+  registerSchema,
+  createUserSchema,
+  createSubAgentBody,
+} from './auth.schemas.js';
 import {
   loginHandler,
   registerHandler,
@@ -11,6 +16,8 @@ import {
   logoutHandler,
   meHandler,
   createUserHandler,
+  createSubAgentHandler,
+  listSubAgentsHandler,
 } from './auth.controller.js';
 
 const router = Router();
@@ -31,6 +38,17 @@ router.post('/logout', asyncHandler(logoutHandler));
 
 // ---- authenticated ----
 router.get('/me', requireAuth, asyncHandler(meHandler));
+
+// ---- sub-agents: an agency managing its own staff ----
+// Any authenticated agent may do this for themselves; the service refuses if the
+// caller is itself a sub-agent, keeping the hierarchy one level deep.
+router.get('/sub-agents', requireAuth, asyncHandler(listSubAgentsHandler));
+router.post(
+  '/sub-agents',
+  requireAuth,
+  validate(createSubAgentBody),
+  asyncHandler(createSubAgentHandler)
+);
 
 // ---- privileged: creating a user with an explicit role ----
 router.post(

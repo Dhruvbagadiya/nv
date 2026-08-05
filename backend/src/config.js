@@ -33,6 +33,23 @@ const schema = z.object({
 
   COOKIE_DOMAIN: z.string().optional(),
   JSON_BODY_LIMIT: z.string().default('1mb'),
+
+  // ---- Document storage (S3 / Cloudflare R2) ----
+  // All optional. Uploads stay disabled until every one of them is present, and
+  // `storage.enabled` below is what the upload endpoint checks. Half-configured
+  // storage is worse than none: it fails at the moment a user tries to upload
+  // rather than at boot.
+  S3_BUCKET: z.string().optional(),
+  S3_REGION: z.string().optional(),
+  // R2 needs an account-specific endpoint
+  // (https://<account>.r2.cloudflarestorage.com). Plain AWS S3 can leave it unset.
+  S3_ENDPOINT: z.string().url().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+  // Where uploaded files are served from, which is not the same host you upload
+  // to. For R2 this is the public bucket or custom domain.
+  S3_PUBLIC_BASE_URL: z.string().url().optional(),
+  S3_PRESIGN_TTL_SECONDS: z.coerce.number().int().positive().max(3600).default(300),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -71,5 +88,27 @@ export const config = {
     // script on the page can read it, which is the whole reason the refresh
     // token moved out of the JSON body.
     refreshName: 'nv_refresh',
+  },
+
+  storage: {
+    // A single flag the upload route checks, so "is this configured" lives here
+    // rather than being re-derived at every call site. Half-configured storage is
+    // worse than none — it fails when a user tries to upload, not at boot.
+    enabled: Boolean(
+      env.S3_BUCKET && env.S3_REGION && env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY
+    ),
+    bucket: env.S3_BUCKET,
+    region: env.S3_REGION,
+    endpoint: env.S3_ENDPOINT,
+    accessKeyId: env.S3_ACCESS_KEY_ID,
+    secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+    // Falls back to the standard AWS virtual-hosted URL when no public base is
+    // given — right for plain S3, wrong for R2, hence the setting.
+    publicBaseUrl:
+      env.S3_PUBLIC_BASE_URL ??
+      (env.S3_BUCKET && env.S3_REGION
+        ? `https://${env.S3_BUCKET}.s3.${env.S3_REGION}.amazonaws.com`
+        : undefined),
+    presignTtlSeconds: env.S3_PRESIGN_TTL_SECONDS,
   },
 };

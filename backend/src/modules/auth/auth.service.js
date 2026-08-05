@@ -3,9 +3,18 @@ import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
 import { prisma } from '../../utils/prisma.js';
 import { config } from '../../config.js';
-import { ConflictError, UnauthorizedError } from '../../utils/httpErrors.js';
+import { ConflictError, ForbiddenError, UnauthorizedError } from '../../utils/httpErrors.js';
 
-const PUBLIC_USER_FIELDS = { id: true, name: true, email: true, role: true, createdAt: true };
+// parentAgentId is included because the frontend needs it to decide whether to
+// offer sub-agent management — only a top-level agent can have sub-agents.
+const PUBLIC_USER_FIELDS = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+  parentAgentId: true,
+  createdAt: true,
+};
 
 // A hash of a value no password will ever produce. Used to spend comparable CPU
 // on a missing-user login so response time doesn't leak whether an email exists.
@@ -51,7 +60,13 @@ export async function login(email, password) {
     accessToken: signAccessToken(user),
     refreshToken, // the controller puts this in an httpOnly cookie, never the body
     refreshExpiresAt: expiresAt,
-    user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      parentAgentId: user.parentAgentId,
+    },
   };
 }
 
@@ -107,6 +122,7 @@ export async function refresh(presentedToken) {
       name: existing.user.name,
       email: existing.user.email,
       role: existing.user.role,
+      parentAgentId: existing.user.parentAgentId,
     },
   };
 }
@@ -139,6 +155,40 @@ export async function register({ name, email, password }) {
 // PRIVILEGED. Callers must already be SUPER_ADMIN — enforced at the route.
 export async function createUser({ name, email, password, role }) {
   return createUserWithRole({ name, email, password, role });
+}
+
+// Sub-agents: an agency creates logins for its own staff. Enforced one level deep
+// — a sub-agent cannot create sub-agents of its own, because nothing in the UI or
+// the application scoping models an arbitrary-depth tree, and silently allowing
+// one would make "my applications" ambiguous.
+export async function createSubAgent({ parentAgentId, name, email, password }) {
+  const parent = await prisma.user.findUnique({
+    where: { id: parentAgentId },
+    select: { id: true, role: true, parentAgentId: true },
+  });
+  if (!parent) throw new UnauthorizedError('Account no longer exists');
+  if (parent.parentAgentId) {
+    throw new ForbiddenError('Sub-agents cannot create their own sub-agents');
+  }
+
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) throw new ConflictError('Email already in use');
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  return prisma.user.create({
+    // role is hard-coded, exactly as in public registration: a sub-agent is always
+    // an AGENT, and this endpoint is reachable by agents.
+    data: { name, email, passwordHash, role: 'AGENT', parentAgentId },
+    select: PUBLIC_USER_FIELDS,
+  });
+}
+
+export async function listSubAgents({ parentAgentId }) {
+  return prisma.user.findMany({
+    where: { parentAgentId },
+    select: { ...PUBLIC_USER_FIELDS, _count: { select: { applications: true } } },
+    orderBy: { createdAt: 'desc' },
+  });
 }
 
 async function createUserWithRole({ name, email, password, role }) {

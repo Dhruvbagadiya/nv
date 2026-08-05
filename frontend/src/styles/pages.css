@@ -228,3 +228,54 @@
     margin: 10px 0 0; padding: 8px 11px; border-radius: var(--radius-sm);
     background: var(--danger-100); color: var(--danger-700); font-size: 12px;
   }
+
+  /* ===================== ADMIN FORMS ===================== */
+  .form-field { margin-bottom: 12px; }
+  .form-field input[type="text"], .form-field input[type="number"], .form-field input[type="date"],
+  .form-field input[type="email"], .form-field select, .form-field textarea {
+    width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 7px 9px; font-size: 12.5px; background: var(--canvas); color: var(--ink-900);
+    font-family: var(--font-sans); transition: border-color .13s, box-shadow .13s;
+  }
+  .form-field textarea { resize: vertical; line-height: 1.5; }
+  .form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+    outline: none; border-color: var(--accent-500); box-shadow: 0 0 0 3px var(--accent-100); background: var(--surface);
+  }
+  .form-field .flabel { display: block; margin-bottom: 4px; }
+  .field-hint { font-size: 11px; color: var(--ink-500); margin-top: 4px; line-height: 1.4; }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-800); cursor: pointer; }
+  .checkbox-row input { width: 15px; height: 15px; accent-color: var(--accent-600); }
+
+  /* Commission tier editor — the Json column's UI. */
+  .tier-editor { display: flex; flex-direction: column; gap: 6px; }
+  .tier-row { display: grid; grid-template-columns: 1fr 100px auto; gap: 6px; align-items: center; }
+  .tier-row input {
+    border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 8px;
+    font-size: 12.5px; background: var(--canvas); font-family: var(--font-sans);
+  }
+
+  /* Tab strips: category on the document admin, level on entry requirements. Both
+     are required API parameters, so they are tabs rather than clearable filters. */
+  .level-tabs { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+
+  .variant-chip {
+    font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: var(--radius-pill);
+    letter-spacing: .02em;
+  }
+  .variant-chip.danger { background: var(--danger-100); color: var(--danger-700); }
+  .variant-chip.info { background: var(--info-100); color: var(--info-700); }
+  .variant-chip.warning { background: var(--warning-100); color: var(--warning-700); }
+
+  /* Sub-agent panel */
+  .subagent-list { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 14px; }
+  .subagent-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 11px; border-bottom: 1px solid var(--border);
+  }
+  .subagent-row:last-child { border-bottom: none; }
+  .credential-box {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px;
+    background: var(--canvas); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    margin: 12px 0;
+  }
+  @media (max-width: 460px) { .credential-box { grid-template-columns: 1fr; } }

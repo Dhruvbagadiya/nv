@@ -51,7 +51,7 @@ API on one origin in development. That matters: the refresh token is an httpOnly
 ### Verifying a change
 
 ```bash
-npm run verify                         # from the repo root: lint + 58 tests + build
+npm run verify                         # from the repo root: lint + 68 tests + build
 npm --prefix backend run verify:auth   # 30 auth integration checks (needs a live DB)
 ```
 
@@ -199,9 +199,9 @@ you, and the first migration shipped 6 foreign keys with 0 indexes.
 | Help & Support | ✅ `tel:` and WhatsApp links |
 | Notifications (unread count, mark read/all) | ✅ |
 | Global announcement banners | ✅ admin-editable via API |
-| Admin UI | 🟡 institutions + courses only. Reference data is editable via the API but has no screens yet. |
-| Document upload | ⬜ endpoints register by URL. S3/R2 presigned upload not built. |
-| Sub-agent invite | ⬜ schema and scoping work; no UI on the header action yet. |
+| Admin UI | ✅ institutions, courses, commissions, entry requirements, updates, documents, banners, support contacts |
+| Document upload | 🟡 S3/R2 presigned flow built and gated on env vars. **Untested against a real bucket** — no credentials yet. Registering by URL works regardless. |
+| Sub-agent management | ✅ header action; an agent creates logins under their own agency, one level deep |
 | Backend tests | 🟡 `scripts/verify-auth.mjs` covers auth. No Vitest suite yet. |
 | E2E tests | ⬜ |
 
@@ -238,7 +238,7 @@ how it was closed — plus the remaining phases.
 | `npm run verify` | root | lint + tests + build |
 | `npm run lint` / `lint:fix` | root | ESLint over both packages |
 | `npm run format` | root | Prettier (skips `index.css` and migrations) |
-| `npm test` | root | Vitest, 58 tests |
+| `npm test` | root | Vitest, 68 tests |
 | `npm run dev` | backend | API with `--watch` |
 | `npm run prisma:migrate` / `:seed` / `:studio` | backend | schema and data |
 | `npm run verify:auth` | backend | 30 auth integration checks against a live DB |

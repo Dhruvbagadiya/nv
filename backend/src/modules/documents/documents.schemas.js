@@ -38,3 +38,13 @@ export const updateDocumentBody = createDocumentBody
   .refine((v) => Object.keys(v).length > 0, 'Provide at least one field to update');
 
 export const idParam = z.object({ id: z.string().uuid() });
+
+export const uploadUrlBody = z
+  .object({
+    filename: z.string().trim().min(1).max(300),
+    contentType: z.string().trim().min(1).max(200),
+    // Optional because a client may not know it; checked against the cap when sent.
+    size: z.number().int().positive().optional(),
+    category: z.enum(DOCUMENT_CATEGORIES).optional(),
+  })
+  .strict();

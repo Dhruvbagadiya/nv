@@ -7,11 +7,14 @@ import {
   listDocumentsQuery,
   createDocumentBody,
   updateDocumentBody,
+  uploadUrlBody,
   idParam,
 } from './documents.schemas.js';
 import {
   listDocumentsHandler,
   countsHandler,
+  uploadUrlHandler,
+  storageStatusHandler,
   createDocumentHandler,
   updateDocumentHandler,
   archiveDocumentHandler,
@@ -22,6 +25,10 @@ const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
 
 router.get('/counts', requireAuth, asyncHandler(countsHandler));
 
+// Static segments, admin-only. Both before /:id.
+router.get('/storage-status', ...admin, asyncHandler(storageStatusHandler));
+router.post('/upload-url', ...admin, validate(uploadUrlBody), asyncHandler(uploadUrlHandler));
+
 // GET /api/documents?category=VISA_DOCUMENT&countryId=&institutionId=&search=
 router.get(
   '/',
@@ -30,11 +37,8 @@ router.get(
   asyncHandler(listDocumentsHandler)
 );
 
-// NOTE: file upload is not wired here yet. `multer` is a dependency and this is
-// where it belongs, but the storage backend (local disk vs S3/R2 presigned) is
-// still an open decision, and picking one to satisfy an endpoint would be the
-// wrong way round. For now documents are registered by URL, which is enough for
-// the five read-only screens the reference portal actually shows.
+// Registers a document that already exists at `fileUrl` — either pasted in, or
+// just uploaded via /upload-url above.
 router.post('/', ...admin, validate(createDocumentBody), asyncHandler(createDocumentHandler));
 
 router.put(

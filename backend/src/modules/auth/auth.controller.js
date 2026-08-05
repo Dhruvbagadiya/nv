@@ -66,3 +66,18 @@ export async function registerHandler(req, res) {
 export async function createUserHandler(req, res) {
   res.status(201).json(await authService.createUser(req.body));
 }
+
+// Sub-agent management. parentAgentId always comes from the token, never the body —
+// otherwise an agent could graft staff onto someone else's agency.
+export async function createSubAgentHandler(req, res) {
+  res.status(201).json(
+    await authService.createSubAgent({ parentAgentId: req.user.sub, ...req.body })
+  );
+}
+
+export async function listSubAgentsHandler(req, res) {
+  const items = await authService.listSubAgents({ parentAgentId: req.user.sub });
+  res.json({
+    items: items.map(({ _count, ...u }) => ({ ...u, applicationCount: _count.applications })),
+  });
+}

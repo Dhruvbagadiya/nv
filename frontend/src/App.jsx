@@ -17,6 +17,12 @@ import HelpSupport from './features/help/HelpSupport.jsx';
 import LoginPage from './features/auth/LoginPage.jsx';
 import AdminInstitutions from './features/admin/AdminInstitutions.jsx';
 import AdminCourses from './features/admin/AdminCourses.jsx';
+import AdminCommissions from './features/admin/AdminCommissions.jsx';
+import AdminEntryRequirements from './features/admin/AdminEntryRequirements.jsx';
+import AdminUpdates from './features/admin/AdminUpdates.jsx';
+import AdminDocuments from './features/admin/AdminDocuments.jsx';
+import AdminAnnouncements from './features/admin/AdminAnnouncements.jsx';
+import AdminSupportContacts from './features/admin/AdminSupportContacts.jsx';
 import ProtectedRoute from './routes/ProtectedRoute.jsx';
 import NotFound from './routes/NotFound.jsx';
 
@@ -110,6 +116,56 @@ export default function App() {
                       element={
                         <ProtectedRoute allowedRoles={ADMIN_ROLES}>
                           <AdminCourses />
+                        </ProtectedRoute>
+                      }
+                    />
+                    {/* Reference-data editors. Every one of these has had write
+                        endpoints since Phase 6; these are the screens over them. */}
+                    <Route
+                      path="/admin/commissions"
+                      element={
+                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                          <AdminCommissions />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/entry-requirements"
+                      element={
+                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                          <AdminEntryRequirements />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/updates"
+                      element={
+                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                          <AdminUpdates />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/documents"
+                      element={
+                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                          <AdminDocuments />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/announcements"
+                      element={
+                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                          <AdminAnnouncements />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/support-contacts"
+                      element={
+                        <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                          <AdminSupportContacts />
                         </ProtectedRoute>
                       }
                     />

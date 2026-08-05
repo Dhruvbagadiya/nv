@@ -33,3 +33,13 @@ export const createUserSchema = z
     role: z.enum(['SUPER_ADMIN', 'ADMIN', 'AGENT']),
   })
   .strict();
+
+// Same shape as public registration and, like it, with no `role` field: a
+// sub-agent is always an AGENT under the caller's agency.
+export const createSubAgentBody = z
+  .object({
+    name: z.string().min(1).max(120).trim(),
+    email: z.string().email().toLowerCase().trim(),
+    password: z.string().min(10, 'Password must be at least 10 characters').max(200),
+  })
+  .strict();
