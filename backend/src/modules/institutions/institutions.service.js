@@ -1,17 +1,19 @@
 import { prisma } from '../../utils/prisma.js';
+import { ConflictError } from '../../utils/httpErrors.js';
 
 const INSTITUTION_INCLUDE = { country: true };
 
-// Not paginated: this feeds institution dropdowns, which need every option. The
-// blacklist modal ("Click for list" in the red banner) uses blacklisted=true.
+// URL-safe slug derived from name when not explicitly provided.
+function slugify(str) {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
 export async function listInstitutions({ country, search, blacklisted, trending, includeArchived }) {
   return prisma.institution.findMany({
     where: {
       ...(includeArchived ? {} : { archivedAt: null }),
       ...(search && { name: { contains: search, mode: 'insensitive' } }),
       ...(country && { country: { code: country } }),
-      // Explicit undefined check: `blacklisted === false` is a real filter
-      // ("show me the active ones"), and a plain truthiness test would drop it.
       ...(blacklisted !== undefined && { isBlacklisted: blacklisted }),
       ...(trending !== undefined && { isTrending: trending }),
     },
@@ -20,7 +22,6 @@ export async function listInstitutions({ country, search, blacklisted, trending,
   });
 }
 
-// Drives the "Trending Universities" carousel on the Report screen.
 export async function listTrending({ limit = 12 } = {}) {
   return prisma.institution.findMany({
     where: { isTrending: true, archivedAt: null },
@@ -31,10 +32,26 @@ export async function listTrending({ limit = 12 } = {}) {
 }
 
 export async function createInstitution(data) {
-  return prisma.institution.create({ data, include: INSTITUTION_INCLUDE });
+  const slug = data.slug || slugify(data.name);
+
+  // Ensure slug uniqueness — append a short timestamp suffix if collision.
+  const existing = await prisma.institution.findUnique({ where: { slug } });
+  const finalSlug = existing ? `${slug}-${Date.now().toString(36)}` : slug;
+
+  return prisma.institution.create({
+    data: { ...data, slug: finalSlug },
+    include: INSTITUTION_INCLUDE,
+  });
 }
 
 export async function updateInstitution(id, data) {
+  // If slug is being changed, check it won't collide with another row.
+  if (data.slug) {
+    const conflict = await prisma.institution.findFirst({
+      where: { slug: data.slug, NOT: { id } },
+    });
+    if (conflict) throw new ConflictError('That slug is already used by another institution');
+  }
   return prisma.institution.update({ where: { id }, data, include: INSTITUTION_INCLUDE });
 }
 
@@ -46,13 +63,18 @@ export async function setBlacklistStatus(id, isBlacklisted) {
   });
 }
 
-// Archive, not delete: courses, applications, commissions and entry requirements
-// all hang off an institution, so removing the row would either fail on a
-// constraint or cascade further than anyone intends.
 export async function archiveInstitution(id) {
   return prisma.institution.update({
     where: { id },
     data: { archivedAt: new Date() },
+    include: INSTITUTION_INCLUDE,
+  });
+}
+
+export async function restoreInstitution(id) {
+  return prisma.institution.update({
+    where: { id },
+    data: { archivedAt: null },
     include: INSTITUTION_INCLUDE,
   });
 }

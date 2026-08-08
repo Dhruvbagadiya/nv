@@ -25,6 +25,7 @@ enum Role {
   SUPER_ADMIN
   ADMIN
   AGENT
+  STUDENT
 }
 
 model User {
@@ -47,6 +48,7 @@ model User {
   courseInquiries CourseInquiry[]
   refreshTokens   RefreshToken[]
   notifications   Notification[]
+  studentProfile  StudentProfile?
 
   @@index([parentAgentId])
   @@index([role])
@@ -54,8 +56,8 @@ model User {
 
 enum RefreshRevokeReason {
   ROTATED // superseded by a newer token during a normal refresh
-  LOGOUT // the user deliberately ended this session
-  REPLAY // revoked as collateral when a rotated token was replayed
+  LOGOUT  // the user deliberately ended this session
+  REPLAY  // revoked as collateral when a rotated token was replayed
 }
 
 model RefreshToken {
@@ -78,6 +80,24 @@ model RefreshToken {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+// ============================================================================
+// Student profile — extra fields that only students have.
+// Stored separately so the User table stays lean for agents and admins.
+// ============================================================================
+model StudentProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  nationality String?
+  dateOfBirth DateTime?
+  passportNo  String?
+  phone       String?
+  address     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ============================================================================
@@ -112,7 +132,14 @@ model Country {
 model Institution {
   id            String  @id @default(uuid())
   name          String
+  // URL-safe slug used in deep-links and the `school.slug` field in the program
+  // response. Derived from the institution name on creation.
+  slug          String  @unique
   countryId     String
+  // Province / state — shown alongside the city in the school object.
+  province      String?
+  // City moved here from Course: a campus has one city; courses inherit it.
+  city          String?
   isBlacklisted Boolean @default(false)
   logoUrl       String?
   // Drives the "Trending Universities" carousel on the Report screen.
@@ -135,37 +162,100 @@ model Institution {
   @@index([archivedAt])
 }
 
+// Structured program-level enum so the dashboard can filter and the response
+// can emit the machine-readable identifiers the target API uses.
+enum ProgramLevel {
+  MASTERS_DEGREE
+  POST_GRADUATE_CERTIFICATE
+  DIPLOMA
+  CERTIFICATE
+  BACHELORS_DEGREE
+  THREE_YEAR_BACHELORS
+  FOUR_YEAR_BACHELORS
+  FOUNDATION
+  OTHER
+}
+
+// Structured success-score intent enum.
+enum SuccessScoreIntent {
+  positive
+  negative
+  neutral
+}
+
 model Course {
-  id             String  @id @default(uuid())
-  institutionId  String
-  title          String
-  degreeLevel    String // "Master's Degree", "Bachelor's Degree", ...
-  city           String
+  id            String @id @default(uuid())
+  institutionId String
+
+  // Human-readable full name, e.g. "Master of Science - Computational Sciences (Course)"
+  title         String
+  // Short display name shown on cards, e.g. "Computational Sciences"
+  shortName     String?
+  // URL-safe slug for deep-links, e.g. "master-of-science-computational-sciences-course"
+  slug          String  @unique
+  // Replaces the free-text `degreeLevel` — machine-readable enum for grouping/filtering
+  programLevel  ProgramLevel @default(OTHER)
+
+  // Duration in calendar months (replaces the freeform `durationText` string).
+  // minLength == maxLength means a fixed-length programme.
+  minLength     Int     @default(0)
+  maxLength     Int     @default(0)
+
+  // ISO 639-3 language code, e.g. "eng"
+  languageOfInstruction String @default("eng")
+
   tuitionFee     Decimal
   applicationFee Decimal
-  durationText   String // "12 - 24 months"
-  tags           String[] // ["High Job Demand", "Prime", ...]
-  // Renamed from `status`. It holds display pills ("Instant Offer", "Instant
-  // Submission") and sat next to Application.primaryStatus, where it read like a
-  // lifecycle field. It is decoration, so it is now named as such.
-  badges  String[]
-  intakes String[] // ["Jan 2027", "May 2027", ...]
 
-  // Soft delete. A hard `prisma.course.delete` on a course with applications hit
-  // the FK constraint and surfaced as a 500. It is also wrong on the merits:
-  // applications must keep pointing at the course they were submitted against,
-  // so withdrawing a course from the catalogue cannot mean erasing it.
+  // Convenience pre-computed commission amount (highest tier) stored alongside
+  // the structured commission object so the card can show it without a join.
+  commissionAmount Decimal?
+
+  // Whether this program supports AB (ApplyBoard) app creation flow.
+  abAppCreationEnabled Boolean @default(false)
+
+  // Success score shown on the program card.
+  successScoreIntent SuccessScoreIntent?
+  successScoreLabel  String?
+
+  tags   String[] // ["top_programs", "popular_programs", "high_job_availability", ...]
+  // Display pills e.g. "Instant Offer", "Instant Submission"
+  badges String[]
+
+  // Soft delete — applications must keep resolving their course after withdrawal.
   archivedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  institution  Institution   @relation(fields: [institutionId], references: [id])
+  institution  Institution    @relation(fields: [institutionId], references: [id])
+  intakes      CourseIntake[]
   applications Application[]
 
   @@index([institutionId])
-  @@index([degreeLevel])
+  @@index([programLevel])
   @@index([archivedAt])
   @@index([createdAt])
+  @@index([slug])
+}
+
+// Replaces the `intakes String[]` array. Each intake now has its own identity,
+// dates and scoring data to match the programIntakes shape in the target API.
+model CourseIntake {
+  id                 Int       @id @default(autoincrement())
+  courseId           String
+  startDate          DateTime
+  openDate           DateTime?
+  submissionDeadline DateTime?
+  overallScore       Float?
+  // scoreDetails is irregular in structure so it stays Json.
+  scoreDetails       Json      @default("[]")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+  @@index([startDate])
 }
 
 model MoiAcceptance {
@@ -183,20 +273,31 @@ model MoiAcceptance {
   @@index([courseType])
 }
 
-// Commission tiers per institution — images 1 and 2. Tiers are Json because the
-// reference data is genuinely irregular: some institutions quote one flat rate
-// ("7%"), others band by volume ("1-5 students: 15%, 6+: 17%"), others by
-// programme ("IFY/IY1: 12%"). Modelling that as columns would mean a column per
-// shape; as rows it would need a tier table whose only consumer renders it as a
-// list anyway.
+// Commission structure per institution. `tiers` (legacy freeform) is preserved
+// for backward compat with the Commission screen. The typed fields below are
+// used by the program/dashboard API to build the structured commission object.
 model UniversityCommission {
   id            String  @id @default(uuid())
   institutionId String  @unique
-  tiers         Json // [{ label: "1-5 Students", rate: "15%" }, ...]
-  notes         String?
-  archivedAt    DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+
+  // Legacy freeform tiers array for the Commission screen display.
+  // e.g. [{ label: "1-5 Students", rate: "15%" }, ...]
+  tiers Json
+
+  // Structured fields for the program response commission object.
+  commissionType         String?  // "percentage" | "fixed_amount"
+  rateFrom               Float?
+  rateTo                 Float?
+  amountFrom             Decimal?
+  amountTo               Decimal?
+  isTierAdjusted         Boolean  @default(false)
+  maxNumberOfInstallments Int?
+  tuitionBasis           String?  // "net" | "gross"
+
+  notes      String?
+  archivedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
 }

@@ -27,10 +27,10 @@ export const registerSchema = z
 // route is behind requireRole('SUPER_ADMIN').
 export const createUserSchema = z
   .object({
-    name: z.string().min(1).max(120).trim(),
-    email: z.string().email().toLowerCase().trim(),
+    name:     z.string().min(1).max(120).trim(),
+    email:    z.string().email().toLowerCase().trim(),
     password: z.string().min(10).max(200),
-    role: z.enum(['SUPER_ADMIN', 'ADMIN', 'AGENT']),
+    role:     z.enum(['SUPER_ADMIN', 'ADMIN', 'AGENT', 'STUDENT']),
   })
   .strict();
 

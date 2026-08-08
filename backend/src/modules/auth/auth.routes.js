@@ -12,12 +12,14 @@ import {
 import {
   loginHandler,
   registerHandler,
+  registerStudentHandler,
   refreshHandler,
   logoutHandler,
   meHandler,
   createUserHandler,
   createSubAgentHandler,
   listSubAgentsHandler,
+  listAllUsersHandler,
 } from './auth.controller.js';
 
 const router = Router();
@@ -29,6 +31,8 @@ router.post('/login', validate(loginSchema), asyncHandler(loginHandler));
 // has no `role` field, so a body carrying one is rejected with a 400 rather than
 // silently downgraded. This endpoint previously accepted any role, unauthenticated.
 router.post('/register', validate(registerSchema), asyncHandler(registerHandler));
+// Student self-registration — same fields, role hard-coded to STUDENT.
+router.post('/register/student', validate(registerSchema), asyncHandler(registerStudentHandler));
 
 // Authenticated by the httpOnly cookie rather than the (expired) access token,
 // which is the whole point — this is what the client calls when the access token
@@ -57,6 +61,14 @@ router.post(
   requireRole('SUPER_ADMIN'),
   validate(createUserSchema),
   asyncHandler(createUserHandler)
+);
+
+// SUPER_ADMIN only — full user list for the admin panel.
+router.get(
+  '/users',
+  requireAuth,
+  requireRole('SUPER_ADMIN'),
+  asyncHandler(listAllUsersHandler)
 );
 
 export default router;

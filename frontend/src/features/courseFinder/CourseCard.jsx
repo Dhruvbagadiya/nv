@@ -1,82 +1,158 @@
 import { Link } from 'react-router-dom';
 import { formatFee, isFree } from '../../utils/format.js';
 
-// Props shape matches the Prisma Course model (see backend/prisma/schema.prisma)
-// joined with its institution — this is exactly the JSON shape courses.service.js returns.
+// Props shape matches the program resource returned by the backend:
+//   { id, type: "program", attributes: { name, programLevel, school, programIntakes,
+//     tuition, applicationFee, minLength, maxLength, tags, badges, commission, ... } }
 
-export default function CourseCard({ course }) {
-  const initials = course.institution.name.slice(0, 2).toUpperCase();
-  const currency = course.institution.country?.currencyCode ?? 'USD';
+// Convert ProgramLevel enum value to a human-readable label.
+const PROGRAM_LEVEL_LABELS = {
+  MASTERS_DEGREE:            "Master's Degree",
+  POST_GRADUATE_CERTIFICATE: 'Postgraduate Certificate',
+  BACHELORS_DEGREE:          "Bachelor's Degree",
+  THREE_YEAR_BACHELORS:      '3-Year Bachelor\'s',
+  FOUR_YEAR_BACHELORS:       '4-Year Bachelor\'s',
+  DIPLOMA:                   'Diploma',
+  CERTIFICATE:               'Certificate',
+  FOUNDATION:                'Foundation',
+  OTHER:                     'Program',
+};
+
+function programLevelLabel(level) {
+  if (!level) return 'Program';
+  // API returns snake_case slugs (e.g. "masters_degree"); DB enum is UPPER_SNAKE.
+  const key = level.toUpperCase();
+  return PROGRAM_LEVEL_LABELS[key] ?? level;
+}
+
+// Format duration from min/max month integers.
+function formatDuration(min, max) {
+  if (!min && !max) return null;
+  if (min === max) return `${min} months`;
+  return `${min} – ${max} months`;
+}
+
+export default function CourseCard({ program }) {
+  const { id, attributes: attr } = program;
+  const { school } = attr;
+
+  const initials = school.name.slice(0, 2).toUpperCase();
+  const currency = attr.currency ?? 'USD';
+  const duration = formatDuration(attr.minLength, attr.maxLength);
+
+  // Intake display: show the startDate of each intake, formatted as "Jan 2027".
+  const intakeLabels = (attr.programIntakes ?? []).map((i) => {
+    const d = new Date(i.startDate);
+    return Number.isNaN(d.getTime())
+      ? i.startDate
+      : d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+  });
+
+  // Badges are human-readable pill strings (e.g. "Instant Offer").
+  // Tags are machine slugs (e.g. "top_programs") — convert for display.
+  const displayTags = (attr.tags ?? []).map((t) =>
+    t.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  );
 
   return (
     <div className="card">
       <div className="card-body">
         <div className="card-top">
           <div className="school-row">
-            <div className="school-logo">{initials}</div>
-            <div className="school-name">{course.institution.name}</div>
+            {school.logoThumbnailUrl ? (
+              <img
+                className="school-logo"
+                src={school.logoThumbnailUrl}
+                alt={school.name}
+                onError={(e) => {
+                  e.currentTarget.replaceWith(
+                    Object.assign(document.createElement('div'), {
+                      className: 'school-logo',
+                      textContent: initials,
+                    })
+                  );
+                }}
+              />
+            ) : (
+              <div className="school-logo">{initials}</div>
+            )}
+            <div className="school-name">{school.name}</div>
           </div>
           <div className="status-stack">
-            {/* Renamed from course.status — these are display pills, and the old
-                name read like a lifecycle field next to Application.stage. */}
-            {course.badges.map((s) => (
-              <span key={s} className={`status-pill ${s === 'Instant Offer' ? 'offer' : 'submission'}`}>
+            {(attr.badges ?? []).map((s) => (
+              <span
+                key={s}
+                className={`status-pill ${s === 'Instant Offer' ? 'offer' : 'submission'}`}
+              >
                 {s}
               </span>
             ))}
           </div>
         </div>
 
-        <div className="degree-label">{course.degreeLevel}</div>
-        <div className="course-title">{course.title}</div>
+        <div className="degree-label">{programLevelLabel(attr.programLevel)}</div>
+        <div className="course-title">{attr.name}</div>
 
-        <div className="tags">
-          {course.tags.map((t) => (
-            <span key={t} className="tag-pill green">{t}</span>
-          ))}
-        </div>
+        {displayTags.length > 0 && (
+          <div className="tags">
+            {displayTags.map((t) => (
+              <span key={t} className="tag-pill green">
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className="info-grid">
           <div className="info-tile">
             <div className="i-label">Location</div>
-            <div className="i-value">{course.institution.country.name}</div>
+            <div className="i-value">{school.countryCode}</div>
           </div>
           <div className="info-tile">
             <div className="i-label">Campus city</div>
-            <div className="i-value">{course.city}</div>
+            <div className="i-value">{school.city ?? '—'}</div>
           </div>
           <div className="info-tile">
             <div className="i-label">Tuition (1st yr)</div>
-            <div className="i-value mono">{formatFee(course.tuitionFee, currency)}</div>
+            <div className="i-value mono">{formatFee(attr.tuition, currency)}</div>
           </div>
           <div className="info-tile">
             <div className="i-label">Application fee</div>
             <div className="i-value mono">
-              {isFree(course.applicationFee) ? 'None' : formatFee(course.applicationFee, currency)}
+              {isFree(attr.applicationFee)
+                ? 'None'
+                : formatFee(attr.applicationFee, currency)}
             </div>
           </div>
-          <div className="info-tile">
-            <div className="i-label">Duration</div>
-            <div className="i-value">{course.durationText}</div>
-          </div>
+          {duration && (
+            <div className="info-tile">
+              <div className="i-label">Duration</div>
+              <div className="i-value">{duration}</div>
+            </div>
+          )}
+          {attr.commissionAmount != null && (
+            <div className="info-tile">
+              <div className="i-label">Commission</div>
+              <div className="i-value mono">{formatFee(attr.commissionAmount, currency)}</div>
+            </div>
+          )}
         </div>
 
-        <div className="intakes">
-          <div className="intakes-label">Available intakes</div>
-          <div className="intake-list">
-            {course.intakes.map((i) => <span key={i}>{i}</span>)}
+        {intakeLabels.length > 0 && (
+          <div className="intakes">
+            <div className="intakes-label">Available intakes</div>
+            <div className="intake-list">
+              {intakeLabels.map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="card-actions">
-          {/* Had no onClick, so the intended entry point into the application flow
-              was inert — and the flow itself had no other working path. */}
-          <Link className="btn btn-primary" to={`/add-application?courseId=${course.id}`}>
+          <Link className="btn btn-primary" to={`/partner/add-application?courseId=${id}`}>
             Create application
           </Link>
-          {/* The save/favourite button has no backend behind it. Rather than leave
-              a control that silently does nothing, it is gone until there is a
-              shortlist model to back it. */}
         </div>
       </div>
     </div>

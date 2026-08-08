@@ -17,42 +17,24 @@ import {
   updateInstitutionHandler,
   setBlacklistHandler,
   archiveInstitutionHandler,
+  restoreInstitutionHandler,
 } from './institutions.controller.js';
 
 const router = Router();
 const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
 
-// Static segments before /:id, otherwise "trending" is parsed as an id and
-// rejected by the uuid check.
 router.get('/trending', requireAuth, asyncHandler(listTrendingHandler));
 
-// GET /api/institutions?country=&search=&blacklisted=&trending=
-// Any authenticated user — this powers the filter dropdowns everywhere.
-router.get(
-  '/',
-  requireAuth,
-  validate(listInstitutionsQuery, 'query'),
-  asyncHandler(listInstitutionsHandler)
-);
+router.get('/', requireAuth, validate(listInstitutionsQuery, 'query'), asyncHandler(listInstitutionsHandler));
 
 router.post('/', ...admin, validate(createInstitutionBody), asyncHandler(createInstitutionHandler));
 
-router.put(
-  '/:id',
-  ...admin,
-  validate(idParam, 'params'),
-  validate(updateInstitutionBody),
-  asyncHandler(updateInstitutionHandler)
-);
+router.put('/:id', ...admin, validate(idParam, 'params'), validate(updateInstitutionBody), asyncHandler(updateInstitutionHandler));
 
-router.patch(
-  '/:id/blacklist',
-  ...admin,
-  validate(idParam, 'params'),
-  validate(blacklistBody),
-  asyncHandler(setBlacklistHandler)
-);
+router.patch('/:id/blacklist', ...admin, validate(idParam, 'params'), validate(blacklistBody), asyncHandler(setBlacklistHandler));
 
 router.delete('/:id', ...admin, validate(idParam, 'params'), asyncHandler(archiveInstitutionHandler));
+
+router.post('/:id/restore', ...admin, validate(idParam, 'params'), asyncHandler(restoreInstitutionHandler));
 
 export default router;

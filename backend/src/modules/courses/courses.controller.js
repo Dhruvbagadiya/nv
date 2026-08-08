@@ -5,38 +5,40 @@ import * as coursesService from './courses.service.js';
 // controller in this codebase used to repeat the same catch block.
 
 export async function listCoursesHandler(req, res) {
-  // Already validated and coerced by `validate(listCoursesQuery, 'query')`, so
-  // page/pageSize are numbers by the time they get here.
+  // Already validated and coerced by `validate(listCoursesQuery, 'query')`.
+  // The service returns { data, meta: { counts, page, pageSize, totalPages } }
+  // which matches the target API shape directly.
   res.json(await coursesService.searchCourses(req.query));
 }
 
 export async function getCourseHandler(req, res) {
-  res.json(await coursesService.getCourse(req.params.id));
+  // Single program wrapped in { data: <resource> } for consistency.
+  const program = await coursesService.getCourse(req.params.id);
+  res.json({ data: program });
 }
 
 export async function createCourseHandler(req, res) {
-  res.status(201).json(await coursesService.createCourse(req.body));
+  const program = await coursesService.createCourse(req.body);
+  res.status(201).json({ data: program });
 }
 
 export async function updateCourseHandler(req, res) {
-  res.json(await coursesService.updateCourse(req.params.id, req.body));
+  const program = await coursesService.updateCourse(req.params.id, req.body);
+  res.json({ data: program });
 }
 
-// Archive rather than delete — see the note in courses.service.js. Kept at
-// DELETE /:id because from the client's point of view the course is gone from
-// the catalogue; the difference is that applications referencing it survive.
+// Archive rather than delete — see the note in courses.service.js.
 export async function archiveCourseHandler(req, res) {
   await coursesService.archiveCourse(req.params.id);
   res.status(204).send();
 }
 
 export async function restoreCourseHandler(req, res) {
-  res.json(await coursesService.restoreCourse(req.params.id));
+  const program = await coursesService.restoreCourse(req.params.id);
+  res.json({ data: program });
 }
 
-// Body shape: { rows: [{ institutionId, title, degreeLevel, city, tuitionFee,
-// applicationFee, durationText, tags, badges, intakes }, ...] }
-// This is what a parsed CSV upload maps into before hitting this endpoint.
+// Body shape: { rows: [{ institutionId, title, programLevel, ... }, ...] }
 export async function bulkImportHandler(req, res) {
   const result = await coursesService.bulkCreateCourses(req.body.rows);
   res.status(201).json({ imported: result.count });

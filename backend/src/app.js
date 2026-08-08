@@ -25,6 +25,7 @@ import documentRoutes from './modules/documents/documents.routes.js';
 import announcementRoutes from './modules/announcements/announcements.routes.js';
 import supportRoutes from './modules/support/support.routes.js';
 import reportRoutes from './modules/reports/reports.routes.js';
+import studentRoutes from './modules/students/students.routes.js';
 
 const app = express();
 
@@ -95,7 +96,8 @@ app.use('/api/important-updates', importantUpdateRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/support-contacts', supportRoutes);
-app.use('/api/reports', reportRoutes);
+app.use('/api/reports',  reportRoutes);
+app.use('/api/students', studentRoutes);
 
 // Unknown /api/* used to fall through to Express's default HTML 404, which a
 // JSON client cannot parse. Must stay above errorHandler.

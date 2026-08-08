@@ -24,3 +24,7 @@ export async function archiveInstitutionHandler(req, res) {
   await institutionsService.archiveInstitution(req.params.id);
   res.status(204).send();
 }
+
+export async function restoreInstitutionHandler(req, res) {
+  res.json(await institutionsService.restoreInstitution(req.params.id));
+}

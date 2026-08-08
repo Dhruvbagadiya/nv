@@ -23,7 +23,7 @@ import {
 const router = Router();
 const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
 
-// GET /api/courses?country=CA&search=data&tag=Prime&degreeLevel=&institutionId=&page=1
+// GET /api/courses?country=CA&search=data&tag=prime&programLevel=MASTERS_DEGREE&institutionId=&page=1
 router.get('/', requireAuth, validate(listCoursesQuery, 'query'), asyncHandler(listCoursesHandler));
 
 // Course detail, used by the New Application screen. Declared after the list

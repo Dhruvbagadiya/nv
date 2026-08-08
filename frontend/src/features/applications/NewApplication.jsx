@@ -23,15 +23,19 @@ export default function NewApplication() {
 
   // Resolved separately from the picker so the chosen course is always shown with
   // its institution and intakes, even when it is not in the current search results.
-  const { data: course, isLoading: courseLoading } = useQuery({
+  // fetchCourse returns { data: { id, type, attributes } }
+  const { data: courseResponse, isLoading: courseLoading } = useQuery({
     queryKey: ['course', form.courseId],
     queryFn: () => fetchCourse(form.courseId),
     enabled: Boolean(form.courseId),
   });
+  // Unwrap the program resource for convenience
+  const course = courseResponse?.data ?? null;
+  const courseAttr = course?.attributes ?? null;
 
   const mutation = useMutation({
     mutationFn: createApplication,
-    onSuccess: (application) => navigate(`/app-history?studentName=${encodeURIComponent(application.studentName)}`),
+    onSuccess: (application) => navigate(`/partner/app-history?studentName=${encodeURIComponent(application.studentName)}`),
   });
 
   const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
@@ -41,7 +45,7 @@ export default function NewApplication() {
     mutation.mutate(form);
   };
 
-  const currency = course?.institution?.country?.currencyCode ?? 'USD';
+  const currency = courseAttr?.currency ?? courseAttr?.school?.countryCode ?? 'USD';
   // The API rejects an unknown or archived course with a 404 naming the problem,
   // rather than letting Prisma raise an opaque FK error as a 500.
   const errorMessage =
@@ -53,7 +57,7 @@ export default function NewApplication() {
       title="New application"
       subtitle="Let’s start by setting your preferences"
       actions={
-        <Link className="btn btn-outline" to="/dashboard">
+        <Link className="btn btn-outline" to="/partner/dashboard">
           Browse courses
         </Link>
       }
@@ -98,13 +102,13 @@ export default function NewApplication() {
               <div className="selected-course">
                 {courseLoading ? (
                   <span>Loading course…</span>
-                ) : course ? (
+                ) : courseAttr ? (
                   <>
                     <div>
-                      <div className="cell-strong">{course.title}</div>
+                      <div className="cell-strong">{courseAttr.name}</div>
                       <div className="picker-sub">
-                        {course.institution.name} · {course.institution.country.name} ·{' '}
-                        {formatFee(course.tuitionFee, currency)}
+                        {courseAttr.school.name} · {courseAttr.school.countryCode} ·{' '}
+                        {formatFee(courseAttr.tuition, currency)}
                       </div>
                     </div>
                     <button
@@ -127,10 +131,10 @@ export default function NewApplication() {
           </div>
         </div>
 
-        {/* Intakes come from the selected course, so this only appears once one is
-            chosen — an intake dropdown with nothing in it is the bug this screen
-            already had. */}
-        {course?.intakes?.length > 0 && (
+        {/* Intakes come from the selected course's programIntakes array.
+            Each intake is an object { id, startDate, submissionDeadline, ... }.
+            We display "Jan 2027" style labels and submit the same as intakeLabel. */}
+        {courseAttr?.programIntakes?.length > 0 && (
           <div className="field">
             <div style={{ width: '100%' }}>
               <div className="flabel">Intake</div>
@@ -140,11 +144,17 @@ export default function NewApplication() {
                 required
               >
                 <option value="">Select an intake</option>
-                {course.intakes.map((intake) => (
-                  <option key={intake} value={intake}>
-                    {intake}
-                  </option>
-                ))}
+                {courseAttr.programIntakes.map((intake) => {
+                  const d = new Date(intake.startDate);
+                  const label = Number.isNaN(d.getTime())
+                    ? intake.startDate
+                    : d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+                  return (
+                    <option key={intake.id} value={label}>
+                      {label}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>
@@ -158,7 +168,7 @@ export default function NewApplication() {
             type="submit"
             // Disabled without a course rather than letting the submit fail: the
             // old form could never satisfy this field at all.
-            disabled={mutation.isPending || !form.courseId}
+            disabled={mutation.isPending || !form.courseId || !courseAttr}
           >
             {mutation.isPending ? 'Submitting…' : 'Proceed for application'}
           </button>

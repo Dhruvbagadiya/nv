@@ -3,7 +3,6 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { fetchCourses } from '../../api/courses.js';
 import { formatFee } from '../../utils/format.js';
 
-// Debounced so typing does not fire a request per keystroke.
 function useDebounced(value, delay = 300) {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -13,29 +12,19 @@ function useDebounced(value, delay = 300) {
   return debounced;
 }
 
-// The course field on New Application was a <select> containing a single disabled
-// placeholder and a TODO, so `courseId` could never be set and the form could
-// never be submitted — the application flow had no working path at all.
-//
-// A plain <select> would not do here either: there are 72 courses in the seed
-// alone and it grows with the catalogue. This is a search box over the same
-// endpoint the Dashboard uses.
 export default function CoursePicker({ value, onChange }) {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounced(search);
 
   const { data, isFetching } = useQuery({
     queryKey: ['courses', 'picker', debouncedSearch],
-    // Server-side search covers course title, institution name and city.
     queryFn: () => fetchCourses({ search: debouncedSearch || undefined, page: 1 }),
     placeholderData: keepPreviousData,
   });
 
-  const courses = data?.items ?? [];
-
-  // When arriving with ?courseId= the selected course may not be in the current
-  // result page, so it is resolved and shown separately above the list.
-  const selected = courses.find((c) => c.id === value);
+  // New response shape: { data: [{id, type, attributes}], meta }
+  const programs = data?.data ?? [];
+  const selected = programs.find((p) => p.id === value);
 
   return (
     <div>
@@ -48,31 +37,36 @@ export default function CoursePicker({ value, onChange }) {
       />
 
       <div className="picker-list">
-        {isFetching && courses.length === 0 && <div className="picker-empty">Searching…</div>}
-        {!isFetching && courses.length === 0 && (
-          <div className="picker-empty">No courses match “{search}”.</div>
+        {isFetching && programs.length === 0 && (
+          <div className="picker-empty">Searching…</div>
+        )}
+        {!isFetching && programs.length === 0 && (
+          <div className="picker-empty">
+            {search ? `No courses match "${search}".` : 'Start typing to search courses.'}
+          </div>
         )}
 
-        {courses.map((course) => {
-          const currency = course.institution.country?.currencyCode ?? 'USD';
-          const isSelected = course.id === value;
+        {programs.map((program) => {
+          const a = program.attributes;
+          const isSelected = program.id === value;
           return (
             <button
               type="button"
-              key={course.id}
-              // A radio-style list rather than a dropdown: the agent needs to see
-              // institution, country and fee to choose, which an <option> cannot show.
+              key={program.id}
               className={`picker-row${isSelected ? ' selected' : ''}`}
               aria-pressed={isSelected}
-              onClick={() => onChange(course.id)}
+              onClick={() => onChange(program.id)}
             >
               <span className="picker-main">
-                <span className="cell-strong">{course.title}</span>
+                <span className="cell-strong">{a.name}</span>
                 <span className="picker-sub">
-                  {course.institution.name} · {course.institution.country.name} · {course.city}
+                  {a.school.name} · {a.school.countryCode}
+                  {a.school.city ? ` · ${a.school.city}` : ''}
                 </span>
               </span>
-              <span className="picker-fee mono">{formatFee(course.tuitionFee, currency)}</span>
+              <span className="picker-fee mono">
+                {formatFee(a.tuition, a.currency)}
+              </span>
             </button>
           );
         })}

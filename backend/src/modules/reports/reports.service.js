@@ -61,3 +61,16 @@ export async function getReportSummary({ agentId, userId }) {
     recentNotifications,
   };
 }
+
+// Admin dashboard stat cards — one count query per entity.
+export async function getAdminStats() {
+  const [institutions, courses, users, applications, activeBanners, documents] = await Promise.all([
+    prisma.institution.count({ where: { archivedAt: null } }),
+    prisma.course.count({ where: { archivedAt: null } }),
+    prisma.user.count(),
+    prisma.application.count(),
+    prisma.announcement.count({ where: { isActive: true } }),
+    prisma.document.count({ where: { archivedAt: null } }),
+  ]);
+  return { institutions, courses, users, applications, activeBanners, documents };
+}

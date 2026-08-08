@@ -1,37 +1,168 @@
 import { prisma } from '../../utils/prisma.js';
-// Page size defaults live in courses.schemas.js (12, to fill the card grid) —
-// the service takes whatever the validated query supplies.
-import { paginateQuery } from '../../utils/pagination.js';
 import { NotFoundError } from '../../utils/httpErrors.js';
 
-const COURSE_INCLUDE = { institution: { include: { country: true } } };
+// ============================================================================
+// Helpers
+// ============================================================================
+
+// Full include used by every query that needs to produce a program response.
+const PROGRAM_INCLUDE = {
+  institution: {
+    include: {
+      country: {
+        select: { code: true, currencyCode: true },
+      },
+      commission: true,
+    },
+  },
+  intakes: {
+    orderBy: { startDate: 'asc' },
+  },
+};
 
 // Archived courses stay in the table so existing applications keep resolving,
 // but they must never appear in the catalogue agents search.
 const NOT_ARCHIVED = { archivedAt: null, institution: { archivedAt: null } };
 
+// ============================================================================
+// Response shaping
+// ============================================================================
+
+/**
+ * Build the structured commission object from a UniversityCommission record.
+ * Falls back to null if no commission is configured for the institution.
+ */
+function buildCommission(commission) {
+  if (!commission) return null;
+
+  const {
+    commissionType,
+    rateFrom,
+    rateTo,
+    amountFrom,
+    amountTo,
+    isTierAdjusted,
+    maxNumberOfInstallments,
+    tuitionBasis,
+  } = commission;
+
+  if (!commissionType) return null;
+
+  const obj = {
+    type: commissionType,
+    isTierAdjusted: Boolean(isTierAdjusted),
+  };
+
+  if (rateFrom != null) obj.rateFrom = Number(rateFrom);
+  if (rateTo != null) obj.rateTo = Number(rateTo);
+  if (amountFrom != null) obj.amountFrom = Number(amountFrom);
+  if (amountTo != null) obj.amountTo = Number(amountTo);
+  if (maxNumberOfInstallments != null) obj.maxNumberOfInstallments = maxNumberOfInstallments;
+  if (tuitionBasis != null) obj.tuitionBasis = tuitionBasis;
+
+  return obj;
+}
+
+/**
+ * Shape a raw Prisma Course row (with includes) into the target API object:
+ *
+ *   { id, type: "program", attributes: { ... } }
+ */
+function toProgramResource(course) {
+  const { institution } = course;
+  const country = institution.country;
+
+  const school = {
+    id: institution.id,
+    name: institution.name,
+    slug: institution.slug,
+    city: institution.city ?? null,
+    province: institution.province ?? null,
+    countryCode: country.code,
+    logoThumbnailUrl: institution.logoUrl ?? null,
+  };
+
+  const programIntakes = (course.intakes ?? []).map((intake) => ({
+    id: intake.id,
+    openDate: intake.openDate ? intake.openDate.toISOString().slice(0, 10) : null,
+    overallScore: intake.overallScore ?? null,
+    scoreDetails: Array.isArray(intake.scoreDetails) ? intake.scoreDetails : [],
+    startDate: intake.startDate.toISOString().slice(0, 10),
+    submissionDeadline: intake.submissionDeadline
+      ? intake.submissionDeadline.toISOString().slice(0, 10)
+      : null,
+  }));
+
+  const commission = buildCommission(institution.commission);
+
+  const attributes = {
+    abAppCreationEnabled: course.abAppCreationEnabled,
+    applicationFee: Number(course.applicationFee),
+    commissionAmount: course.commissionAmount != null ? Number(course.commissionAmount) : null,
+    currency: country.currencyCode,
+    id: course.id,
+    languageOfInstructionCode: course.languageOfInstruction,
+    maxLength: course.maxLength,
+    minLength: course.minLength,
+    name: course.title,
+    programIntakes,
+    programLevel: toProgramLevelSlug(course.programLevel),
+    school,
+    shortName: course.shortName ?? null,
+    slug: course.slug,
+    successScore: course.successScoreIntent
+      ? { intent: course.successScoreIntent, label: course.successScoreLabel ?? null }
+      : null,
+    tags: course.tags ?? [],
+    tuition: Number(course.tuitionFee),
+  };
+
+  // Only include commission key if it exists
+  if (commission) attributes.commission = commission;
+
+  return {
+    id: course.id,
+    type: 'program',
+    attributes,
+  };
+}
+
+/**
+ * Convert the ProgramLevel enum value to the snake_case slug the API emits.
+ * e.g. MASTERS_DEGREE → "masters_degree"
+ */
+function toProgramLevelSlug(enumValue) {
+  return enumValue ? enumValue.toLowerCase() : 'other';
+}
+
+// ============================================================================
+// Queries
+// ============================================================================
+
 export async function searchCourses({
   country,
   search,
   tag,
-  degreeLevel,
+  programLevel,
   institutionId,
-  page,
-  pageSize,
+  page = 1,
+  pageSize = 12,
 }) {
+  const safePage = Math.max(1, Math.trunc(Number(page) || 1));
+  const safeSize = Math.min(100, Math.max(1, Math.trunc(Number(pageSize) || 12)));
+
   const where = {
     ...NOT_ARCHIVED,
-    // Search used to match the course title only, so typing an institution name —
-    // the obvious thing to try — returned nothing.
     ...(search && {
       OR: [
         { title: { contains: search, mode: 'insensitive' } },
+        { shortName: { contains: search, mode: 'insensitive' } },
         { institution: { name: { contains: search, mode: 'insensitive' } } },
-        { city: { contains: search, mode: 'insensitive' } },
+        { institution: { city: { contains: search, mode: 'insensitive' } } },
       ],
     }),
     ...(tag && { tags: { has: tag } }),
-    ...(degreeLevel && { degreeLevel }),
+    ...(programLevel && { programLevel }),
     ...(institutionId && { institutionId }),
     ...(country &&
       country !== 'ALL' && {
@@ -39,63 +170,79 @@ export async function searchCourses({
       }),
   };
 
-  return paginateQuery(
-    prisma.course,
-    {
+  const [rows, total] = await Promise.all([
+    prisma.course.findMany({
       where,
-      include: COURSE_INCLUDE,
-      // Was unordered, which in Postgres means no guaranteed order at all — the
-      // same query could return the same course on page 1 and page 2, or skip one
-      // entirely. Pagination is only coherent over a stable sort.
+      include: PROGRAM_INCLUDE,
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+      skip: (safePage - 1) * safeSize,
+      take: safeSize,
+    }),
+    prisma.course.count({ where }),
+  ]);
+
+  return {
+    data: rows.map(toProgramResource),
+    meta: {
+      counts: { total },
+      page: safePage,
+      pageSize: safeSize,
+      totalPages: Math.ceil(total / safeSize),
     },
-    { page, pageSize }
-  );
+  };
 }
 
-// Needed by the New Application screen, which resolves the course chosen from a
-// card or a ?courseId= link so it can show what was picked and offer its intakes.
-// Archived courses are excluded: you cannot apply to something withdrawn from the
-// catalogue.
 export async function getCourse(id) {
   const course = await prisma.course.findFirst({
     where: { id, archivedAt: null },
-    include: COURSE_INCLUDE,
+    include: PROGRAM_INCLUDE,
   });
   if (!course) throw new NotFoundError('Course not found or no longer available');
-  return course;
+  return toProgramResource(course);
 }
 
 export async function createCourse(data) {
-  return prisma.course.create({ data, include: COURSE_INCLUDE });
+  const { intakes, ...rest } = data;
+  const course = await prisma.course.create({
+    data: {
+      ...rest,
+      ...(intakes?.length && {
+        intakes: {
+          create: intakes,
+        },
+      }),
+    },
+    include: PROGRAM_INCLUDE,
+  });
+  return toProgramResource(course);
 }
 
 export async function updateCourse(id, data) {
-  return prisma.course.update({ where: { id }, data, include: COURSE_INCLUDE });
+  const { intakes, ...rest } = data;
+  const course = await prisma.course.update({
+    where: { id },
+    data: rest,
+    include: PROGRAM_INCLUDE,
+  });
+  return toProgramResource(course);
 }
 
-// Soft delete. A hard delete on a course with applications hit the FK constraint
-// and surfaced as a 500, and it is wrong regardless: an application has to keep
-// pointing at the course it was submitted against, so withdrawing a course from
-// the catalogue cannot mean erasing the record of it.
 export async function archiveCourse(id) {
   return prisma.course.update({
     where: { id },
     data: { archivedAt: new Date() },
-    include: COURSE_INCLUDE,
   });
 }
 
 export async function restoreCourse(id) {
-  return prisma.course.update({
+  const course = await prisma.course.update({
     where: { id },
     data: { archivedAt: null },
-    include: COURSE_INCLUDE,
+    include: PROGRAM_INCLUDE,
   });
+  return toProgramResource(course);
 }
 
-// Bulk import for CSV uploads — each row is validated/shaped by the caller
-// before reaching here; this just does the insert.
 export async function bulkCreateCourses(rows) {
   return prisma.course.createMany({ data: rows, skipDuplicates: true });
 }

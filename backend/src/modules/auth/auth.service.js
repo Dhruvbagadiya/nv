@@ -144,12 +144,17 @@ export async function getUserById(id) {
   return user;
 }
 
-// PUBLIC self-registration. Role is hard-coded and deliberately not a parameter.
-// The old signature was `register({ ..., role = 'AGENT' })` — a default, not a
-// constraint — trivially overridden by putting `role` in the body of an endpoint
-// that required no authentication at all. Staff accounts go through createUser.
+// PUBLIC self-registration for AGENTS.
 export async function register({ name, email, password }) {
   return createUserWithRole({ name, email, password, role: 'AGENT' });
+}
+
+// PUBLIC self-registration for STUDENTS.
+export async function registerStudent({ name, email, password }) {
+  const user = await createUserWithRole({ name, email, password, role: 'STUDENT' });
+  // Create a blank StudentProfile immediately so profile endpoints always find one.
+  await prisma.studentProfile.create({ data: { id: crypto.randomUUID(), userId: user.id } });
+  return user;
 }
 
 // PRIVILEGED. Callers must already be SUPER_ADMIN — enforced at the route.
@@ -189,6 +194,49 @@ export async function listSubAgents({ parentAgentId }) {
     select: { ...PUBLIC_USER_FIELDS, _count: { select: { applications: true } } },
     orderBy: { createdAt: 'desc' },
   });
+}
+
+// SUPER_ADMIN only — full user list for the admin panel.
+export async function listAllUsers({ role, search, page = 1, pageSize = 25 } = {}) {
+  const safePage     = Math.max(1, Math.trunc(Number(page)     || 1));
+  const safePageSize = Math.min(100, Math.max(1, Math.trunc(Number(pageSize) || 25)));
+  const where = {
+    ...(role && { role }),
+    ...(search && {
+      OR: [
+        { name:  { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ],
+    }),
+  };
+  const skip = (safePage - 1) * safePageSize;
+  const [items, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      select: {
+        ...PUBLIC_USER_FIELDS,
+        // `subAgents` is the relation name in the schema (User.subAgents)
+        _count: { select: { applications: true, subAgents: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: safePageSize,
+    }),
+    prisma.user.count({ where }),
+  ]);
+  return {
+    items: items.map(({ _count, ...u }) => ({
+      ...u,
+      applicationCount: _count.applications,
+      subAgentCount:    _count.subAgents,
+    })),
+    meta: {
+      total,
+      page:       safePage,
+      pageSize:   safePageSize,
+      totalPages: Math.ceil(total / safePageSize),
+    },
+  };
 }
 
 async function createUserWithRole({ name, email, password, role }) {

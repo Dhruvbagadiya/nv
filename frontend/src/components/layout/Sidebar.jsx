@@ -106,7 +106,7 @@ export default function Sidebar() {
               {section.items.map((item) =>
                 item.children ? (
                   <NavGroup key={item.label} item={item} />
-                ) : (
+                ) : !item.roles || item.roles.includes(role) ? (
                   <NavLink
                     key={item.path}
                     to={item.path}
@@ -115,7 +115,7 @@ export default function Sidebar() {
                     <span className="icon" dangerouslySetInnerHTML={{ __html: item.iconSvg }} />
                     <span className="side-text">{item.label}</span>
                   </NavLink>
-                )
+                ) : null
               )}
             </div>
           </div>

@@ -62,6 +62,11 @@ export async function registerHandler(req, res) {
   res.status(201).json(await authService.register(req.body));
 }
 
+// Public student self-registration — always creates a STUDENT.
+export async function registerStudentHandler(req, res) {
+  res.status(201).json(await authService.registerStudent(req.body));
+}
+
 // SUPER_ADMIN only — see auth.routes.js.
 export async function createUserHandler(req, res) {
   res.status(201).json(await authService.createUser(req.body));
@@ -80,4 +85,8 @@ export async function listSubAgentsHandler(req, res) {
   res.json({
     items: items.map(({ _count, ...u }) => ({ ...u, applicationCount: _count.applications })),
   });
+}
+
+export async function listAllUsersHandler(req, res) {
+  res.json(await authService.listAllUsers(req.query));
 }
