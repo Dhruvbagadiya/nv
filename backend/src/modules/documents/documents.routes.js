@@ -21,9 +21,12 @@ import {
 } from './documents.controller.js';
 
 const router = Router();
+// Partner-side only — the partner document bank. Adding STUDENT to the Role
+// enum silently widened every route that was merely `requireAuth`.
+const partnerAuth = [requireAuth, requireRole('AGENT', 'ADMIN', 'SUPER_ADMIN')];
 const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
 
-router.get('/counts', requireAuth, asyncHandler(countsHandler));
+router.get('/counts', ...partnerAuth, asyncHandler(countsHandler));
 
 // Static segments, admin-only. Both before /:id.
 router.get('/storage-status', ...admin, asyncHandler(storageStatusHandler));
@@ -32,7 +35,7 @@ router.post('/upload-url', ...admin, validate(uploadUrlBody), asyncHandler(uploa
 // GET /api/documents?category=VISA_DOCUMENT&countryId=&institutionId=&search=
 router.get(
   '/',
-  requireAuth,
+  ...partnerAuth,
   validate(listDocumentsQuery, 'query'),
   asyncHandler(listDocumentsHandler)
 );

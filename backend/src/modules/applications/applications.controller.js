@@ -1,8 +1,10 @@
 import * as applicationsService from './applications.service.js';
+import { agentScopeFor } from '../../utils/scope.js';
 
 // Agents only ever see their own applications; admins see all. Derived from the
-// verified token here rather than trusting a query parameter.
-const scopeFor = (user) => (user.role === 'AGENT' ? user.sub : undefined);
+// verified token, never a query parameter. See utils/scope.js for why this is
+// stated positively rather than as "not an agent".
+const scopeFor = agentScopeFor;
 
 export async function createApplicationHandler(req, res) {
   const application = await applicationsService.createApplication({

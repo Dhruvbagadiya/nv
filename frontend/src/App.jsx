@@ -1,4 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+
+// ── Partner portal ─────────────────────────────────────────────────────
 import Header from './components/layout/Header.jsx';
 import Sidebar from './components/layout/Sidebar.jsx';
 import AnnouncementBar from './components/layout/AnnouncementBar.jsx';
@@ -14,9 +16,10 @@ import ImportantUpdates from './features/importantUpdates/ImportantUpdates.jsx';
 import DocumentBank from './features/documentBank/DocumentBank.jsx';
 import Report from './features/report/Report.jsx';
 import HelpSupport from './features/help/HelpSupport.jsx';
-import LoginPage from './features/auth/LoginPage.jsx';
+import PartnerLoginPage from './features/auth/PartnerLoginPage.jsx';
 
-// Admin pages
+// ── Admin panel ────────────────────────────────────────────────────────
+import AdminLoginPage from './features/auth/AdminLoginPage.jsx';
 import AdminDashboard from './features/admin/AdminDashboard.jsx';
 import AdminInstitutions from './features/admin/AdminInstitutions.jsx';
 import AdminCourses from './features/admin/AdminCourses.jsx';
@@ -29,95 +32,143 @@ import AdminAnnouncements from './features/admin/AdminAnnouncements.jsx';
 import AdminSupportContacts from './features/admin/AdminSupportContacts.jsx';
 import AdminUsers from './features/admin/AdminUsers.jsx';
 
+// ── Student portal ─────────────────────────────────────────────────────
+import StudentLoginPage from './features/student/StudentLoginPage.jsx';
+import StudentShell from './features/student/StudentShell.jsx';
+import StudentProgramBrowser from './features/student/StudentProgramBrowser.jsx';
+import StudentProgramDetail from './features/student/StudentProgramDetail.jsx';
+import StudentApplyForm from './features/student/StudentApplyForm.jsx';
+import StudentApplications from './features/student/StudentApplications.jsx';
+import StudentApplicationDetail from './features/student/StudentApplicationDetail.jsx';
+import StudentProfile from './features/student/StudentProfile.jsx';
+
 import ProtectedRoute from './routes/ProtectedRoute.jsx';
 import NotFound from './routes/NotFound.jsx';
 
 const ADMIN_ROLES       = ['ADMIN', 'SUPER_ADMIN'];
 const SUPER_ADMIN_ROLES = ['SUPER_ADMIN'];
+const PARTNER_ROLES     = ['AGENT', 'ADMIN', 'SUPER_ADMIN'];
+
+// Shared shell wrapper for partner routes
+function PartnerShell({ children }) {
+  return (
+    <>
+      <Header />
+      <div className="layout">
+        <Sidebar />
+        <main className="main">
+          <AnnouncementBar />
+          {children}
+        </main>
+      </div>
+    </>
+  );
+}
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route
-        path="/*"
-        element={
-          <ProtectedRoute>
-            <>
-              <Header />
-              <div className="layout">
-                <Sidebar />
-                <main className="main">
-                  <AnnouncementBar />
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard"     element={<CourseFinder />} />
-                    <Route path="/ask-team"       element={<CourseInquiryForm />} />
-                    <Route path="/history"        element={<CourseInquiryHistory />} />
-                    <Route path="/add-application" element={<NewApplication />} />
-                    <Route path="/app-history"    element={<ApplicationHistory />} />
+      {/* ── Root redirect ─────────────────────────────── */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
-                    {/* Operations */}
-                    <Route path="/moi-accepted"   element={<MoiAccepted />} />
-                    <Route path="/commission"     element={<Commission />} />
-                    <Route path="/entry-requirements" element={<Navigate to="/entry-requirements/ug" replace />} />
-                    <Route path="/entry-requirements/ug" element={<EntryRequirements level="UG" />} />
-                    <Route path="/entry-requirements/pg" element={<EntryRequirements level="PG" />} />
-                    <Route path="/updates"        element={<ImportantUpdates />} />
-                    <Route path="/documents"      element={<Navigate to="/documents/visa" replace />} />
-                    <Route path="/documents/visa"         element={<DocumentBank category="VISA_DOCUMENT" />} />
-                    <Route path="/documents/refund-forms" element={<DocumentBank category="REFUND_FORM" />} />
-                    <Route path="/documents/brochures"    element={<DocumentBank category="INSTITUTE_BROCHURE" />} />
-                    <Route path="/documents/sop"          element={<DocumentBank category="SOP" />} />
-                    <Route path="/documents/lor"          element={<DocumentBank category="LOR" />} />
-                    <Route path="/report"         element={<Report />} />
+      {/* ── Student portal ────────────────────────────── */}
+      <Route path="/login"    element={<StudentLoginPage />} />
 
-                    {/* Support */}
-                    <Route path="/help"           element={<HelpSupport />} />
+      {/* Public student routes (no auth needed to browse) */}
+      <Route path="/programs" element={
+        <StudentShell><StudentProgramBrowser /></StudentShell>
+      } />
+      <Route path="/programs/:id" element={
+        <StudentShell><StudentProgramDetail /></StudentShell>
+      } />
 
-                    {/* ── Admin section ─────────────────────────────────── */}
-                    <Route path="/admin" element={
-                      <ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminDashboard /></ProtectedRoute>
-                    } />
-                    <Route path="/admin/institutions" element={
-                      <ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminInstitutions /></ProtectedRoute>
-                    } />
-                    <Route path="/admin/courses" element={
-                      <ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminCourses /></ProtectedRoute>
-                    } />
-                    <Route path="/admin/commissions" element={
-                      <ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminCommissions /></ProtectedRoute>
-                    } />
-                    <Route path="/admin/entry-requirements" element={
-                      <ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminEntryRequirements /></ProtectedRoute>
-                    } />
-                    <Route path="/admin/moi" element={
-                      <ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminMoiAcceptances /></ProtectedRoute>
-                    } />
-                    <Route path="/admin/updates" element={
-                      <ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminUpdates /></ProtectedRoute>
-                    } />
-                    <Route path="/admin/documents" element={
-                      <ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminDocuments /></ProtectedRoute>
-                    } />
-                    <Route path="/admin/announcements" element={
-                      <ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminAnnouncements /></ProtectedRoute>
-                    } />
-                    <Route path="/admin/support-contacts" element={
-                      <ProtectedRoute allowedRoles={ADMIN_ROLES}><AdminSupportContacts /></ProtectedRoute>
-                    } />
-                    <Route path="/admin/users" element={
-                      <ProtectedRoute allowedRoles={SUPER_ADMIN_ROLES}><AdminUsers /></ProtectedRoute>
-                    } />
+      {/* Protected student routes */}
+      <Route path="/apply/:courseId" element={
+        <ProtectedRoute allowedRoles={['STUDENT']} loginPath="/login" redirectPath="/programs">
+          <StudentShell><StudentApplyForm /></StudentShell>
+        </ProtectedRoute>
+      } />
+      <Route path="/my-applications" element={
+        <ProtectedRoute allowedRoles={['STUDENT']} loginPath="/login" redirectPath="/programs">
+          <StudentShell><StudentApplications /></StudentShell>
+        </ProtectedRoute>
+      } />
+      <Route path="/my-applications/:id" element={
+        <ProtectedRoute allowedRoles={['STUDENT']} loginPath="/login" redirectPath="/programs">
+          <StudentShell><StudentApplicationDetail /></StudentShell>
+        </ProtectedRoute>
+      } />
+      <Route path="/profile" element={
+        <ProtectedRoute allowedRoles={['STUDENT']} loginPath="/login" redirectPath="/programs">
+          <StudentShell><StudentProfile /></StudentShell>
+        </ProtectedRoute>
+      } />
 
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </main>
-              </div>
-            </>
-          </ProtectedRoute>
-        }
-      />
+      {/* ── Partner portal ────────────────────────────── */}
+      <Route path="/partner/login" element={<PartnerLoginPage />} />
+      <Route path="/partner/*" element={
+        <ProtectedRoute allowedRoles={PARTNER_ROLES} loginPath="/partner/login" redirectPath="/partner/dashboard">
+          <PartnerShell>
+            <Routes>
+              <Route path="/" element={<Navigate to="/partner/dashboard" replace />} />
+              <Route path="dashboard"       element={<CourseFinder />} />
+              <Route path="ask-team"         element={<CourseInquiryForm />} />
+              <Route path="history"          element={<CourseInquiryHistory />} />
+              <Route path="add-application"  element={<NewApplication />} />
+              <Route path="app-history"      element={<ApplicationHistory />} />
+              <Route path="moi-accepted"     element={<MoiAccepted />} />
+              <Route path="commission"       element={<Commission />} />
+              <Route path="entry-requirements" element={<Navigate to="/partner/entry-requirements/ug" replace />} />
+              <Route path="entry-requirements/ug" element={<EntryRequirements level="UG" />} />
+              <Route path="entry-requirements/pg" element={<EntryRequirements level="PG" />} />
+              <Route path="updates"          element={<ImportantUpdates />} />
+              <Route path="documents"        element={<Navigate to="/partner/documents/visa" replace />} />
+              <Route path="documents/visa"         element={<DocumentBank category="VISA_DOCUMENT" />} />
+              <Route path="documents/refund-forms" element={<DocumentBank category="REFUND_FORM" />} />
+              <Route path="documents/brochures"    element={<DocumentBank category="INSTITUTE_BROCHURE" />} />
+              <Route path="documents/sop"          element={<DocumentBank category="SOP" />} />
+              <Route path="documents/lor"          element={<DocumentBank category="LOR" />} />
+              <Route path="report"           element={<Report />} />
+              <Route path="help"             element={<HelpSupport />} />
+              <Route path="*"               element={<NotFound />} />
+            </Routes>
+          </PartnerShell>
+        </ProtectedRoute>
+      } />
+
+      {/* ── Admin panel ───────────────────────────────── */}
+      <Route path="/admin/login" element={<AdminLoginPage />} />
+      <Route path="/admin" element={
+        <ProtectedRoute allowedRoles={ADMIN_ROLES} loginPath="/admin/login" redirectPath="/partner/dashboard">
+          <PartnerShell><AdminDashboard /></PartnerShell>
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/*" element={
+        <ProtectedRoute allowedRoles={ADMIN_ROLES} loginPath="/admin/login" redirectPath="/partner/dashboard">
+          <PartnerShell>
+            <Routes>
+              <Route path="institutions"      element={<AdminInstitutions />} />
+              <Route path="courses"           element={<AdminCourses />} />
+              <Route path="commissions"       element={<AdminCommissions />} />
+              <Route path="entry-requirements" element={<AdminEntryRequirements />} />
+              <Route path="moi"               element={<AdminMoiAcceptances />} />
+              <Route path="updates"           element={<AdminUpdates />} />
+              <Route path="documents"         element={<AdminDocuments />} />
+              <Route path="announcements"     element={<AdminAnnouncements />} />
+              <Route path="support-contacts"  element={<AdminSupportContacts />} />
+              <Route path="users" element={
+                <ProtectedRoute allowedRoles={SUPER_ADMIN_ROLES} loginPath="/admin/login" redirectPath="/admin">
+                  <AdminUsers />
+                </ProtectedRoute>
+              } />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </PartnerShell>
+        </ProtectedRoute>
+      } />
+
+      {/* ── Catch-all ─────────────────────────────────── */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

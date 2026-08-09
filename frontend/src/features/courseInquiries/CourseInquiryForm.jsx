@@ -10,7 +10,7 @@ export default function CourseInquiryForm() {
 
   const mutation = useMutation({
     mutationFn: createInquiry,
-    onSuccess: () => navigate('/history'),
+    onSuccess: () => navigate('/partner/history'),
   });
 
   return (

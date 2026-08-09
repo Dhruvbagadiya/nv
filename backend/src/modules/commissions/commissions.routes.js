@@ -7,11 +7,14 @@ import { listCommissionsQuery, upsertCommissionBody } from './commissions.schema
 import { listCommissionsHandler, upsertCommissionHandler } from './commissions.controller.js';
 
 const router = Router();
+// Partner-side only — commission rates are the agency margin. Adding STUDENT to the Role
+// enum silently widened every route that was merely `requireAuth`.
+const partnerAuth = [requireAuth, requireRole('AGENT', 'ADMIN', 'SUPER_ADMIN')];
 
 // GET /api/commissions?country=&search=&page=
 router.get(
   '/',
-  requireAuth,
+  ...partnerAuth,
   validate(listCommissionsQuery, 'query'),
   asyncHandler(listCommissionsHandler)
 );

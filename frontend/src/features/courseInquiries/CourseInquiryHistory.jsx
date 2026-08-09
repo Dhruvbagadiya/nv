@@ -72,7 +72,7 @@ export default function CourseInquiryHistory() {
       title="Course inquiry history"
       subtitle="Track all your course inquiries"
       actions={
-        <button className="btn btn-primary" onClick={() => navigate('/ask-team')}>
+        <button className="btn btn-primary" onClick={() => navigate('/partner/ask-team')}>
           New inquiry
         </button>
       }

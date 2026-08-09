@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { prisma } from '../../utils/prisma.js';
 import { NotFoundError } from '../../utils/httpErrors.js';
 import { paginateQuery } from '../../utils/pagination.js';
@@ -24,7 +25,7 @@ export async function upsertProfile(userId, data) {
   return prisma.studentProfile.upsert({
     where:  { userId },
     update: { ...data, updatedAt: new Date() },
-    create: { id: crypto.randomUUID?.() ?? require('crypto').randomUUID(), userId, ...data },
+    create: { id: crypto.randomUUID(), userId, ...data },
     select: PROFILE_SELECT,
   });
 }
@@ -35,7 +36,9 @@ const APPLICATION_INCLUDE = {
   course: {
     include: {
       institution: {
-        include: { country: { select: { code: true, name: true, flagEmoji: true, currencyCode: true } } },
+        include: {
+          country: { select: { code: true, name: true, flagEmoji: true, currencyCode: true } },
+        },
       },
       intakes: { orderBy: { startDate: 'asc' } },
     },

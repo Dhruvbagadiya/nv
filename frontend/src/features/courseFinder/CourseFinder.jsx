@@ -92,10 +92,10 @@ export default function CourseFinder() {
       subtitle={`Welcome back, ${user?.name ?? 'partner'}`}
       actions={
         <>
-          <button className="btn btn-outline" onClick={() => navigate('/ask-team')}>
+          <button className="btn btn-outline" onClick={() => navigate('/partner/ask-team')}>
             Ask our team
           </button>
-          <button className="btn btn-primary" onClick={() => navigate('/add-application')}>
+          <button className="btn btn-primary" onClick={() => navigate('/partner/add-application')}>
             + Add new application
           </button>
         </>

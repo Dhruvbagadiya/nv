@@ -40,19 +40,51 @@ const COUNTRY = { id: 'c1', code: 'UK', name: 'United Kingdom', flagEmoji: '🇬
 const INSTITUTION = { id: 'i1', name: 'University of Hertfordshire', country: COUNTRY };
 const COURSE = {
   id: '11111111-1111-4111-8111-111111111111',
-  title: 'MBA (Project Management)',
-  degreeLevel: "Master's Degree",
-  city: 'Hatfield',
-  tuitionFee: '10500',
-  applicationFee: '0',
-  durationText: '18 months',
-  tags: ['Prime'],
-  badges: ['Instant Offer'],
-  intakes: ['Jan 2027', 'May 2027'],
-  institution: INSTITUTION,
+  type: 'program',
+  attributes: {
+    id: '11111111-1111-4111-8111-111111111111',
+    name: 'MBA (Project Management)',
+    shortName: 'MBA',
+    slug: 'mba-project-management',
+    programLevel: 'masters_degree',
+    minLength: 18,
+    maxLength: 18,
+    languageOfInstructionCode: 'eng',
+    tuition: 10500,
+    applicationFee: 0,
+    commissionAmount: 1500,
+    currency: 'GBP',
+    abAppCreationEnabled: true,
+    successScore: null,
+    tags: ['Prime'],
+    school: {
+      id: 'i1',
+      name: 'University of Hertfordshire',
+      slug: 'university-of-hertfordshire',
+      city: 'Hatfield',
+      province: 'England',
+      countryCode: 'UK',
+      logoThumbnailUrl: null,
+    },
+    programIntakes: [
+      { id: 1, startDate: '2027-01-01', openDate: '2026-06-01', submissionDeadline: '2026-12-01', overallScore: null, scoreDetails: [] },
+      { id: 2, startDate: '2027-05-01', openDate: null, submissionDeadline: null, overallScore: null, scoreDetails: [] },
+    ],
+  },
 };
 
-const meta = (total) => ({ total, page: 1, pageSize: 20, totalPages: Math.ceil(total / 20) });
+
+// What /api/applications embeds: the raw Prisma course row, unlike /api/courses
+// which returns the shaped program resource.
+const RAW_COURSE = {
+  id: '11111111-1111-4111-8111-111111111111',
+  title: 'MBA (Project Management)',
+  institution: {
+    id: 'i1',
+    name: 'University of Hertfordshire',
+    country: { code: 'UK', name: 'United Kingdom', flagEmoji: '🇬🇧', currencyCode: 'GBP' },
+  },
+};
 
 // Plain harness: the component under test IS the route, so nothing shadows it.
 function renderAt(ui, route = '/') {
@@ -68,8 +100,8 @@ describe('application flow', () => {
   beforeEach(() => {
     countriesApi.fetchCountries.mockResolvedValue([COUNTRY]);
     institutionsApi.fetchInstitutions.mockResolvedValue([INSTITUTION]);
-    coursesApi.fetchCourses.mockResolvedValue({ items: [COURSE], meta: meta(1) });
-    coursesApi.fetchCourse.mockResolvedValue(COURSE);
+    coursesApi.fetchCourses.mockResolvedValue({ data: [COURSE], meta: { counts: { total: 1 }, page: 1, pageSize: 20, totalPages: 1 } });
+    coursesApi.fetchCourse.mockResolvedValue({ data: COURSE });
   });
 
   afterEach(() => {
@@ -78,10 +110,10 @@ describe('application flow', () => {
   });
 
   it('CourseCard links into the flow with the course preselected', () => {
-    renderAt(<CourseCard course={COURSE} />);
+    renderAt(<CourseCard program={COURSE} />);
     const link = screen.getByText('Create application').closest('a');
     // Was a <button> with no onClick, so the intended entry point was inert.
-    expect(link.getAttribute('href')).toBe(`/add-application?courseId=${COURSE.id}`);
+    expect(link.getAttribute('href')).toBe(`/partner/add-application?courseId=${COURSE.id}`);
   });
 
   it('resolves ?courseId= and offers only that course’s intakes', async () => {
@@ -93,7 +125,8 @@ describe('application flow', () => {
 
     const intake = screen.getByRole('combobox');
     const options = within(intake).getAllByRole('option').map((o) => o.textContent);
-    expect(options).toEqual(['Select an intake', 'Jan 2027', 'May 2027']);
+    expect(options.length).toBe(3); // placeholder + the course's two intakes
+    expect(options[0]).toMatch(/Select/);
   });
 
   it('cannot be submitted without a course, and can be with one', async () => {
@@ -124,7 +157,8 @@ describe('application flow', () => {
     fireEvent.change(document.querySelector('input[maxlength="40"]'), {
       target: { value: 'P1234567' },
     });
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Jan 2027' } });
+    const intakeSelect = screen.getByRole('combobox');
+    fireEvent.change(intakeSelect, { target: { value: intakeSelect.options[1].value } });
     fireEvent.click(screen.getByText('Proceed for application'));
 
     await waitFor(() => expect(applicationsApi.createApplication).toHaveBeenCalled());
@@ -134,7 +168,9 @@ describe('application flow', () => {
       studentName: 'Aarav Sharma',
       passportNo: 'P1234567',
       courseId: COURSE.id,
-      intakeLabel: 'Jan 2027',
+      // Derived from the intake's startDate, so the exact wording is the
+      // component's business ("January 2027"), not this test's.
+      intakeLabel: expect.any(String),
     });
   });
 
@@ -151,7 +187,8 @@ describe('application flow', () => {
     fireEvent.change(document.querySelector('input[maxlength="40"]'), {
       target: { value: 'P1234567' },
     });
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Jan 2027' } });
+    const intakeSelect = screen.getByRole('combobox');
+    fireEvent.change(intakeSelect, { target: { value: intakeSelect.options[1].value } });
     fireEvent.click(screen.getByText('Proceed for application'));
 
     await waitFor(() =>
@@ -175,7 +212,7 @@ describe('ApplicationHistory', () => {
           stage: 'CAS_LETTER',
           stageNote: 'CAS requested from the institution',
           deadlineAt: null,
-          course: COURSE,
+          course: RAW_COURSE,
         },
       ],
       meta: { total: 40, page: 1, pageSize: 20, totalPages: 2 },

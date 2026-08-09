@@ -96,7 +96,7 @@ export default function AdminDashboard() {
           to="/admin/users" color="var(--purple-700)" />
         <StatCard icon={APP_ICON} label="Applications"
           value={isLoading ? '…' : stats?.applications}
-          to="/app-history" color="var(--accent-700)" />
+          to="/partner/app-history" color="var(--accent-700)" />
         <StatCard icon={ANNOUNCE_ICON} label="Active banners"
           value={isLoading ? '…' : stats?.activeBanners}
           to="/admin/announcements" color="var(--warning-700)" />
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
         <ActionTile icon={DOC_ICON} label="Document bank"
           to="/admin/documents" description="Upload visa documents, SOPs, LORs and brochures" />
         <ActionTile icon={APP_ICON} label="Applications"
-          to="/app-history" description="Review and advance student applications" />
+          to="/partner/app-history" description="Review and advance student applications" />
       </div>
     </Page>
   );

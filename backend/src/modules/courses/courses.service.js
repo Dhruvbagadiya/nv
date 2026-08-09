@@ -219,9 +219,22 @@ export async function createCourse(data) {
 
 export async function updateCourse(id, data) {
   const { intakes, ...rest } = data;
+
+  // Intakes were previously destructured off and discarded, so editing a course
+  // silently dropped every intake change with no error. When the caller supplies
+  // them, replace the set; when the key is absent, leave the existing rows alone
+  // (an update that omits intakes should not wipe them).
   const course = await prisma.course.update({
     where: { id },
-    data: rest,
+    data: {
+      ...rest,
+      ...(intakes && {
+        intakes: {
+          deleteMany: {},
+          create: intakes,
+        },
+      }),
+    },
     include: PROGRAM_INCLUDE,
   });
   return toProgramResource(course);

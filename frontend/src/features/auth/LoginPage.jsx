@@ -18,14 +18,14 @@ export default function LoginPage() {
     mutationFn: () => login(email, password),
     onSuccess: (data) => {
       setSession(data);
-      const redirectTo = location.state?.from || '/dashboard';
+      const redirectTo = location.state?.from || '/partner/dashboard';
       navigate(redirectTo, { replace: true });
     },
   });
 
   // /login sits outside ProtectedRoute, so without this an already-signed-in
   // user (or one who just refreshed) would be shown the form again.
-  if (status === 'authenticated') return <Navigate to="/dashboard" replace />;
+  if (status === 'authenticated') return <Navigate to="/partner/dashboard" replace />;
 
   const handleSubmit = (e) => {
     e.preventDefault();

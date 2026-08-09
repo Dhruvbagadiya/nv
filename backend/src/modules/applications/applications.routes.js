@@ -17,26 +17,27 @@ import {
 } from './applications.controller.js';
 
 const router = Router();
+// Partner/admin only — students use /api/students/applications instead.
+const partnerAuth = [requireAuth, requireRole('AGENT', 'ADMIN', 'SUPER_ADMIN')];
 
 // GET /api/applications?country=&institutionId=&stage=&passportNo=&studentName=&page=
 router.get(
   '/',
-  requireAuth,
+  ...partnerAuth,
   validate(listApplicationsQuery, 'query'),
   asyncHandler(listApplicationsHandler)
 );
 
-// POST /api/applications  { studentName, passportNo, courseId, intakeLabel? }
+// POST /api/applications
 router.post(
   '/',
-  requireAuth,
+  ...partnerAuth,
   validate(createApplicationBody),
   asyncHandler(createApplicationHandler)
 );
 
-// Detail view behind the eye icon in Application History. Agent-scoped in the
-// service, so an agent cannot read another partner's student by guessing an id.
-router.get('/:id', requireAuth, validate(idParam, 'params'), asyncHandler(getApplicationHandler));
+// Detail view — agent-scoped in the service.
+router.get('/:id', ...partnerAuth, validate(idParam, 'params'), asyncHandler(getApplicationHandler));
 
 // Advancing an application is staff work, not something the submitting agent does.
 router.patch(

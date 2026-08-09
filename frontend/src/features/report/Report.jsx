@@ -101,7 +101,7 @@ export default function Report() {
             key={s.value}
             label={s.label}
             value={data.applications[s.value]}
-            to={`/app-history?stage=${s.value}`}
+            to={`/partner/app-history?stage=${s.value}`}
           />
         ))}
       </StatTileGrid>
@@ -113,7 +113,7 @@ export default function Report() {
             key={s.value}
             label={s.label}
             value={data.courseInquiries[s.value]}
-            to={`/history?stage=${s.value}`}
+            to={`/partner/history?stage=${s.value}`}
           />
         ))}
       </StatTileGrid>
@@ -136,7 +136,7 @@ export default function Report() {
             title="Recent Application Notifications"
             action={
               data.recentNotifications.length > 0 && (
-                <Link className="btn btn-outline" to="/app-history">
+                <Link className="btn btn-outline" to="/partner/app-history">
                   View all
                 </Link>
               )

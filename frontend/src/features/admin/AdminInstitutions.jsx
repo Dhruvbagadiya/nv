@@ -21,10 +21,6 @@ function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-const emptyForm = {
-  name: '', slug: '', countryId: '', city: '', province: '',
-  logoUrl: '', isTrending: false, isBlacklisted: false,
-};
 
 function InstitutionModal({ initial, onClose, onSaved, countries }) {
   const isEdit = Boolean(initial?.id);
@@ -153,7 +149,7 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
 export default function AdminInstitutions() {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(null);
-  const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
+  const { applied, draft, setField, apply, clear } = useUrlFilters(FILTER_DEFAULTS);
   const { countries } = useCountries();
 
   const countryOptions = countries.map((c) => ({ value: c.code, label: c.name }));

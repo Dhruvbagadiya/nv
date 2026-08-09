@@ -1,6 +1,7 @@
 import * as inquiriesService from './courseInquiries.service.js';
+import { agentScopeFor } from '../../utils/scope.js';
 
-const scopeFor = (user) => (user.role === 'AGENT' ? user.sub : undefined);
+const scopeFor = agentScopeFor;
 
 export async function createInquiryHandler(req, res) {
   res.status(201).json(await inquiriesService.createInquiry({ agentId: req.user.sub, ...req.body }));

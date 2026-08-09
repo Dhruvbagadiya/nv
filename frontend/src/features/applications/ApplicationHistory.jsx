@@ -127,7 +127,7 @@ export default function ApplicationHistory() {
       title="Application history"
       subtitle="Track all your students’ applications with ease"
       actions={
-        <button className="btn btn-primary" onClick={() => navigate('/add-application')}>
+        <button className="btn btn-primary" onClick={() => navigate('/partner/add-application')}>
           Add new application
         </button>
       }

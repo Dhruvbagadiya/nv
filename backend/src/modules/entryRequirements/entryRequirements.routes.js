@@ -15,10 +15,13 @@ import {
 } from './entryRequirements.controller.js';
 
 const router = Router();
+// Partner-side only — partner reference data. Adding STUDENT to the Role
+// enum silently widened every route that was merely `requireAuth`.
+const partnerAuth = [requireAuth, requireRole('AGENT', 'ADMIN', 'SUPER_ADMIN')];
 
 router.get(
   '/english-tests',
-  requireAuth,
+  ...partnerAuth,
   validate(englishTestsQuery, 'query'),
   asyncHandler(listEnglishTestsHandler)
 );
@@ -26,7 +29,7 @@ router.get(
 // GET /api/entry-requirements?level=UG|PG&country=&institutionId=&englishRequirement=&credibilityInterview=
 router.get(
   '/',
-  requireAuth,
+  ...partnerAuth,
   validate(listEntryRequirementsQuery, 'query'),
   asyncHandler(listEntryRequirementsHandler)
 );

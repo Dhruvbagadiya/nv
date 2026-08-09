@@ -1,9 +1,10 @@
 import * as reportsService from './reports.service.js';
+import { agentScopeFor } from '../../utils/scope.js';
 
 export async function summaryHandler(req, res) {
   res.json(
     await reportsService.getReportSummary({
-      agentId: req.user.role === 'AGENT' ? req.user.sub : undefined,
+      agentId: agentScopeFor(req.user),
       userId: req.user.sub,
     })
   );

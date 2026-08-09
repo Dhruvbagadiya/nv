@@ -46,10 +46,11 @@ router.get('/me', requireAuth, asyncHandler(meHandler));
 // ---- sub-agents: an agency managing its own staff ----
 // Any authenticated agent may do this for themselves; the service refuses if the
 // caller is itself a sub-agent, keeping the hierarchy one level deep.
-router.get('/sub-agents', requireAuth, asyncHandler(listSubAgentsHandler));
+router.get('/sub-agents', requireAuth, requireRole('AGENT'), asyncHandler(listSubAgentsHandler));
 router.post(
   '/sub-agents',
   requireAuth,
+  requireRole('AGENT'),
   validate(createSubAgentBody),
   asyncHandler(createSubAgentHandler)
 );

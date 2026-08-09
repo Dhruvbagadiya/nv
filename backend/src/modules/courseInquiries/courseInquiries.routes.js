@@ -16,17 +16,10 @@ import {
 } from './courseInquiries.controller.js';
 
 const router = Router();
+const partnerAuth = [requireAuth, requireRole('AGENT', 'ADMIN', 'SUPER_ADMIN')];
 
-// GET /api/course-inquiries?countryId=&intake=&stage=&page=
-router.get(
-  '/',
-  requireAuth,
-  validate(listInquiriesQuery, 'query'),
-  asyncHandler(listInquiriesHandler)
-);
-
-// POST /api/course-inquiries  { nationality, countryId?, intake?, courseType? }
-router.post('/', requireAuth, validate(createInquiryBody), asyncHandler(createInquiryHandler));
+router.get('/', ...partnerAuth, validate(listInquiriesQuery, 'query'), asyncHandler(listInquiriesHandler));
+router.post('/', ...partnerAuth, validate(createInquiryBody), asyncHandler(createInquiryHandler));
 
 router.patch(
   '/:id/stage',

@@ -12,8 +12,8 @@ function renderAt(path = '/admin', allowedRoles = ADMIN_ROLES) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/login" element={<p>LOGIN PAGE</p>} />
-        <Route path="/dashboard" element={<p>DASHBOARD</p>} />
+        <Route path="/partner/login" element={<p>LOGIN PAGE</p>} />
+        <Route path="/partner/dashboard" element={<p>DASHBOARD</p>} />
         <Route
           path="/admin"
           element={

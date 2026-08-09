@@ -54,7 +54,7 @@ export default function Header() {
     if (!term) return;
     // The dashboard is the course catalogue, and its search covers course title,
     // institution and city.
-    navigate(`/dashboard?search=${encodeURIComponent(term)}`);
+    navigate(`/partner/dashboard?search=${encodeURIComponent(term)}`);
     setSearch('');
     searchRef.current?.blur();
   };
@@ -67,7 +67,7 @@ export default function Header() {
   // navigate away — logout() now revokes the refresh token, not just local state.
   const handleLogout = async () => {
     await logout();
-    navigate('/login', { replace: true });
+    navigate('/partner/login', { replace: true });
   };
 
   return (

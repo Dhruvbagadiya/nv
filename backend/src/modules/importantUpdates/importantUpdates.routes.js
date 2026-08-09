@@ -18,12 +18,15 @@ import {
 } from './importantUpdates.controller.js';
 
 const router = Router();
+// Partner-side only — partner-internal announcements. Adding STUDENT to the Role
+// enum silently widened every route that was merely `requireAuth`.
+const partnerAuth = [requireAuth, requireRole('AGENT', 'ADMIN', 'SUPER_ADMIN')];
 const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
 
 // GET /api/important-updates?from=&to=&countryId=&institutionId=&page=
-router.get('/', requireAuth, validate(listUpdatesQuery, 'query'), asyncHandler(listUpdatesHandler));
+router.get('/', ...partnerAuth, validate(listUpdatesQuery, 'query'), asyncHandler(listUpdatesHandler));
 
-router.get('/:id', requireAuth, validate(idParam, 'params'), asyncHandler(getUpdateHandler));
+router.get('/:id', ...partnerAuth, validate(idParam, 'params'), asyncHandler(getUpdateHandler));
 
 router.post('/', ...admin, validate(createUpdateBody), asyncHandler(createUpdateHandler));
 
