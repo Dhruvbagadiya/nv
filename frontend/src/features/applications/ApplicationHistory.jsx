@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { fetchApplications } from '../../api/applications.js';
+import Flag from '../../components/ui/Flag.jsx';
 import Page from '../../components/ui/Page.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
@@ -96,7 +97,12 @@ export default function ApplicationHistory() {
       render: (a) => (
         <>
           <div>
-            {a.course.institution.country.flagEmoji} {a.course.institution.name}
+            <Flag
+              emoji={a.course.institution.country.flagEmoji}
+              code={a.course.institution.country.code}
+              name={a.course.institution.country.name}
+            />{' '}
+            {a.course.institution.name}
           </div>
           <div className="cell-strong">{a.course.title}</div>
           {a.intakeLabel && <div className="picker-sub">{a.intakeLabel}</div>}

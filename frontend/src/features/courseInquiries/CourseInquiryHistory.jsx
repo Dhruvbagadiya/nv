@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import Flag from '../../components/ui/Flag.jsx';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { fetchInquiries } from '../../api/courseInquiries.js';
 import Page from '../../components/ui/Page.jsx';
@@ -59,7 +60,14 @@ export default function CourseInquiryHistory() {
       header: 'Destination',
       // The country name, which this screen could not show at all before —
       // CourseInquiry.countryId had no relation, so there was nothing to join.
-      render: (i) => (i.country ? `${i.country.flagEmoji ?? ''} ${i.country.name}` : '—'),
+      render: (i) =>
+        i.country ? (
+          <>
+            <Flag emoji={i.country.flagEmoji} code={i.country.code} name={i.country.name} /> {i.country.name}
+          </>
+        ) : (
+          '—'
+        ),
     },
     { key: 'intake', header: 'Intake', render: (i) => i.intake || '—' },
     { key: 'courseType', header: 'Course type', render: (i) => i.courseType || '—' },

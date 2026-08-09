@@ -103,7 +103,7 @@ export default function StudentProgramBrowser() {
             <select value={country} onChange={(e) => { setCountry(e.target.value); setPage(1); }}>
               <option value="ALL">All countries</option>
               {countries.map((c) => (
-                <option key={c.code} value={c.code}>{c.flagEmoji} {c.name}</option>
+                <option key={c.code} value={c.code}>{c.name}</option>
               ))}
             </select>
           </div>

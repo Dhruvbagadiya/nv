@@ -34,6 +34,13 @@ export async function fetchDocuments(params) {
   return data;
 }
 
+// Only the countries/institutions that actually have documents in this category,
+// so the dropdowns cannot offer an option that returns an empty grid.
+export async function fetchDocumentFacets(category) {
+  const { data } = await api.get('/documents/facets', { params: { category } });
+  return data;
+}
+
 export async function fetchDocumentCounts() {
   const { data } = await api.get('/documents/counts');
   return data.counts;

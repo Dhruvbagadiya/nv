@@ -199,3 +199,11 @@
   .page-head p { margin: 0; color: var(--ink-500); font-size: 12px; }
   .head-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
+
+  /* Flag images (see components/ui/Flag.jsx for why these are not emoji). */
+  .flag-img { display: block; border-radius: 2px; object-fit: cover; box-shadow: 0 0 0 1px var(--border); flex-shrink: 0; }
+  .flag-fallback {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    background: var(--canvas); color: var(--ink-500); border-radius: 2px;
+    box-shadow: 0 0 0 1px var(--border); font-size: 8px; font-weight: 700; letter-spacing: -0.02em;
+  }

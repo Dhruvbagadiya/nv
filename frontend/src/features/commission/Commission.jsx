@@ -1,4 +1,5 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import Flag from '../../components/ui/Flag.jsx';
 import Page from '../../components/ui/Page.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
@@ -14,7 +15,12 @@ const COLUMNS = [
     header: 'Country',
     render: (c) => (
       <span>
-        {c.institution.country.flagEmoji} {c.institution.country.name}
+        <Flag
+          emoji={c.institution.country.flagEmoji}
+          code={c.institution.country.code}
+          name={c.institution.country.name}
+        />{' '}
+        {c.institution.country.name}
       </span>
     ),
   },

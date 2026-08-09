@@ -1,4 +1,5 @@
 import AdminResourcePage from '../../components/admin/AdminResourcePage.jsx';
+import Flag from '../../components/ui/Flag.jsx';
 import { fetchMoiAcceptances, createMoiAcceptance, updateMoiAcceptance, deleteMoiAcceptance } from '../../api/admin.js';
 import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
 
@@ -37,7 +38,12 @@ export default function AdminMoiAcceptances() {
           <div>
             <div className="cell-strong">{r.institution.name}</div>
             <div style={{ fontSize: 11, color: 'var(--ink-500)' }}>
-              {r.institution.country?.flagEmoji} {r.institution.country?.name}
+              <Flag
+                emoji={r.institution.country?.flagEmoji}
+                code={r.institution.country?.code}
+                name={r.institution.country?.name}
+              />{' '}
+              {r.institution.country?.name}
             </div>
           </div>
         ),

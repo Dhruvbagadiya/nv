@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import Flag from '../../components/ui/Flag.jsx';
 import Page from '../../components/ui/Page.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
@@ -90,7 +91,9 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
               <option value="">Select country</option>
               {countries.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.flagEmoji ? `${c.flagEmoji} ` : ''}{c.name}
+                  {/* No emoji in an <option>: it cannot hold an image, and on
+                      Windows the emoji degrades to stray letters. */}
+                  {c.name}
                 </option>
               ))}
             </select>
@@ -217,7 +220,12 @@ export default function AdminInstitutions() {
       header: 'Country',
       render: (inst) => (
         <span className="cell-flag">
-          {inst.country?.flagEmoji} {inst.country?.name}
+          <Flag
+            emoji={inst.country?.flagEmoji}
+            code={inst.country?.code}
+            name={inst.country?.name}
+          />{' '}
+          {inst.country?.name}
         </span>
       ),
     },

@@ -49,3 +49,34 @@ export async function updateDocument(id, data) {
 export async function archiveDocument(id) {
   return prisma.document.update({ where: { id }, data: { archivedAt: new Date() } });
 }
+
+// Which countries and institutions actually have documents in this category.
+//
+// The filters were correct but every option returned nothing, because no document
+// carried a scope — indistinguishable from a broken filter. Offering only the
+// values that can return a result is the same rule applied elsewhere in this
+// codebase: no control that does nothing.
+export async function listFacets({ category }) {
+  const rows = await prisma.document.findMany({
+    where: { category, archivedAt: null },
+    select: {
+      country: { select: { id: true, name: true, code: true, flagEmoji: true } },
+      institution: { select: { id: true, name: true } },
+    },
+  });
+
+  const countries = new Map();
+  const institutions = new Map();
+  for (const r of rows) {
+    if (r.country) countries.set(r.country.id, r.country);
+    if (r.institution) institutions.set(r.institution.id, r.institution);
+  }
+
+  const byName = (a, b) => a.name.localeCompare(b.name);
+  return {
+    countries: [...countries.values()].sort(byName),
+    institutions: [...institutions.values()].sort(byName),
+    // How many have no scope at all, so the UI can say what "all" means.
+    unscoped: rows.filter((r) => !r.country && !r.institution).length,
+  };
+}

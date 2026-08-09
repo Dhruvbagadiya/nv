@@ -3,8 +3,7 @@ import Page from '../../components/ui/Page.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
 import DocumentGrid from '../../components/ui/DocumentGrid.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
-import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
-import { fetchDocuments } from '../../api/referenceScreens.js';
+import { fetchDocuments, fetchDocumentFacets } from '../../api/referenceScreens.js';
 
 // All five Document Bank screens are this component behind five routes. In the
 // reference portal they are five near-identical pages differing only by category,
@@ -21,25 +20,37 @@ export const DOCUMENT_CATEGORIES = {
 
 export default function DocumentBank({ category }) {
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
-  const { countries } = useCountries();
-  const { options: institutionOptions } = useInstitutions();
   const meta = DOCUMENT_CATEGORIES[category];
 
+  // Driven by what exists rather than the full country/institution lists. Every
+  // document used to be unscoped, so both dropdowns offered every option and
+  // every one returned an empty grid — which reads as a broken filter.
+  const { data: facets } = useQuery({
+    queryKey: ['document-facets', category],
+    queryFn: () => fetchDocumentFacets(category),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // A dropdown with nothing behind it is hidden rather than shown empty.
   const fields = [
-    {
-      name: 'countryId',
-      label: 'Country',
-      type: 'select',
-      placeholder: 'Select country',
-      options: countries.map((c) => ({ value: c.id, label: c.name })),
-    },
-    {
-      name: 'institutionId',
-      label: 'Institution',
-      type: 'select',
-      placeholder: 'Select university',
-      options: institutionOptions,
-    },
+    ...(facets?.countries?.length
+      ? [{
+          name: 'countryId',
+          label: 'Country',
+          type: 'select',
+          placeholder: 'All countries',
+          options: facets.countries.map((c) => ({ value: c.id, label: c.name })),
+        }]
+      : []),
+    ...(facets?.institutions?.length
+      ? [{
+          name: 'institutionId',
+          label: 'Institution',
+          type: 'select',
+          placeholder: 'All institutions',
+          options: facets.institutions.map((i) => ({ value: i.id, label: i.name })),
+        }]
+      : []),
     { name: 'search', label: 'Search by name', type: 'text', placeholder: meta.searchHint },
   ];
 

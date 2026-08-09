@@ -5,6 +5,10 @@ export async function listDocumentsHandler(req, res) {
   res.json(await service.listDocuments(req.query));
 }
 
+export async function facetsHandler(req, res) {
+  res.json(await service.listFacets({ category: req.query.category }));
+}
+
 export async function countsHandler(req, res) {
   res.json({ counts: await service.countByCategory() });
 }

@@ -76,7 +76,7 @@ export default function StudentApplications() {
                   <div className="student-app-title">{app.course?.title}</div>
                   <div className="student-app-school">
                     {inst?.name}
-                    {inst?.country?.flagEmoji ? ` ${inst.country.flagEmoji}` : ''}
+                    {inst?.country?.code ? ` · ${inst.country.code}` : ''}
                   </div>
                   {app.intakeLabel && (
                     <div className="student-app-intake">Intake: {app.intakeLabel}</div>

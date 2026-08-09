@@ -1,5 +1,6 @@
 import { useCountryFilter } from '../../store/useCountryFilter.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
+import Flag from '../ui/Flag.jsx';
 
 // The 15 chips used to be a hardcoded array in this file rendering plain text
 // codes — the scaffold left a "paste the flag SVG here" note that was never
@@ -8,9 +9,9 @@ import { useCountries } from '../../hooks/useReferenceData.js';
 // had never heard of: selecting one produced an empty grid with no explanation.
 //
 // Now driven by GET /api/countries, so the strip cannot drift from the data, and
-// flagEmoji comes from the same row as the code. Emoji rather than inline SVG:
-// 15 hand-drawn flags is a lot of markup to maintain for something the platform
-// already renders.
+// Flags render through <Flag>, not as raw emoji: Windows has no country-flag
+// emoji font, so the two Regional Indicator code points fall back to their
+// letters and the strip read "GB DE NZ FR…" instead of showing flags.
 export default function CountryStrip() {
   const { selectedCountry, setSelectedCountry } = useCountryFilter();
   const { countries, isLoading } = useCountries();
@@ -51,11 +52,7 @@ export default function CountryStrip() {
             title={`${c.name}${c.institutionCount ? ` — ${c.institutionCount} institutions` : ' — no institutions yet'}`}
             onClick={() => setSelectedCountry(c.code)}
           >
-            {c.flagEmoji && (
-              <span className="flag-emoji" aria-hidden="true">
-                {c.flagEmoji}
-              </span>
-            )}
+            <Flag emoji={c.flagEmoji} code={c.code} name={c.name} size={18} />
             <span>{c.code}</span>
           </button>
         ))}

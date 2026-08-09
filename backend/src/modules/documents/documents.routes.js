@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth.js';
 import { requireRole } from '../../middleware/rbac.js';
 import { validate } from '../../middleware/validate.js';
@@ -9,10 +10,12 @@ import {
   updateDocumentBody,
   uploadUrlBody,
   idParam,
+  DOCUMENT_CATEGORIES,
 } from './documents.schemas.js';
 import {
   listDocumentsHandler,
   countsHandler,
+  facetsHandler,
   uploadUrlHandler,
   storageStatusHandler,
   createDocumentHandler,
@@ -27,6 +30,14 @@ const partnerAuth = [requireAuth, requireRole('AGENT', 'ADMIN', 'SUPER_ADMIN')];
 const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
 
 router.get('/counts', ...partnerAuth, asyncHandler(countsHandler));
+
+// Filter options that can actually return something, for the given category.
+router.get(
+  '/facets',
+  ...partnerAuth,
+  validate(z.object({ category: z.enum(DOCUMENT_CATEGORIES) }), 'query'),
+  asyncHandler(facetsHandler)
+);
 
 // Static segments, admin-only. Both before /:id.
 router.get('/storage-status', ...admin, asyncHandler(storageStatusHandler));
