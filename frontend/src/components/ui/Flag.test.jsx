@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
-import Flag, { isoFromFlagEmoji } from './Flag.jsx';
+import Flag, { isoFromFlagEmoji, flagUrl } from './Flag.jsx';
 
 // A flag emoji is two Regional Indicator code points, and Windows ships no font
 // that composes them — so the browser draws the letters and the country strip
@@ -69,5 +69,51 @@ describe('Flag', () => {
     const img = screen.getByTitle('France');
     expect(img.getAttribute('alt')).toBe('');
     expect(img.getAttribute('aria-hidden')).toBe('true');
+  });
+});
+
+// The CDN serves a fixed set of dimensions. Requesting anything else is a 404, and
+// <Flag> then falls back to the code chip — which is exactly what happened in the
+// header strip: size 18 computed "18x14", which does not exist, so every flag in
+// the header 404'd while the admin table (size 24 -> "24x18") worked.
+describe('CDN size snapping', () => {
+  const SUPPORTED = new Set([
+    '16x12', '20x15', '24x18', '28x21', '32x24', '36x27', '40x30', '48x36',
+    '56x42', '60x45', '64x48', '72x54', '80x60', '84x63', '96x72', '108x81',
+    '112x84', '120x90', '128x96',
+  ]);
+
+  it('never requests a dimension the CDN does not serve', () => {
+    for (let size = 8; size <= 128; size += 1) {
+      for (const url of [flagUrl('gb', size), flagUrl('gb', size * 2)]) {
+        const dims = url.match(/flagcdn\.com\/(\d+x\d+)\//)[1];
+        expect(SUPPORTED.has(dims), `size ${size} produced ${dims}`).toBe(true);
+      }
+    }
+  });
+
+  // The exact size that was broken in the header.
+  it('snaps the header strip size (18) to a real one', () => {
+    expect(flagUrl('gb', 18)).toBe('https://flagcdn.com/20x15/gb.png');
+  });
+
+  it('uses an exact match when the requested size is already supported', () => {
+    expect(flagUrl('gb', 24)).toBe('https://flagcdn.com/24x18/gb.png');
+  });
+
+  it('never downscales below the requested size', () => {
+    for (const size of [17, 18, 19, 25, 33, 41]) {
+      const w = Number(flagUrl('gb', size).match(/\/(\d+)x/)[1]);
+      expect(w).toBeGreaterThanOrEqual(size);
+    }
+  });
+
+  it('displays at the asked-for size even when fetching a larger asset', () => {
+    render(<Flag isoCode="GB" code="UK" name="United Kingdom" size={18} />);
+    const img = screen.getByTitle('United Kingdom');
+    // Layout is unchanged: only the fetched asset is snapped.
+    expect(img.getAttribute('width')).toBe('18');
+    expect(img.getAttribute('height')).toBe('14');
+    expect(img.getAttribute('src')).toContain('20x15');
   });
 });
