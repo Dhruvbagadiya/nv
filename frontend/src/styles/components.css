@@ -95,7 +95,12 @@
   .intake-list { display:flex; gap:4px; flex-wrap:wrap; }
   .intake-list span { font-size: 9.5px; font-family: var(--font-mono); font-weight: 600; color: var(--ink-700); background: var(--canvas); border: 1px solid var(--border); border-radius: 5px; padding: 2px 5px; }
 
-  .card-actions { display:flex; gap:5px; align-items:center; margin-top:7px; }
+  /* margin-top:auto pins the action row to the bottom of .card-body (which is a
+     flex column with flex:1), so every button in a row lines up regardless of how
+     many tags a course has or whether it lists intakes. Grid rows already stretch
+     cards to equal height; this is what makes the buttons agree.
+     padding-top keeps the old gap when the content is tall enough to touch it. */
+  .card-actions { display:flex; gap:5px; align-items:center; margin-top:auto; padding-top:7px; }
   .card-actions .btn-primary { flex:1; width:auto; justify-content:center; height: 31px; font-size: 12px; }
   .heart-btn { width:31px; height:31px; border:1px solid var(--border); border-radius:var(--radius-sm); background:#fff; cursor:pointer; font-size:15px; color:var(--ink-400); flex-shrink: 0; transition: all .13s; }
   .heart-btn:hover { border-color: var(--danger-700); color: var(--danger-700); }
