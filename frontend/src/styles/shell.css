@@ -49,6 +49,10 @@
     font-size: 9px; font-weight: 700; line-height: 1; transition: background .12s, color .12s, border-color .12s;
   }
   .country-chip .flag-svg { width: 18px; height: 18px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 1px var(--border); display: block; flex-shrink: 0; }
+  /* The "All" chip leads the country strip and needs to stay visible when the
+     strip scrolls horizontally. */
+  .country-chip.all-chip { position: sticky; left: 0; z-index: 1; background: var(--surface); }
+  .country-chip.all-chip.active { background: var(--accent-50); }
   .country-chip .flag-globe { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--accent-600); }
   /* Flag emoji sit on a different baseline to the surrounding text and render at
      inconsistent widths across platforms, so they get a fixed box and their own

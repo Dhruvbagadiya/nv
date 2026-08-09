@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { login } from '../../api/auth.js';
 import { useAuth } from '../../store/useAuth.js';
+import { homePathFor } from '../../routes/homePath.js';
 
 const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN'];
 
@@ -44,6 +45,10 @@ export default function AdminLoginPage() {
   const errorMsg = wrongRole
     ? 'This account does not have admin access.'
     : mutation.error?.response?.data?.error ?? (mutation.isError ? 'Invalid email or password.' : null);
+
+  // Had no signed-in check, so an already-authenticated admin was shown the
+  // sign-in form again. Placed after every hook.
+  if (status === 'authenticated') return <Navigate to={homePathFor(user?.role)} replace />;
 
   return (
     <div className="admin-login-page">

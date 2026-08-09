@@ -3,12 +3,14 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { login } from '../../api/auth.js';
 import { useAuth } from '../../store/useAuth.js';
+import { homePathFor } from '../../routes/homePath.js';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const setSession = useAuth((s) => s.setSession);
   const status = useAuth((s) => s.status);
+  const user = useAuth((s) => s.user);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -18,14 +20,19 @@ export default function LoginPage() {
     mutationFn: () => login(email, password),
     onSuccess: (data) => {
       setSession(data);
-      const redirectTo = location.state?.from || '/partner/dashboard';
+      // Falls back to the signed-in user's OWN home rather than a hardcoded
+      // partner route — signing in as a student here would otherwise aim at a
+      // page they cannot open.
+      const redirectTo = location.state?.from || homePathFor(data.user?.role);
       navigate(redirectTo, { replace: true });
     },
   });
 
   // /login sits outside ProtectedRoute, so without this an already-signed-in
   // user (or one who just refreshed) would be shown the form again.
-  if (status === 'authenticated') return <Navigate to="/partner/dashboard" replace />;
+  // Send them to THEIR home, not the partner dashboard. Redirecting a signed-in
+  // student here was what produced the blank page.
+  if (status === 'authenticated') return <Navigate to={homePathFor(user?.role)} replace />;
 
   const handleSubmit = (e) => {
     e.preventDefault();

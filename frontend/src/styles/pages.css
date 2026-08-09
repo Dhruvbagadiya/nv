@@ -373,3 +373,11 @@
   .admin-action-icon svg { width: 18px; height: 18px; }
   .admin-action-label { font-size: 13px; font-weight: 700; color: var(--ink-950); margin-bottom: 2px; }
   .admin-action-desc  { font-size: 11.5px; color: var(--ink-500); line-height: 1.4; }
+
+  /* Flex child of .admin-stat-card — without min-width:0 a long label widens
+     the card instead of wrapping. */
+  .admin-stat-body { min-width: 0; }
+
+  /* Wrapper around the global banners. Was referenced by AnnouncementBar but
+     never styled, so two banners sat flush against each other. */
+  .announcement-stack { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }

@@ -211,3 +211,31 @@
 .student-profile-card h2 { font-size: 14px; font-weight: 700; color: var(--ink-950); margin: 0 0 4px; }
 .student-profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 @media (max-width: 580px) { .student-profile-grid { grid-template-columns: 1fr; } }
+
+/* ===================================================================
+   Structural wrappers that were referenced in JSX but never styled.
+   Mostly min-width:0 — a flex or grid child defaults to min-width:auto,
+   which refuses to shrink below its content, so a long programme or
+   school name pushes the row wider than its container instead of
+   ellipsing. That is the usual cause of a card "breaking" its layout.
+   =================================================================== */
+
+.student-browser { min-height: 100%; }
+
+/* Right-hand column of .student-browser-body (grid: 220px 1fr). */
+.student-results { min-width: 0; }
+
+/* Sits next to the logo inside .student-card-top. */
+.student-card-school { min-width: 0; }
+.student-card-school-name,
+.student-card-school-loc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The two halves of .student-app-card (flex, space-between). */
+.student-app-card-left { min-width: 0; }
+.student-app-card-right {
+  display: flex; flex-direction: column; align-items: flex-end;
+  gap: 4px; flex-shrink: 0;
+}
+
+/* Grid item inside .student-detail-stats. */
+.student-detail-stat { min-width: 0; }

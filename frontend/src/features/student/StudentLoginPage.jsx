@@ -4,6 +4,7 @@ import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
 import { login } from '../../api/auth.js';
 import { registerStudent } from '../../api/students.js';
 import { useAuth } from '../../store/useAuth.js';
+import { homePathFor } from '../../routes/homePath.js';
 
 export default function StudentLoginPage() {
   const navigate   = useNavigate();
@@ -43,8 +44,11 @@ export default function StudentLoginPage() {
   // count changed between renders, which React rejects outright — it crashed on the
   // render right after a successful login, and whenever a signed-in student opened
   // this page.
-  if (status === 'authenticated' && user?.role === 'STUDENT') {
-    return <Navigate to="/programs" replace />;
+  // Any signed-in user goes to their own portal. Previously only STUDENT was
+  // handled, so an agent or admin who opened this page was shown a sign-in form
+  // while already authenticated — confusing, and one click from a blank page.
+  if (status === 'authenticated') {
+    return <Navigate to={homePathFor(user?.role)} replace />;
   }
 
   const handleSubmit = (e) => {

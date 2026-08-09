@@ -12,8 +12,10 @@ function renderAt(path = '/admin', allowedRoles = ADMIN_ROLES) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/partner/login" element={<p>LOGIN PAGE</p>} />
+        <Route path="/admin/login" element={<p>LOGIN PAGE</p>} />
+        <Route path="/login" element={<p>STUDENT LOGIN</p>} />
         <Route path="/partner/dashboard" element={<p>DASHBOARD</p>} />
+        <Route path="/programs" element={<p>PROGRAMS</p>} />
         <Route
           path="/admin"
           element={
@@ -58,7 +60,8 @@ describe('ProtectedRoute', () => {
     useAuth.setState({ status: 'authenticated', user: null, accessToken: 'tok' });
     renderAt();
     expect(screen.queryByText('ADMIN PANEL')).toBeNull();
-    expect(screen.getByText('DASHBOARD')).toBeTruthy();
+    // No role -> the public entry point, not a partner route it also cannot open.
+    expect(screen.getByText('STUDENT LOGIN')).toBeTruthy();
   });
 
   it('redirects an AGENT away from an admin-only route', () => {
@@ -86,6 +89,17 @@ describe('ProtectedRoute', () => {
     useAuth.setState({ status: 'authenticated', user: { id: '1', role: 'INTERN' } });
     renderAt();
     expect(screen.queryByText('ADMIN PANEL')).toBeNull();
-    expect(screen.getByText('DASHBOARD')).toBeTruthy();
+    expect(screen.getByText('STUDENT LOGIN')).toBeTruthy();
+  });
+
+  // Each rejected role must land on ITS OWN home. Sending everyone to one fixed
+  // route is what produced a blank page for students.
+  it.each([
+    ['AGENT', 'DASHBOARD'],
+    ['STUDENT', 'PROGRAMS'],
+  ])('sends a rejected %s to their own home', (role, expected) => {
+    useAuth.setState({ status: 'authenticated', user: { id: '1', role } });
+    renderAt();
+    expect(screen.getByText(expected)).toBeTruthy();
   });
 });
