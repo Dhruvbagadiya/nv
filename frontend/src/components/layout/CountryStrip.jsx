@@ -52,7 +52,7 @@ export default function CountryStrip() {
             title={`${c.name}${c.institutionCount ? ` — ${c.institutionCount} institutions` : ' — no institutions yet'}`}
             onClick={() => setSelectedCountry(c.code)}
           >
-            <Flag emoji={c.flagEmoji} code={c.code} name={c.name} size={18} />
+            <Flag isoCode={c.isoCode} emoji={c.flagEmoji} code={c.code} name={c.name} size={18} />
             <span>{c.code}</span>
           </button>
         ))}

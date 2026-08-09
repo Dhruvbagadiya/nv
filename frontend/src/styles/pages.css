@@ -381,3 +381,7 @@
   /* Wrapper around the global banners. Was referenced by AnnouncementBar but
      never styled, so two banners sat flush against each other. */
   .announcement-stack { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+
+  /* Live flag preview in the country editor — a wrong ISO code should be obvious
+     before saving, not after it appears blank in the header strip. */
+  .flag-preview { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 11.5px; color: var(--ink-500); }

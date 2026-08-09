@@ -61,3 +61,8 @@ export async function uploadFile(file, category) {
   if (!response.ok) throw new Error(`Upload failed (${response.status}).`);
   return fileUrl;
 }
+
+// ---- countries ----
+export const createCountry = (b) => api.post('/countries', b).then((r) => r.data);
+export const updateCountry = (id, b) => api.put(`/countries/${id}`, b).then((r) => r.data);
+export const deleteCountry = (id) => api.delete(`/countries/${id}`);

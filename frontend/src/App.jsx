@@ -21,6 +21,7 @@ import PartnerLoginPage from './features/auth/PartnerLoginPage.jsx';
 // ── Admin panel ────────────────────────────────────────────────────────
 import AdminLoginPage from './features/auth/AdminLoginPage.jsx';
 import AdminDashboard from './features/admin/AdminDashboard.jsx';
+import AdminCountries from './features/admin/AdminCountries.jsx';
 import AdminInstitutions from './features/admin/AdminInstitutions.jsx';
 import AdminCourses from './features/admin/AdminCourses.jsx';
 import AdminCommissions from './features/admin/AdminCommissions.jsx';
@@ -148,6 +149,7 @@ export default function App() {
           <PartnerShell>
             <Routes>
               <Route path="institutions"      element={<AdminInstitutions />} />
+              <Route path="countries"          element={<AdminCountries />} />
               <Route path="courses"           element={<AdminCourses />} />
               <Route path="commissions"       element={<AdminCommissions />} />
               <Route path="entry-requirements" element={<AdminEntryRequirements />} />

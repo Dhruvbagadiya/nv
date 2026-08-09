@@ -112,6 +112,11 @@ model Country {
   // The header strip rendered 15 hardcoded text chips while the database held 4
   // rows and no flags, so 11 of them silently returned nothing.
   flagEmoji String?
+  // ISO 3166-1 alpha-2, e.g. "GB". Explicit rather than reverse-engineered from
+  // flagEmoji's Regional Indicator code points, and deliberately separate from
+  // `code` — the portal's own shorthand is NOT ISO (we use UK, GR, SP, UAE, IR,
+  // NE where ISO says GB, DE, ES, AE, IE, NL). Flags are keyed on this.
+  isoCode   String?
   // Fees were printed as "$X CAD" for every course regardless of destination;
   // the reference screenshots show GBP for UK institutions. Currency belongs to
   // the country rather than the course — tuition for two courses in the same

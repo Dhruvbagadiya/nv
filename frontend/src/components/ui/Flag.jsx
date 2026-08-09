@@ -27,8 +27,10 @@ export function isoFromFlagEmoji(emoji) {
  * if the image cannot load (offline, blocked, or an unknown ISO code) — never to
  * the emoji, which is what fails on Windows in the first place.
  */
-export default function Flag({ emoji, code, name, size = 18 }) {
-  const iso = isoFromFlagEmoji(emoji);
+export default function Flag({ isoCode, emoji, code, name, size = 18 }) {
+  // Prefer the explicit column; decoding the emoji stays as a fallback for rows
+  // written before isoCode existed.
+  const iso = (isoCode || isoFromFlagEmoji(emoji) || '').toLowerCase() || null;
   const [failed, setFailed] = useState(false);
 
   if (!iso || failed) {
