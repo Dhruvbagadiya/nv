@@ -16,23 +16,27 @@ function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-// All 15 destinations from the header strip.
+// Every destination in the header strip.
+// isoCode is ISO 3166-1 alpha-2 and is what flag images are keyed on. It is NOT
+// the same as `code`, the portal's own shorthand: UK/GR/SP/UAE/IR/NE here are
+// GB/DE/ES/AE/IE/NL in ISO, so reusing `code` would show six wrong flags.
 const COUNTRIES = [
-  { code: 'UK',  name: 'United Kingdom',       flagEmoji: '🇬🇧', currencyCode: 'GBP' },
-  { code: 'GR',  name: 'Germany',              flagEmoji: '🇩🇪', currencyCode: 'EUR' },
-  { code: 'NZ',  name: 'New Zealand',          flagEmoji: '🇳🇿', currencyCode: 'NZD' },
-  { code: 'FR',  name: 'France',               flagEmoji: '🇫🇷', currencyCode: 'EUR' },
-  { code: 'SP',  name: 'Spain',                flagEmoji: '🇪🇸', currencyCode: 'EUR' },
-  { code: 'UAE', name: 'United Arab Emirates', flagEmoji: '🇦🇪', currencyCode: 'AED' },
-  { code: 'MT',  name: 'Malta',                flagEmoji: '🇲🇹', currencyCode: 'EUR' },
-  { code: 'IR',  name: 'Ireland',              flagEmoji: '🇮🇪', currencyCode: 'EUR' },
-  { code: 'AT',  name: 'Austria',              flagEmoji: '🇦🇹', currencyCode: 'EUR' },
-  { code: 'HU',  name: 'Hungary',              flagEmoji: '🇭🇺', currencyCode: 'HUF' },
-  { code: 'CA',  name: 'Canada',               flagEmoji: '🇨🇦', currencyCode: 'CAD' },
-  { code: 'AU',  name: 'Australia',            flagEmoji: '🇦🇺', currencyCode: 'AUD' },
-  { code: 'US',  name: 'United States',        flagEmoji: '🇺🇸', currencyCode: 'USD' },
-  { code: 'NE',  name: 'Netherlands',          flagEmoji: '🇳🇱', currencyCode: 'EUR' },
-  { code: 'IL',  name: 'Israel',               flagEmoji: '🇮🇱', currencyCode: 'ILS' },
+  { code: 'UK',  isoCode: 'GB', name: 'United Kingdom',       flagEmoji: '🇬🇧', currencyCode: 'GBP' },
+  { code: 'GR',  isoCode: 'DE', name: 'Germany',              flagEmoji: '🇩🇪', currencyCode: 'EUR' },
+  { code: 'NZ',  isoCode: 'NZ', name: 'New Zealand',          flagEmoji: '🇳🇿', currencyCode: 'NZD' },
+  { code: 'FR',  isoCode: 'FR', name: 'France',               flagEmoji: '🇫🇷', currencyCode: 'EUR' },
+  { code: 'SP',  isoCode: 'ES', name: 'Spain',                flagEmoji: '🇪🇸', currencyCode: 'EUR' },
+  { code: 'UAE', isoCode: 'AE', name: 'United Arab Emirates', flagEmoji: '🇦🇪', currencyCode: 'AED' },
+  { code: 'MT',  isoCode: 'MT', name: 'Malta',                flagEmoji: '🇲🇹', currencyCode: 'EUR' },
+  { code: 'IR',  isoCode: 'IE', name: 'Ireland',              flagEmoji: '🇮🇪', currencyCode: 'EUR' },
+  { code: 'AT',  isoCode: 'AT', name: 'Austria',              flagEmoji: '🇦🇹', currencyCode: 'EUR' },
+  { code: 'HU',  isoCode: 'HU', name: 'Hungary',              flagEmoji: '🇭🇺', currencyCode: 'HUF' },
+  { code: 'CA',  isoCode: 'CA', name: 'Canada',               flagEmoji: '🇨🇦', currencyCode: 'CAD' },
+  { code: 'AU',  isoCode: 'AU', name: 'Australia',            flagEmoji: '🇦🇺', currencyCode: 'AUD' },
+  { code: 'US',  isoCode: 'US', name: 'United States',        flagEmoji: '🇺🇸', currencyCode: 'USD' },
+  { code: 'NE',  isoCode: 'NL', name: 'Netherlands',          flagEmoji: '🇳🇱', currencyCode: 'EUR' },
+  { code: 'IL',  isoCode: 'IL', name: 'Israel',               flagEmoji: '🇮🇱', currencyCode: 'ILS' },
+  { code: 'SK',  isoCode: 'SK', name: 'Slovakia',             flagEmoji: '🇸🇰', currencyCode: 'EUR' },
 ];
 
 // Institutions: name, country code, city, province, trending, blacklisted.

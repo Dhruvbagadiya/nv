@@ -20,6 +20,10 @@ export async function listCountries({ withInstitutionsOnly = false } = {}) {
       flagEmoji: true,
       isoCode: true,
       currencyCode: true,
+      // Was omitted, so the admin table's Order column rendered blank AND the
+      // edit form seeded sortOrder from undefined — saving any country silently
+      // reset it to 0 and reshuffled the header strip.
+      sortOrder: true,
       // Lets a filter show "United Kingdom (30)" and lets the UI grey out
       // destinations with nothing behind them, instead of the current behaviour
       // where picking one silently returns an empty grid.

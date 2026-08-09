@@ -82,6 +82,25 @@ describe('AdminCountries', () => {
     expect(adminApi.updateCountry.mock.calls[0][1]).not.toHaveProperty('code');
   });
 
+  // sortOrder was missing from the API's select, so the Order column rendered
+  // blank AND the edit form seeded it from undefined — saving any country reset
+  // its order to 0 and reshuffled the header strip.
+  it('preserves sortOrder when editing an unrelated field', async () => {
+    adminApi.updateCountry.mockResolvedValue({ id: 'c2' });
+    renderScreen();
+    await waitFor(() => expect(screen.getByText('Portugal')).toBeTruthy());
+    // The column actually shows the value rather than an empty cell.
+    expect(screen.getByText('20')).toBeTruthy();
+
+    fireEvent.click(screen.getAllByText('Edit')[1]);
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy());
+    fireEvent.change(screen.getByLabelText(/Country name/), { target: { value: 'Portugal PT' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(adminApi.updateCountry).toHaveBeenCalled());
+    expect(adminApi.updateCountry.mock.calls[0][1].sortOrder).toBe(20);
+  });
+
   it('surfaces the API reason when a delete is refused', async () => {
     adminApi.deleteCountry.mockRejectedValue({
       response: { data: { error: 'United Kingdom still has 10 institutions.' } },
