@@ -3,6 +3,9 @@ import { ConflictError } from '../../utils/httpErrors.js';
 
 const INSTITUTION_INCLUDE = { country: true };
 
+// Enough for every real catalogue while bounding the response.
+const MAX_INSTITUTION_OPTIONS = 2000;
+
 // URL-safe slug derived from name when not explicitly provided.
 function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -19,6 +22,10 @@ export async function listInstitutions({ country, search, blacklisted, trending,
     },
     include: INSTITUTION_INCLUDE,
     orderBy: { name: 'asc' },
+    // Hard cap. This endpoint has no pagination because it populates dropdowns,
+    // which need the whole list — but "the whole list" must not become unbounded
+    // as the catalogue grows. Callers that need more should search.
+    take: MAX_INSTITUTION_OPTIONS,
   });
 }
 

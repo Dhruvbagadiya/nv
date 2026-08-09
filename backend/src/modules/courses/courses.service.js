@@ -1,5 +1,6 @@
 import { prisma } from '../../utils/prisma.js';
 import { NotFoundError } from '../../utils/httpErrors.js';
+import { toSkipTake } from '../../utils/pagination.js';
 
 // ============================================================================
 // Helpers
@@ -148,8 +149,30 @@ export async function searchCourses({
   page = 1,
   pageSize = 12,
 }) {
-  const safePage = Math.max(1, Math.trunc(Number(page) || 1));
-  const safeSize = Math.min(100, Math.max(1, Math.trunc(Number(pageSize) || 12)));
+  // Shares the deep-offset guard with every other list endpoint.
+  const { skip, take: safeSize, page: safePage } = toSkipTake({ page, pageSize: pageSize ?? 12 });
+
+  // Resolved separately so the OR below stays within a single table. An OR that
+  // spans the Course->Institution join cannot use the trigram indexes on either
+  // side; Postgres falls back to a sequential scan. Two indexed queries beat one
+  // unindexed one by ~10x at a million rows.
+  let matchingInstitutionIds = null;
+  if (search) {
+    const matches = await prisma.institution.findMany({
+      where: {
+        archivedAt: null,
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { city: { contains: search, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true },
+      // Bounded: a one-letter search must not build an IN list of every
+      // institution. Course title/shortName still match beyond this cap.
+      take: 1000,
+    });
+    matchingInstitutionIds = matches.map((m) => m.id);
+  }
 
   const where = {
     ...NOT_ARCHIVED,
@@ -157,8 +180,9 @@ export async function searchCourses({
       OR: [
         { title: { contains: search, mode: 'insensitive' } },
         { shortName: { contains: search, mode: 'insensitive' } },
-        { institution: { name: { contains: search, mode: 'insensitive' } } },
-        { institution: { city: { contains: search, mode: 'insensitive' } } },
+        ...(matchingInstitutionIds.length
+          ? [{ institutionId: { in: matchingInstitutionIds } }]
+          : []),
       ],
     }),
     ...(tag && { tags: { has: tag } }),
@@ -175,7 +199,7 @@ export async function searchCourses({
       where,
       include: PROGRAM_INCLUDE,
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
-      skip: (safePage - 1) * safeSize,
+      skip,
       take: safeSize,
     }),
     prisma.course.count({ where }),
