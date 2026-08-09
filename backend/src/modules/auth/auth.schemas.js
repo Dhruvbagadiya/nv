@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const loginSchema = z.object({
-  email: z.string().email().toLowerCase().trim(),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1, 'Password is required'),
 });
 
@@ -15,7 +15,7 @@ export const loginSchema = z.object({
 export const registerSchema = z
   .object({
     name: z.string().min(1).max(120).trim(),
-    email: z.string().email().toLowerCase().trim(),
+    email: z.string().trim().toLowerCase().email(),
     password: z
       .string()
       .min(10, 'Password must be at least 10 characters')
@@ -28,7 +28,7 @@ export const registerSchema = z
 export const createUserSchema = z
   .object({
     name:     z.string().min(1).max(120).trim(),
-    email:    z.string().email().toLowerCase().trim(),
+    email:    z.string().trim().toLowerCase().email(),
     password: z.string().min(10).max(200),
     role:     z.enum(['SUPER_ADMIN', 'ADMIN', 'AGENT', 'STUDENT']),
   })
@@ -39,7 +39,7 @@ export const createUserSchema = z
 export const createSubAgentBody = z
   .object({
     name: z.string().min(1).max(120).trim(),
-    email: z.string().email().toLowerCase().trim(),
+    email: z.string().trim().toLowerCase().email(),
     password: z.string().min(10, 'Password must be at least 10 characters').max(200),
   })
   .strict();

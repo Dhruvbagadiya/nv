@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { optionalUuid, optionalText, optionalEnum } from '../../utils/queryTypes.js';
 
 // Shared pagination coercion. Query strings arrive as text so `coerce` is
 // required — `Number('abc')` previously became `skip: NaN`, which Prisma
@@ -22,13 +23,13 @@ const PROGRAM_LEVELS = [
 ];
 
 export const listCoursesQuery = z.object({
-  country: z.string().trim().max(8).optional(),
-  search: z.string().trim().max(200).optional(),
-  tag: z.string().trim().max(80).optional(),
+  country: optionalText(8),
+  search: optionalText(200),
+  tag: optionalText(80),
   // Accepts either the new enum key or the legacy degreeLevel string.
   // The service maps it to the prisma enum field.
-  programLevel: z.enum(PROGRAM_LEVELS).optional(),
-  institutionId: z.string().uuid().optional(),
+  programLevel: optionalEnum(PROGRAM_LEVELS),
+  institutionId: optionalUuid(),
   ...paginationQuery,
 });
 

@@ -1,13 +1,11 @@
 import { z } from 'zod';
+import { queryBool } from '../../utils/queryTypes.js';
 
 export const listCountriesQuery = z.object({
   // Query strings have no booleans — "false" is a non-empty string and therefore
   // truthy, which is a classic way to end up with a filter that cannot be
-  // switched off. Coerced explicitly.
-  withInstitutionsOnly: z
-    .enum(['true', 'false'])
-    .optional()
-    .transform((v) => v === 'true'),
+  // switched off. queryBool also maps an empty value to "not set".
+  withInstitutionsOnly: queryBool,
 });
 
 // The portal's own shorthand. Uppercase and short — it appears in URLs

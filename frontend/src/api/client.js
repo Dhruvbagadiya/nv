@@ -15,6 +15,21 @@ const refreshClient = axios.create({ baseURL: '/api', withCredentials: true });
 api.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  // Drop params with no value before they reach the wire. An unset filter is
+  // absent, not empty: a screen holding { countryId: '', stage: '' } in its filter
+  // state would otherwise send `?countryId=&stage=`, and the API's zod schemas
+  // validate a present-but-empty value rather than skipping it.
+  //
+  // The API tolerates empty values too (see utils/queryTypes.js) — this is the
+  // other half, and it also keeps the URLs readable.
+  if (config.params) {
+    config.params = Object.fromEntries(
+      Object.entries(config.params).filter(
+        ([, v]) => v !== '' && v !== null && v !== undefined
+      )
+    );
+  }
   return config;
 });
 

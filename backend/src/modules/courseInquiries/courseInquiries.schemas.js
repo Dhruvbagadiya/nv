@@ -1,11 +1,12 @@
 import { z } from 'zod';
+import { optionalUuid, optionalText, optionalEnum } from '../../utils/queryTypes.js';
 
 export const COURSE_INQUIRY_STAGES = ['INQUIRY', 'PENDING', 'OFFERED', 'APPLIED'];
 
 export const listInquiriesQuery = z.object({
-  countryId: z.string().uuid().optional(),
-  intake: z.string().trim().max(40).optional(),
-  stage: z.enum(COURSE_INQUIRY_STAGES).optional(),
+  countryId: optionalUuid(),
+  intake: optionalText(40),
+  stage: optionalEnum(COURSE_INQUIRY_STAGES),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),
 });

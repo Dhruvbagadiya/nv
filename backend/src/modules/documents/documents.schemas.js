@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { optionalUuid, optionalText } from '../../utils/queryTypes.js';
 
 export const DOCUMENT_CATEGORIES = [
   'VISA_DOCUMENT',
@@ -12,9 +13,9 @@ export const listDocumentsQuery = z.object({
   // Required. There is no combined view of all five categories, and defaulting to
   // one would make the other four look empty.
   category: z.enum(DOCUMENT_CATEGORIES),
-  countryId: z.string().uuid().optional(),
-  institutionId: z.string().uuid().optional(),
-  search: z.string().trim().max(200).optional(),
+  countryId: optionalUuid(),
+  institutionId: optionalUuid(),
+  search: optionalText(200),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(48),
 });

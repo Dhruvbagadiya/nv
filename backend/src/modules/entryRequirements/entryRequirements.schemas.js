@@ -1,17 +1,13 @@
 import { z } from 'zod';
-
-const queryBool = z
-  .enum(['true', 'false'])
-  .optional()
-  .transform((v) => (v === undefined ? undefined : v === 'true'));
+import { optionalUuid, optionalText, queryBool } from '../../utils/queryTypes.js';
 
 export const listEntryRequirementsQuery = z.object({
   // Required: there is no meaningful combined UG+PG view, and defaulting to one
   // silently would make the other screen look empty.
   level: z.enum(['UG', 'PG']),
-  country: z.string().trim().max(8).optional(),
-  institutionId: z.string().uuid().optional(),
-  englishRequirement: z.string().trim().max(80).optional(),
+  country: optionalText(8),
+  institutionId: optionalUuid(),
+  englishRequirement: optionalText(80),
   credibilityInterview: queryBool,
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),

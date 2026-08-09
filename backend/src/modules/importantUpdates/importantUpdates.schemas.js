@@ -1,13 +1,14 @@
 import { z } from 'zod';
+import { optionalUuid, optionalDate } from '../../utils/queryTypes.js';
 
 export const listUpdatesQuery = z
   .object({
     // The screen's "Publish Date From/To" inputs. Coerced to Date so the service
     // never has to parse strings.
-    from: z.coerce.date().optional(),
-    to: z.coerce.date().optional(),
-    countryId: z.string().uuid().optional(),
-    institutionId: z.string().uuid().optional(),
+    from: optionalDate(),
+    to: optionalDate(),
+    countryId: optionalUuid(),
+    institutionId: optionalUuid(),
     page: z.coerce.number().int().positive().default(1),
     pageSize: z.coerce.number().int().positive().max(100).default(20),
   })

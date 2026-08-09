@@ -1,8 +1,9 @@
 import { z } from 'zod';
+import { optionalText } from '../../utils/queryTypes.js';
 
 export const listCommissionsQuery = z.object({
-  country: z.string().trim().max(8).optional(),
-  search: z.string().trim().max(200).optional(),
+  country: optionalText(8),
+  search: optionalText(200),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),
 });

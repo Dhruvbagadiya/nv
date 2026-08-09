@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { optionalUuid, optionalText, optionalEnum } from '../../utils/queryTypes.js';
 
 export const APPLICATION_STAGES = [
   'PROFILE_ASSESSMENT',
@@ -12,11 +13,11 @@ export const APPLICATION_STAGES = [
 ];
 
 export const listApplicationsQuery = z.object({
-  country: z.string().trim().max(8).optional(),
-  institutionId: z.string().uuid().optional(),
-  stage: z.enum(APPLICATION_STAGES).optional(),
-  passportNo: z.string().trim().max(40).optional(),
-  studentName: z.string().trim().max(160).optional(),
+  country: optionalText(8),
+  institutionId: optionalUuid(),
+  stage: optionalEnum(APPLICATION_STAGES),
+  passportNo: optionalText(40),
+  studentName: optionalText(160),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),
 });

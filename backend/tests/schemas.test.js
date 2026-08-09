@@ -138,14 +138,17 @@ describe('query coercion', () => {
 });
 
 describe('write-body schemas', () => {
+  // Matches the schema after the program-API overhaul: degreeLevel became the
+  // programLevel enum, durationText became minLength/maxLength in months, and
+  // city moved to Institution.
   const validCourse = {
     institutionId: '11111111-1111-4111-8111-111111111111',
     title: 'MSc Data',
-    degreeLevel: "Master's Degree",
-    city: 'Leeds',
+    programLevel: 'MASTERS_DEGREE',
+    minLength: 12,
+    maxLength: 12,
     tuitionFee: 12000,
     applicationFee: 0,
-    durationText: '12 months',
   };
 
   it('accepts a valid course and defaults its array fields', () => {

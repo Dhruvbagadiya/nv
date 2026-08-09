@@ -1,13 +1,9 @@
 import { z } from 'zod';
-
-const queryBool = z
-  .enum(['true', 'false'])
-  .optional()
-  .transform((v) => (v === undefined ? undefined : v === 'true'));
+import { optionalText, queryBool } from '../../utils/queryTypes.js';
 
 export const listInstitutionsQuery = z.object({
-  country:        z.string().trim().max(8).optional(),
-  search:         z.string().trim().max(200).optional(),
+  country:        optionalText(8),
+  search:         optionalText(200),
   blacklisted:    queryBool,
   trending:       queryBool,
   includeArchived: queryBool,
