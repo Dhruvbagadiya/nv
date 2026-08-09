@@ -6,7 +6,7 @@ import Page from '../../components/ui/Page.jsx';
 import ChoiceField from '../../components/ui/ChoiceField.jsx';
 import Flag from '../../components/ui/Flag.jsx';
 import { useCountries } from '../../hooks/useReferenceData.js';
-import { NATIONALITIES, PROGRAM_LEVELS, intakeOptions } from '../../constants/referenceData.js';
+import { NATIONALITIES, PROGRAM_LEVELS, intakeChoices } from '../../constants/referenceData.js';
 import { errorMessage } from '../../utils/format.js';
 
 export default function CourseInquiryForm() {
@@ -16,8 +16,8 @@ export default function CourseInquiryForm() {
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }));
 
-  // Recomputed once per mount; the option list is a rolling window around today.
-  const intakes = useMemo(() => intakeOptions(), []);
+  // Current month forward only — a past intake is not something you can apply for.
+  const intakes = useMemo(() => intakeChoices(), []);
 
   const countryOptions = useMemo(
     () =>

@@ -47,13 +47,13 @@ export const PROGRAM_LEVELS = [
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // CourseInquiry.intake is free text, so the only thing keeping the form and the
-// history filter able to match each other is both generating their options from
+// history filter able to match each other is both generating their labels from
 // here. They previously did not: the form let you type anything while the filter
 // offered three fixed labels, so a filter hit was mostly luck.
 //
-// The window reaches back as well as forward because inquiries outlive their
-// intake — an intake that has already started must stay filterable.
-export function intakeOptions(from = new Date(), monthsBack = 6, monthsForward = 24) {
+// The two lists are NOT the same window, though, which is the point of the pair
+// of functions below.
+export function intakeOptions(from = new Date(), monthsBack = 0, monthsForward = 24) {
   const out = [];
   const start = new Date(from.getFullYear(), from.getMonth() - monthsBack, 1);
   for (let i = 0; i <= monthsBack + monthsForward; i += 1) {
@@ -63,6 +63,17 @@ export function intakeOptions(from = new Date(), monthsBack = 6, monthsForward =
   }
   return out;
 }
+
+// What the FORM offers: the current month forward. You cannot apply for an intake
+// that has already gone, so offering one is just a way to file an inquiry nobody
+// can act on. The current month is included because an intake starting this month
+// may still be taking applications.
+export const intakeChoices = (from = new Date()) => intakeOptions(from, 0, 24);
+
+// What the history FILTER offers: the same labels, but reaching back as well,
+// because inquiries outlive their intake. An intake that has already started must
+// stay searchable or the rows recording it become unfilterable.
+export const intakeFilters = (from = new Date()) => intakeOptions(from, 12, 24);
 
 // Nationality is free text in the API. This covers the applicant base a study
 // abroad portal actually sees; anything missing can still be typed, because the

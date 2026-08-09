@@ -10,7 +10,7 @@ import { useCountries } from '../../hooks/useReferenceData.js';
 import {
   COURSE_INQUIRY_STAGES,
   courseInquiryStageLabel,
-  intakeOptions,
+  intakeFilters,
 } from '../../constants/referenceData.js';
 import { formatDate } from '../../utils/format.js';
 
@@ -19,9 +19,11 @@ import { formatDate } from '../../utils/format.js';
 // inquiry tiles now link in here with ?stage=…
 const FILTER_DEFAULTS = { countryId: '', intake: '', stage: '', page: 1 };
 
-// Shared with the inquiry form. These were three fixed labels while the form let
-// you type any intake at all, so the filter could only ever match by coincidence.
-const INTAKES = intakeOptions();
+// Same labels the form generates, but reaching back too: an intake that has
+// already started must stay searchable, or the rows recording it drop out of
+// reach. These were three fixed labels while the form let you type any intake at
+// all, so the filter could only ever match by coincidence.
+const INTAKES = intakeFilters();
 
 export default function CourseInquiryHistory() {
   const navigate = useNavigate();

@@ -24,7 +24,9 @@ const inquiriesApi = await import('../../api/courseInquiries.js');
 const countriesApi = await import('../../api/countries.js');
 
 const CourseInquiryForm = (await import('./CourseInquiryForm.jsx')).default;
-const { intakeOptions, PROGRAM_LEVELS } = await import('../../constants/referenceData.js');
+const { intakeChoices, intakeFilters, PROGRAM_LEVELS } = await import(
+  '../../constants/referenceData.js'
+);
 
 const COUNTRIES = [
   { id: 'c1', code: 'UK', name: 'United Kingdom', flagEmoji: '🇬🇧', institutionCount: 3 },
@@ -68,7 +70,7 @@ describe('CourseInquiryForm', () => {
 
     await screen.findByText('Preferred country');
     await pick('Preferred country', 'Canada');
-    await pick('Preferred intake', intakeOptions()[0].label);
+    await pick('Preferred intake', intakeChoices()[0].label);
     await pick('Type of course', PROGRAM_LEVELS[0].label);
 
     fireEvent.click(screen.getByRole('button', { name: /submit your inquiry/i }));
@@ -79,7 +81,7 @@ describe('CourseInquiryForm', () => {
     expect(inquiriesApi.createInquiry.mock.calls[0][0]).toEqual({
       nationality: 'Indian',
       countryId: 'c2',
-      intake: intakeOptions()[0].label,
+      intake: intakeChoices()[0].label,
       courseType: PROGRAM_LEVELS[0].label,
     });
   });
@@ -98,7 +100,7 @@ describe('CourseInquiryForm', () => {
     await pick('Preferred country', 'United Kingdom');
     expect(submit.disabled).toBe(true);
 
-    await pick('Preferred intake', intakeOptions()[0].label);
+    await pick('Preferred intake', intakeChoices()[0].label);
     await pick('Type of course', PROGRAM_LEVELS[0].label);
     expect(submit.disabled).toBe(false);
   });
@@ -132,7 +134,7 @@ describe('CourseInquiryForm', () => {
     fireEvent.click(await screen.findByRole('option', { name: /Use .Andorran./ }));
 
     await pick('Preferred country', 'Canada');
-    await pick('Preferred intake', intakeOptions()[0].label);
+    await pick('Preferred intake', intakeChoices()[0].label);
     await pick('Type of course', PROGRAM_LEVELS[0].label);
     fireEvent.click(screen.getByRole('button', { name: /submit your inquiry/i }));
 
@@ -142,16 +144,35 @@ describe('CourseInquiryForm', () => {
 });
 
 describe('intake options', () => {
-  // Form and filter must generate from the same helper, or a filter hit is luck.
-  it('spans past and future intakes around the given date', () => {
-    const options = intakeOptions(new Date(2026, 7, 1), 6, 24);
-    expect(options[0].label).toBe('Feb 2026');
+  const TODAY = new Date(2026, 7, 1); // Aug 2026
+
+  // The form must not offer an intake that has already gone — you cannot apply
+  // for it, so picking one only files an inquiry nobody can act on.
+  it('the form offers the current month forward and nothing earlier', () => {
+    const options = intakeChoices(TODAY);
+    expect(options[0].label).toBe('Aug 2026');
     expect(options.at(-1).label).toBe('Aug 2028');
-    expect(options).toHaveLength(31);
+    expect(options.map((o) => o.label)).not.toContain('Jul 2026');
+  });
+
+  // The filter must reach back, or an inquiry whose intake has started becomes
+  // unfilterable — the row is still there but nothing selects it.
+  it('the history filter reaches back as well as forward', () => {
+    const options = intakeFilters(TODAY);
+    expect(options[0].label).toBe('Aug 2025');
+    expect(options.at(-1).label).toBe('Aug 2028');
+  });
+
+  // Both must generate the same label text, or a filter hit is coincidence.
+  it('the filter is a superset of what the form can produce', () => {
+    const filterLabels = new Set(intakeFilters(TODAY).map((o) => o.label));
+    for (const option of intakeChoices(TODAY)) {
+      expect(filterLabels.has(option.label), `${option.label} is unfilterable`).toBe(true);
+    }
   });
 
   it('labels match the format the API stores', () => {
-    for (const option of intakeOptions()) {
+    for (const option of intakeFilters()) {
       expect(option.value).toBe(option.label);
       expect(option.label).toMatch(/^[A-Z][a-z]{2} \d{4}$/);
     }
