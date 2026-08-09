@@ -138,6 +138,45 @@
   .submit-row { margin-top: 12px; }
   .submit-row .btn-primary { width: 100%; justify-content: center; height: 37px; font-size: 13px; }
 
+  /* ---- ChoiceField: the collapsible searchable rows on the inquiry form ---- */
+  /* Relative so the panel anchors to its own row, and z-indexed while open so an
+     expanded list sits over the rows beneath instead of being clipped by them. */
+  .choice-field { position: relative; }
+  .choice-field.open { z-index: 20; }
+  /* The closed row reuses .field, but as a <button> it needs its own resets. */
+  .choice-head { width: 100%; font-family: inherit; text-align: left; }
+  .choice-head:disabled { opacity: .55; cursor: not-allowed; }
+  .choice-text { display: flex; flex-direction: column; min-width: 0; }
+  .choice-value { color: var(--ink-700); font-size: 11.5px; }
+  .choice-field.open .chevron { transform: rotate(180deg); }
+  .chevron { transition: transform .13s; }
+
+  .choice-panel {
+    position: absolute; left: 0; right: 0; top: calc(100% - 4px);
+    background: var(--surface); border: 1px solid var(--accent-500);
+    border-radius: var(--radius-sm); box-shadow: var(--shadow-md, 0 8px 24px rgba(15,23,42,.12));
+    padding: 6px; text-align: left;
+  }
+  .choice-search {
+    width: 100%; height: 30px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 0 8px; font-size: 12.5px; font-family: var(--font-sans);
+    background: var(--canvas); color: var(--ink-900); margin-bottom: 5px;
+  }
+  .choice-search:focus { outline: none; border-color: var(--accent-500); }
+  /* Capped and scrollable: the nationality list is ~110 entries and would
+     otherwise run off the bottom of the page. */
+  .choice-list { list-style: none; margin: 0; padding: 0; max-height: 208px; overflow-y: auto; }
+  .choice-option {
+    display: flex; align-items: center; gap: 7px; width: 100%; border: 0; background: none;
+    padding: 6px 8px; border-radius: var(--radius-sm); cursor: pointer;
+    font-size: 12.5px; font-family: inherit; color: var(--ink-900); text-align: left;
+  }
+  .choice-option.active { background: var(--accent-700); color: #fff; }
+  .choice-option.selected { font-weight: 700; }
+  .choice-option.selected:not(.active) { background: var(--accent-50); }
+  .choice-icon { display: inline-flex; flex-shrink: 0; }
+  .choice-empty { padding: 8px; color: var(--ink-500); font-size: 12px; }
+
   /* ===================== FILTER CARD + TABLES ===================== */
   .filter-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; box-shadow: var(--shadow-xs); }
   .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-bottom: 8px; }

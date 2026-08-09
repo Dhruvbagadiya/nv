@@ -7,7 +7,11 @@ import FilterBar from '../../components/ui/FilterBar.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
-import { COURSE_INQUIRY_STAGES, courseInquiryStageLabel } from '../../constants/referenceData.js';
+import {
+  COURSE_INQUIRY_STAGES,
+  courseInquiryStageLabel,
+  intakeOptions,
+} from '../../constants/referenceData.js';
 import { formatDate } from '../../utils/format.js';
 
 // This screen had no filters at all despite the API accepting countryId and intake,
@@ -15,7 +19,9 @@ import { formatDate } from '../../utils/format.js';
 // inquiry tiles now link in here with ?stage=…
 const FILTER_DEFAULTS = { countryId: '', intake: '', stage: '', page: 1 };
 
-const INTAKES = ['Jan 2027', 'May 2027', 'Sep 2027'];
+// Shared with the inquiry form. These were three fixed labels while the form let
+// you type any intake at all, so the filter could only ever match by coincidence.
+const INTAKES = intakeOptions();
 
 export default function CourseInquiryHistory() {
   const navigate = useNavigate();
@@ -36,7 +42,7 @@ export default function CourseInquiryHistory() {
       label: 'Intake',
       type: 'select',
       placeholder: 'Any intake',
-      options: INTAKES.map((i) => ({ value: i, label: i })),
+      options: INTAKES,
     },
     {
       name: 'stage',

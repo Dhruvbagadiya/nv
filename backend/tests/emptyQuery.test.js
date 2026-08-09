@@ -10,6 +10,8 @@ import { listUpdatesQuery } from '../src/modules/importantUpdates/importantUpdat
 import { listInstitutionsQuery } from '../src/modules/institutions/institutions.schemas.js';
 import { listNotificationsQuery } from '../src/modules/notifications/notifications.schemas.js';
 import { listCountriesQuery } from '../src/modules/countries/countries.schemas.js';
+import { createInquiryBody } from '../src/modules/courseInquiries/courseInquiries.schemas.js';
+import { createApplicationBody } from '../src/modules/applications/applications.schemas.js';
 
 // A browser form with nothing selected serialises to `?countryId=&stage=&page=1`.
 // zod's `.optional()` only permits the key to be ABSENT, so a present empty string
@@ -76,5 +78,64 @@ describe('empty query parameters mean "no filter"', () => {
     expect(listInstitutionsQuery.parse({ blacklisted: '' }).blacklisted).toBeUndefined();
     expect(listInstitutionsQuery.parse({ blacklisted: 'false' }).blacklisted).toBe(false);
     expect(listInstitutionsQuery.parse({ blacklisted: 'true' }).blacklisted).toBe(true);
+  });
+});
+
+// A form's unselected <select> submits "" in a JSON body exactly as it does in a
+// query string, so an OPTIONAL body field has the same problem. Submitting the
+// inquiry form with no destination chosen 400'd with "countryId: Invalid uuid" —
+// reported from the browser with the real payload below.
+describe('empty optional body fields mean "not provided"', () => {
+  it('accepts the exact payload the inquiry form sent', () => {
+    const result = createInquiryBody.safeParse({
+      nationality: 'Indian',
+      countryId: '',
+      intake: 'jan 2026',
+      courseType: "Master's degree",
+    });
+    expect(result.success, result.success ? '' : JSON.stringify(result.error.issues)).toBe(true);
+    // Dropped rather than passed through: '' would fail the Country foreign key
+    // as a 500 instead of a 400.
+    expect(result.data.countryId).toBeUndefined();
+  });
+
+  it('accepts an application with no intake chosen', () => {
+    const result = createApplicationBody.safeParse({
+      studentName: 'A Student',
+      passportNo: 'P7654321',
+      courseId: '11111111-1111-4111-8111-111111111111',
+      intakeLabel: '',
+    });
+    expect(result.success).toBe(true);
+    expect(result.data.intakeLabel).toBeUndefined();
+  });
+
+  // Leniency is only for OPTIONAL fields. A required one receiving '' is a real
+  // error and must still be reported, or a nameless inquiry reaches the database.
+  it('still rejects an empty REQUIRED field', () => {
+    expect(createInquiryBody.safeParse({ nationality: '' }).success).toBe(false);
+    expect(
+      createApplicationBody.safeParse({
+        studentName: '',
+        passportNo: 'P7654321',
+        courseId: '11111111-1111-4111-8111-111111111111',
+      }).success
+    ).toBe(false);
+  });
+
+  it('still rejects a genuinely malformed optional value', () => {
+    expect(
+      createInquiryBody.safeParse({ nationality: 'Indian', countryId: 'not-a-uuid' }).success
+    ).toBe(false);
+  });
+
+  it('keeps a real countryId intact', () => {
+    const parsed = createInquiryBody.parse({
+      nationality: 'Indian',
+      countryId: '11111111-1111-4111-8111-111111111111',
+      intake: 'Jan 2027',
+      courseType: "Master's Degree",
+    });
+    expect(parsed.countryId).toBe('11111111-1111-4111-8111-111111111111');
   });
 });

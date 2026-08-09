@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { optionalUuid, optionalText, optionalEnum } from '../../utils/queryTypes.js';
+import { optionalBody, optionalEnum, optionalText, optionalUuid } from '../../utils/queryTypes.js';
 
 export const APPLICATION_STAGES = [
   'PROFILE_ASSESSMENT',
@@ -30,7 +30,7 @@ export const createApplicationBody = z
     // document and should be stored as written.
     passportNo: z.string().trim().min(4).max(40),
     courseId: z.string().uuid(),
-    intakeLabel: z.string().trim().max(40).optional(),
+    intakeLabel: optionalBody(z.string().trim().max(40)),
   })
   .strict();
 

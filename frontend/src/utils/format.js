@@ -20,6 +20,19 @@ export function formatFee(amount, currencyCode = 'USD') {
 // for a zero fee — it arrives as "0".
 export const isFree = (amount) => Number(amount) === 0;
 
+// The API reports a validation failure as { error, details: [{ path, message }] }
+// and everything else as { error }. Reading only `error` on a 400 shows the
+// generic "Validation failed" while the useful part sits in details, which is
+// what made the empty-countryId bug so hard to place from the UI alone.
+export function errorMessage(error, fallback = 'Something went wrong. Please try again.') {
+  const body = error?.response?.data;
+  const detail = body?.details?.[0];
+  if (detail?.message) {
+    return detail.field ? `${detail.field}: ${detail.message}` : detail.message;
+  }
+  return body?.error ?? error?.message ?? fallback;
+}
+
 export function formatDate(value) {
   if (!value) return '—';
   const d = new Date(value);

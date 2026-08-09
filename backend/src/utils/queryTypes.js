@@ -22,6 +22,15 @@ export const queryBool = optionalQuery(
   z.enum(['true', 'false']).transform((v) => v === 'true')
 );
 
+// The same problem exists in request BODIES. A form's unselected <select>
+// submits "" in JSON exactly as it does in a query string, so an optional body
+// field must treat "" as "not provided" too. Creating a course inquiry with no
+// destination chosen 400'd with "Invalid uuid" for precisely this reason.
+//
+// Only for OPTIONAL fields: a REQUIRED one receiving "" is a genuine error and
+// should still be reported.
+export const optionalBody = optionalQuery;
+
 export const optionalUuid = () => optionalQuery(z.string().uuid());
 export const optionalText = (max = 200) => optionalQuery(z.string().trim().max(max));
 export const optionalEnum = (values) => optionalQuery(z.enum(values));

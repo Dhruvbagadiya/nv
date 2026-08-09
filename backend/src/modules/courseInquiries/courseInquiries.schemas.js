@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { optionalUuid, optionalText, optionalEnum } from '../../utils/queryTypes.js';
+import { optionalBody, optionalEnum, optionalText, optionalUuid } from '../../utils/queryTypes.js';
 
 export const COURSE_INQUIRY_STAGES = ['INQUIRY', 'PENDING', 'OFFERED', 'APPLIED'];
 
@@ -16,9 +16,9 @@ export const createInquiryBody = z
     nationality: z.string().trim().min(1).max(80),
     // Optional, but must be a real uuid when present — an empty string used to
     // reach Prisma and fail the foreign key as a 500.
-    countryId: z.string().uuid().optional(),
-    intake: z.string().trim().max(40).optional(),
-    courseType: z.string().trim().max(80).optional(),
+    countryId: optionalBody(z.string().uuid()),
+    intake: optionalBody(z.string().trim().max(40)),
+    courseType: optionalBody(z.string().trim().max(80)),
   })
   .strict();
 

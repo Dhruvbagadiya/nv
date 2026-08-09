@@ -8,6 +8,7 @@ import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
 import CourseCard from './CourseCard.jsx';
 import Pagination from '../../components/ui/Pagination.jsx';
 import Page from '../../components/ui/Page.jsx';
+import { PROGRAM_LEVELS } from '../../constants/referenceData.js';
 
 const QUICK_FILTERS = ['prime', 'instant_submission', 'scholarships_available'];
 const QUICK_FILTER_LABELS = {
@@ -16,17 +17,6 @@ const QUICK_FILTER_LABELS = {
   scholarships_available: 'Scholarships Available',
 };
 
-// Matches the ProgramLevel enum values the backend accepts.
-const PROGRAM_LEVELS = [
-  { value: 'MASTERS_DEGREE',            label: "Master's Degree" },
-  { value: 'POST_GRADUATE_CERTIFICATE', label: 'Postgraduate Certificate' },
-  { value: 'BACHELORS_DEGREE',          label: "Bachelor's Degree" },
-  { value: 'THREE_YEAR_BACHELORS',      label: '3-Year Bachelor\'s' },
-  { value: 'FOUR_YEAR_BACHELORS',       label: '4-Year Bachelor\'s' },
-  { value: 'DIPLOMA',                   label: 'Diploma' },
-  { value: 'CERTIFICATE',               label: 'Certificate' },
-  { value: 'FOUNDATION',                label: 'Foundation' },
-];
 
 export default function CourseFinder() {
   const navigate = useNavigate();

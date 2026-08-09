@@ -8,18 +8,8 @@ import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
 import { fetchCourses, createCourse, updateCourse, archiveCourse, restoreCourse } from '../../api/courses.js';
 import { formatFee } from '../../utils/format.js';
+import { PROGRAM_LEVELS } from '../../constants/referenceData.js';
 
-const PROGRAM_LEVELS = [
-  { value: 'MASTERS_DEGREE',            label: "Master's Degree" },
-  { value: 'POST_GRADUATE_CERTIFICATE', label: 'Postgraduate Certificate' },
-  { value: 'BACHELORS_DEGREE',          label: "Bachelor's Degree" },
-  { value: 'THREE_YEAR_BACHELORS',      label: "3-Year Bachelor's" },
-  { value: 'FOUR_YEAR_BACHELORS',       label: "4-Year Bachelor's" },
-  { value: 'DIPLOMA',                   label: 'Diploma' },
-  { value: 'CERTIFICATE',               label: 'Certificate' },
-  { value: 'FOUNDATION',                label: 'Foundation' },
-  { value: 'OTHER',                     label: 'Other' },
-];
 const LEVEL_LABEL = Object.fromEntries(PROGRAM_LEVELS.map((l) => [l.value, l.label]));
 
 function slugify(str) {
