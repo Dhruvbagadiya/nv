@@ -23,9 +23,10 @@ import {
 const router = Router();
 const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
 
-router.get('/trending', requireAuth, asyncHandler(listTrendingHandler));
-
-router.get('/', requireAuth, validate(listInstitutionsQuery, 'query'), asyncHandler(listInstitutionsHandler));
+// GET /api/institutions — public so the student programme browser can populate
+// its institution filters without requiring sign-in.
+router.get('/trending', asyncHandler(listTrendingHandler));
+router.get('/', validate(listInstitutionsQuery, 'query'), asyncHandler(listInstitutionsHandler));
 
 router.post('/', ...admin, validate(createInstitutionBody), asyncHandler(createInstitutionHandler));
 

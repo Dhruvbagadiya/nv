@@ -207,3 +207,52 @@
     background: var(--canvas); color: var(--ink-500); border-radius: 2px;
     box-shadow: 0 0 0 1px var(--border); font-size: 8px; font-weight: 700; letter-spacing: -0.02em;
   }
+
+  /* ===================== HEADER PROFILE MENU ===================== */
+  .header-avatar-btn {
+    width: 32px; height: 32px; border-radius: 50%; padding: 0; border: none;
+    cursor: pointer; background: none; overflow: hidden; position: relative;
+    flex-shrink: 0;
+  }
+  .header-avatar-img {
+    width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
+    border: 2px solid var(--border); display: block;
+  }
+  /* The .avatar class already handles the initials fallback */
+
+  .header-profile-menu {
+    position: absolute; top: calc(100% + 8px); right: 0;
+    width: 260px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow-lg);
+    z-index: 60; overflow: hidden;
+    animation: pop-in .14s ease;
+  }
+
+  .header-profile-menu-top {
+    display: flex; align-items: center; gap: 10px; padding: 14px 14px 12px;
+  }
+  .header-profile-menu-avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+    background: linear-gradient(150deg, var(--accent-500), var(--accent-700));
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700;
+  }
+  .header-profile-menu-info { min-width: 0; }
+  .header-profile-menu-name  { font-size: 13px; font-weight: 700; color: var(--ink-950); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .header-profile-menu-email { font-size: 11px; color: var(--ink-500); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 4px; }
+
+  .header-profile-menu-divider { height: 1px; background: var(--border); margin: 0; }
+
+  .header-profile-menu-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 14px; font-size: 12.5px; font-weight: 500;
+    color: var(--ink-700); text-decoration: none; cursor: pointer;
+    background: none; border: none; width: 100%; text-align: left;
+    font-family: var(--font-sans); transition: background .1s, color .1s;
+  }
+  .header-profile-menu-item:hover { background: var(--canvas); color: var(--ink-950); }
+  .header-profile-menu-item svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--ink-400); }
+
+  .header-profile-menu-logout { color: var(--danger-700); }
+  .header-profile-menu-logout svg { color: var(--danger-700); }
+  .header-profile-menu-logout:hover { background: var(--danger-100); }

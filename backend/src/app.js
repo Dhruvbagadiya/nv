@@ -24,8 +24,10 @@ import importantUpdateRoutes from './modules/importantUpdates/importantUpdates.r
 import documentRoutes from './modules/documents/documents.routes.js';
 import announcementRoutes from './modules/announcements/announcements.routes.js';
 import supportRoutes from './modules/support/support.routes.js';
-import reportRoutes from './modules/reports/reports.routes.js';
+import reportRoutes  from './modules/reports/reports.routes.js';
 import studentRoutes from './modules/students/students.routes.js';
+import agencyRoutes  from './modules/agency/agency.routes.js';
+import profileRoutes from './modules/profile/profile.routes.js';
 
 const app = express();
 
@@ -98,6 +100,16 @@ app.use('/api/announcements', announcementRoutes);
 app.use('/api/support-contacts', supportRoutes);
 app.use('/api/reports',  reportRoutes);
 app.use('/api/students', studentRoutes);
+app.use('/api/agency',   agencyRoutes);
+app.use('/api/profile',  profileRoutes);
+
+// Serve locally-uploaded logos when S3 is not configured.
+// Path: /uploads/logos/<uuid>.png
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
 
 // Unknown /api/* used to fall through to Express's default HTML 404, which a
 // JSON client cannot parse. Must stay above errorHandler.

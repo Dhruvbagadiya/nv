@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getAccessToken, setAccessToken, useAuth } from '../store/useAuth.js';
+import { getAccessToken, setAccessToken, getCurrentUserId, useAuth } from '../store/useAuth.js';
 
 export const api = axios.create({
   baseURL: '/api',
@@ -44,8 +44,15 @@ function refreshSession() {
   refreshPromise ??= refreshClient
     .post('/auth/refresh')
     .then(({ data }) => {
-      setAccessToken(data.accessToken);
-      useAuth.getState().setSession({ user: data.user, accessToken: data.accessToken });
+      const prevUserId = getCurrentUserId();
+      useAuth.getState().setSession({
+        user:          data.user,
+        accessToken:   data.accessToken,
+        agencyProfile: data.agencyProfile ?? null,
+      });
+      if (prevUserId && prevUserId !== data.user.id && import.meta.env.DEV) {
+        console.warn('[auth] Refresh returned a different user — cache cleared.');
+      }
       return data.accessToken;
     })
     .finally(() => {

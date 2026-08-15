@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchNotifications,
@@ -15,18 +16,25 @@ export default function NotificationDropdown() {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-  // The badge only needs a number, so it does not fetch rows.
+  // Badge polls every 90 seconds — frequent enough to feel live, infrequent
+  // enough not to hammer the server. staleTime keeps it from re-fetching
+  // on every window focus as well.
   const { data: unread = 0 } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: fetchUnreadCount,
+    refetchInterval: 90_000,
+    staleTime: 60_000,
   });
 
-  // The list is only fetched once the panel is actually opened.
+  // The list is only fetched once the panel is actually opened, and re-fetches
+  // when the panel opens so it's always fresh.
   const { data, isLoading } = useQuery({
     queryKey: ['notifications', 'list'],
     queryFn: () => fetchNotifications({ pageSize: 10 }),
     enabled: open,
+    staleTime: 0, // always fresh when re-opened
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -112,16 +120,37 @@ export default function NotificationDropdown() {
             <div
               className="notif-item"
               key={n.id}
-              style={n.readAt ? { opacity: 0.6 } : undefined}
-              onClick={() => !n.readAt && readOne.mutate(n.id)}
+              style={{ ...(!n.readAt ? {} : { opacity: 0.6 }), cursor: 'pointer' }}
+              onClick={() => {
+                if (!n.readAt) readOne.mutate(n.id);
+                setOpen(false);
+                // Navigate to the application if one is attached
+                if (n.applicationId) {
+                  navigate(`/partner/app-history`);
+                }
+              }}
             >
-              <div className="notif-text">
-                <strong>{n.title}</strong>
-                <div>{n.body}</div>
+              <div className="n-icon">
+                {n.kind === 'NEW_APPLICATION' ? '📋' :
+                 n.kind === 'STAGE_CHANGE'    ? '🔄' :
+                 n.kind === 'DOCUMENT_QUERY'  ? '📄' :
+                 n.kind === 'INFO_QUERY'      ? 'ℹ️' : '🔔'}
               </div>
-              <div className="alert-link" style={{ cursor: 'default' }}>
-                {formatDate(n.createdAt)}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="notif-text">
+                  <strong>{n.title}</strong>
+                  <div style={{ fontSize: 11.5, color: 'var(--ink-600)', marginTop: 2 }}>{n.body}</div>
+                </div>
+                <div className="alert-link" style={{ cursor: 'default', marginTop: 3 }}>
+                  {formatDate(n.createdAt)}
+                </div>
               </div>
+              {!n.readAt && (
+                <div style={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: 'var(--accent-700)', flexShrink: 0, marginTop: 4,
+                }} />
+              )}
             </div>
           ))}
         </div>

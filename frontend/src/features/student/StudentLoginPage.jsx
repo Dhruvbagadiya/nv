@@ -28,7 +28,9 @@ export default function StudentLoginPage() {
         return;
       }
       setSession(data);
-      navigate(location.state?.from ?? '/programs', { replace: true });
+      // Always go to role home — not location.state?.from — to prevent a previous
+      // user's stale URL from being restored into a new session.
+      navigate(homePathFor(data.user.role), { replace: true });
     },
   });
 

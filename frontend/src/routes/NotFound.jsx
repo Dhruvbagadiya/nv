@@ -25,7 +25,7 @@ export default function NotFound() {
         </div>
         <h3>There’s nothing at {location.pathname}</h3>
         <p>The link may be out of date, or the page may have moved.</p>
-        <Link className="btn btn-primary" to="/dashboard" style={{ marginTop: 12 }}>
+        <Link className="btn btn-primary" to="/partner/dashboard" style={{ marginTop: 12 }}>
           Back to dashboard
         </Link>
       </div>

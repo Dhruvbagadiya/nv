@@ -1,593 +1,251 @@
-# NV Immigration Partner Portal — Audit, Refactor & Implementation Plan
+# NV Immigration Portal — Implementation Log
 
-Date: 2026-08-03
-Scope reviewed: all 69 source files (`backend/` 30, `frontend/` 39), Prisma schema +
-migration, seed, CSS, and the 20 reference screenshots of `instantapply.net/partner`.
+This document records every major change made to the project, in the order it was done.
 
 ---
 
-# Progress — read this first
+## Phase 1 — Schema overhaul for program API
 
-**Done: Phases 0, 1, 2, 3, 4, 6.** Branch `refactor/foundation`, 15 commits off the
-`main` baseline. Every API the design-set screens need now exists, is seeded, and
-has been verified against the live database.
+**Goal:** Return courses in the standard `{data:[{id,type,attributes}],meta}` shape matching the ApplyBoard-style API.
 
-Closed: F-01 … F-05, F-09 … F-13, F-16 … F-23, F-25, F-26. `npm run verify` runs
-lint + 40 tests + build; `npm --prefix backend run verify:auth` runs 30 auth
-integration checks.
+### Database changes
+- Replaced `Course.degreeLevel` (String) → `programLevel` (`ProgramLevel` enum)
+- Replaced `Course.durationText` → `minLength` + `maxLength` (integers, months)
+- Removed `Course.city`, `Course.intakes[]`
+- Added `Course.slug` (unique), `shortName`, `languageOfInstruction`, `abAppCreationEnabled`, `commissionAmount`, `successScoreIntent`, `successScoreLabel`
+- Added `Institution.slug` (unique), `city`, `province`
+- Added `CourseIntake` table replacing the `String[]` array: `id` (serial, source integer), `startDate`, `openDate`, `submissionDeadline`, `overallScore`, `scoreDetails` (JSON)
+- Added typed commission fields to `UniversityCommission`: `commissionType`, `rateFrom`, `rateTo`, `amountFrom`, `amountTo`, `isTierAdjusted`, `maxNumberOfInstallments`, `tuitionBasis`
 
-**Remaining: Phase 5 (repair the last of the existing screens), Phase 7 (build the
-11 screens), Phase 8 (shell: banners, expandable sidebar, messages, sub-agent
-invite), Phase 9 (hardening).** Phase 7 is now purely frontend assembly —
-primitives exist, endpoints exist, data exists.
-
-Environment notes that will bite anyone picking this up:
-- Postgres runs on the Windows host and is NOT reachable from inside WSL. Use the
-  Windows node for anything touching the DB: `node.exe prisma/seed.js`,
-  `node.exe node_modules/prisma/build/index.js migrate deploy`. See
-  `backend/.env.example`.
-- Windows and WSL share `node_modules`, but native modules are per-platform.
-  Whichever side installed last wins; the other fails with "Cannot find native
-  binding". Re-run `npm install` on the side you are working from.
+### API changes
+- `GET /api/courses` returns `{data:[...],meta:{counts:{total},page,pageSize,totalPages}}`
+- Each program item: `{id, type:"program", attributes:{name, programLevel, school, programIntakes, tuition, currency, commission, ...}}`
+- `GET /api/courses` and `GET /api/courses/:id` made **public** (no auth required) so students can browse without logging in
+- `GET /api/institutions` and `GET /api/countries` also made public
 
 ---
 
-# Original plan and audit
+## Phase 2 — Bulk import script
 
-**Done: Phase 0 (safety net), Phase 1 (auth correctness), Phase 4 (frontend
-primitives).** Branch `refactor/foundation`, 8 commits off the `main` baseline.
-Closed: F-01, F-02, F-03, F-04 (mechanism), F-05, F-06 (partly), F-11, F-12
-(structurally), F-16 (partly), F-21, F-22, F-23, F-25, F-26. `npm run verify`
-runs lint + 40 tests + build, all green.
-
-Phase 4 was pulled ahead of Phases 2/3 because it needs no database. The
-primitives now exist in `components/ui/` (`Page`, `FilterBar`, `DataTable`,
-`Pagination`, `DocumentGrid`) plus `hooks/useUrlFilters`, with `MoiAccepted`
-converted as the reference implementation. The CSS split was verified by diffing
-the built bundle — byte-identical, so no visual risk.
-
-**Still open in Phase 4:** `CountrySelect`/`InstitutionSelect` over a real
-`/api/countries` (task 21) — currently served by `constants/referenceData.js` as
-an interim shared list. Flag chips (F-10) also still pending.
-
-**One thing is blocked.** Postgres 18 runs on the Windows host and listens on
-`0.0.0.0:5432`, but TCP from the WSL subnet is refused — Windows Firewall. No
-Docker and no sudo in this shell, so there is no substitute (PGlite over a socket
-was tried; Prisma's connection pattern closes it, P1017). Consequences:
-
-- The `RefreshToken` migration is **written but not applied**. Run
-  `npm run prisma:migrate` from Windows, or open the firewall — the command is in
-  `backend/.env.example`.
-- Rotation and replay-revocation logic is **unverified against a real database**.
-  Everything ahead of the DB call is verified against a running server: the
-  escalation payload is rejected 400, `/auth/users` is 401/403/past-RBAC by role,
-  expired vs invalid vs missing tokens are distinguishable, logout is idempotent.
-- Phase 2 onward needs the DB, so that is the gate on continuing.
+`backend/scripts/import-programs.mjs` — accepts the program API JSON format, imports 100k+ records via:
+- Batched transactions (500 programs per transaction)
+- Pre-resolved country + institution cache (one DB lookup per unique entity, not per program)
+- Source intake integer IDs preserved as PKs via raw SQL `INSERT ... ON CONFLICT DO UPDATE`
+- Serial sequence advanced after import to prevent collisions
+- Idempotent — safe to re-run
 
 ---
 
-# Part 0 — Where the project actually stands
+## Phase 3 — Full admin panel
 
-The scaffold is well organised: one folder per business area on both sides,
-a single Prisma client, a config-driven sidebar, and 517 lines of finished CSS
-covering ~220 selectors. That structure is worth keeping — this plan builds on it
-rather than replacing it.
+### Backend additions
+- `Institution`: `slug`, `city`, `province`, `isBlacklisted` added to schema + restore endpoint
+- `MoiAcceptance`: full CRUD endpoints added (previously read-only)
+- `GET /api/auth/users` — list all users with activity counts (SUPER_ADMIN only)
+- `GET /api/reports/admin-stats` — 6 count queries for dashboard stat cards (ADMIN+)
 
-But the README's status table is materially wrong. Counting only what a logged-in
-user can actually *do*:
+### Frontend — 11 admin pages
+| Page | Route | Features |
+|---|---|---|
+| Admin Dashboard | `/admin` | 6 stat cards (live from DB), 8 quick-action tiles |
+| Institutions | `/admin/institutions` | Full CRUD modal: name, slug (auto-derived), country, city, province, logo (URL + preview), trending/blacklist toggles, archive/restore |
+| Courses | `/admin/courses` | Full CRUD modal: all program fields, intake date rows (add/remove), tag chip editor, badge chip editor |
+| Commissions | `/admin/commissions` | Upsert per institution with tier editor |
+| Entry Requirements | `/admin/entry-requirements` | UG/PG tab switcher |
+| MOI Acceptances | `/admin/moi` | Full CRUD |
+| Important Updates | `/admin/updates` | Full CRUD |
+| Document Bank | `/admin/documents` | Upload/manage across 5 categories |
+| Announcements | `/admin/announcements` | Manage portal-wide banners |
+| Support Contacts | `/admin/support-contacts` | Full CRUD |
+| Users | `/admin/users` | List + create with role selection (SUPER_ADMIN only) |
 
-| README claim | Reality |
+---
+
+## Phase 4 — Portal restructure (3 separate portals)
+
+### URL structure
+- Partner: `/partner/*` (moved from `/*`)
+- Admin: `/admin/*` (unchanged)
+- Student: `/*` (new)
+
+### Auth isolation
+- `/partner/login` — partner login, redirects all roles to their home
+- `/admin/login` — dark-themed login, rejects non-admin roles with error message
+- `/login` — student login + register (tabs)
+- `ProtectedRoute` accepts `loginPath` prop so each portal guards to its own login page
+
+### Session bleed prevention
+- `useAuth` holds `_queryClient` reference
+- `setSession()`, `setAnonymous()`, `logout()` all call `queryClient.clear()` first
+- Login pages navigate to `homePathFor(role)` — never `location.state?.from` — preventing previous user's URL from being restored
+
+---
+
+## Phase 5 — STUDENT role + student portal
+
+### Backend
+- `STUDENT` added to `Role` enum
+- `StudentProfile` table: nationality, dateOfBirth, passportNo, phone, address
+- `POST /api/auth/register/student` — public, always creates STUDENT
+- `GET/PUT /api/students/profile` — student's own profile
+- `GET/POST /api/students/applications` — student's own applications
+- `GET /api/students/applications/:id` — single application detail
+- All partner endpoints (`/applications`, `/course-inquiries`, etc.) restricted to `AGENT/ADMIN/SUPER_ADMIN`
+- All student endpoints restricted to `STUDENT`
+
+### Frontend — student portal
+| Page | Route |
 |---|---|
-| Courses ✅ fully wired | Search + tag + country work; 3 of 4 filter dropdowns are dead markup |
-| Applications ✅ fully implemented | **Cannot create one.** The course `<select>` has no options |
-| MOI Accepted ✅ fully implemented | Renders, but both filters are empty dropdowns |
-| Admin institutions ✅ CRUD done | Requires hand-typing a country UUID from Prisma Studio |
-| Role guards ✅ fully implemented | **Bypassed after any page refresh** (see F-02) |
-| Commission / Entry Req / Doc Bank / Report ⬜ | Correct — not started. 11 screens in the images |
+| Login + Register | `/login` |
+| Program Browser | `/programs` |
+| Program Detail | `/programs/:id` |
+| Apply Form | `/apply/:courseId` |
+| My Applications | `/my-applications` |
+| Application Detail | `/my-applications/:id` |
+| Student Profile | `/profile` |
 
-Root cause of most of the dead UI is one missing thing: **there is no
-`/api/countries` endpoint** (`backend/src/app.js` wires 7 routers, none for
-countries). Every country dropdown in the app is therefore an empty `<select>`,
-and the country strip in the header is 15 hardcoded chips against 4 seeded
-`Country` rows.
-
----
-
-# Part 1 — Findings (bugs, errors, structural defects)
-
-Severity: **S1** exploitable / data-integrity, **S2** feature broken for users,
-**S3** structural debt that will slow every screen below, **S4** polish.
-
-## S1 — Security & correctness
-
-**F-01 · Public privilege escalation via register**
-`backend/src/modules/auth/auth.routes.js:7` mounts `POST /api/auth/register`
-with no `requireAuth`. `auth.controller.js:15` forwards the whole body, and
-`auth.service.js:30` destructures `role = 'AGENT'` — a default, not a constraint.
-So an unauthenticated request with `{"role":"SUPER_ADMIN"}` mints a super admin.
-→ Fix: strip `role` from the public path entirely; agents self-register as
-`AGENT` only. Admin-created users go through a separate
-`POST /api/users` behind `requireRole('SUPER_ADMIN')`.
-
-**F-02 · Role guard silently disabled on refresh**
-`useAuth.js:15-17` persists only the token; `user` resets to `null` on reload
-while `isAuthenticated` stays `true`. `ProtectedRoute.jsx:15` reads
-`allowedRoles && user && !allowedRoles.includes(user.role)` — with `user === null`
-the condition short-circuits and the guard **passes**. Any logged-in agent who
-refreshes on `/admin/courses` gets the admin UI. The API still returns 403, so
-data isn't leaked, but the entire admin surface becomes visible.
-→ Fix: persist the user (or re-hydrate from `GET /api/auth/me`), and invert the
-guard to fail closed: `if (allowedRoles && !allowedRoles.includes(user?.role)) redirect`.
-
-**F-03 · Refresh token is minted and thrown away**
-`auth.service.js:17` signs a 7-day refresh token, returns it in the JSON body —
-and no `/api/auth/refresh` route exists (grep: zero hits outside that file).
-The access token expires in 15 minutes, so every user is hard-redirected to
-`/login` mid-session, losing form state, via `client.js`'s
-`window.location.href` on 401.
-→ Fix: implement rotation with the refresh token in an httpOnly cookie, plus a
-queued retry in the axios interceptor. This is the fix the note at the top of
-`useAuth.js` already anticipates.
-
-**F-04 · No input validation anywhere**
-`zod` is a declared dependency and is imported zero times. Every controller
-passes `req.body` / `req.query` straight to Prisma. `Number(page)` on a
-non-numeric query yields `NaN`, and `skip: NaN` throws a Prisma 500.
-→ Fix: one `validate(schema)` middleware, a schema per route.
-
-**F-05 · Missing baseline HTTP hardening**
-`app.js:14` — if `CORS_ORIGIN` is unset, `origin: undefined` makes `cors`
-reflect **any** origin while `credentials: true`. `app.js:15` — `express.json()`
-with no `limit`. No `helmet`, no rate limit on `/auth/login` (unlimited
-credential stuffing), no request logging, no fail-fast check that
-`JWT_ACCESS_SECRET` exists (a missing secret becomes a runtime 500, not a boot
-error). No 404 handler, so unknown `/api/*` paths return Express's HTML page to
-a JSON client.
-
-**F-06 · Secrets and version control**
-`backend/.env` holds live Postgres credentials and JWT secrets on disk, and
-**the project is not a git repository at all** — no history, no branch, no way
-to review or revert the refactor below. This is the single highest-risk item
-before touching code.
-
-## S2 — Broken user-facing features
-
-**F-07 · The application flow is a dead end**
-`NewApplication.jsx:63-64` — the course `<select>` contains one disabled
-placeholder and a `TODO`. `courseId` can never be set, so
-`POST /api/applications` can never be satisfied from the UI. The
-"Create application" button on `CourseCard.jsx` (card actions) has no `onClick`,
-so the intended entry point is also inert.
-
-**F-08 · Seven sidebar links lead nowhere**
-`navConfig.js` declares `/commission`, `/entry-requirements`, `/updates`,
-`/documents`, `/report`, `/help`, and `App.jsx` (routes at lines 38-52) defines
-none of them. React Router matches nothing, `<main>` renders empty — no 404, no
-message. These are exactly the screens in the images.
-
-**F-09 · Every country / institution dropdown is empty**
-`CourseFinder.jsx:47-49` (three `<select>` with a single static `<option>`),
-`ApplicationHistory.jsx:31`, `MoiAccepted.jsx:28` and `:34`,
-`AdminInstitutions.jsx:63` (asks the operator for a raw UUID). Blocked on the
-missing `/api/countries`.
-
-**F-10 · Country strip renders codes, not flags**
-`CountryStrip.jsx:49` — "omitted in scaffold for brevity". The screenshots show
-15 flag chips; the app shows 15 text labels. Also: the strip offers UK, GR, NZ,
-FR, SP, UAE, MT, IR, AT, HU, CA, AU, US, NE, IL while `seed.js` creates only
-UK, CA, AU, NE — selecting any of the other 11 returns an empty grid with no
-explanation.
-
-**F-11 · Application history can't reach page 2**
-`ApplicationHistory.jsx` keeps `page` in filter state and the service returns
-`totalPages`, but no `<Pagination>` is rendered and nothing ever increments it.
-Same for `CourseInquiryHistory.jsx`, which additionally exposes none of the
-`countryId` / `intake` filters the backend already supports.
-
-**F-12 · Stale page index on country change**
-`CourseFinder.jsx` resets `page` on search and tag change but not on
-`selectedCountry` — the country lives in a separate Zustand store. Switch
-country while on page 4 and you get an empty grid.
-
-**F-13 · Deleting a course 500s**
-`courses.service.js:47` is a hard `prisma.course.delete`. Any course with an
-`Application` row hits the FK constraint; the raw Prisma error goes through
-`errorHandler` as a 500. The admin UI's Delete button is a landmine.
-→ Fix: soft delete (`archivedAt`) — the right call anyway, since applications
-must keep pointing at the course they were made against.
-
-**F-14 · Mobile navigation is unreachable**
-`Header.jsx:25` — the `menu-toggle` button has no `onClick`. `index.css` has
-`.sidebar-overlay` and `body.sidebar-open .sidebar { transform: translateX(0) }`
-(lines 466-467) behind a `max-width: 900px` query, but no JSX ever renders the
-overlay or sets the class. Below 900px the sidebar is off-canvas with no way to
-open it.
-
-**F-15 · Header search is decorative**
-`Header.jsx:34-49` — local `useState` wired to nothing, including the `/` kbd
-hint. Either wire it to a global search or remove it; shipping a search box that
-silently discards input is worse than having none.
-
-**F-16 · Hardcoded currency and copy**
-`CourseCard.jsx:43,47` print `${fee} CAD` for every course regardless of
-country — the screenshots show GBP figures for UK institutions.
-`CourseFinder.jsx:29` greets "Welcome back, agent name" instead of `user.name`.
-Both header CTAs on that page have no handler.
-
-## S3 — Structural debt
-
-**F-17 · No `Notification` model** — `notifications.service.js` synthesises one
-item from a blacklist count. The header shows a badge count, the images show a
-messages badge *and* a "Recent Application Notifications" feed with per-item
-read state. Not extensible as written.
-
-**F-18 · Two dangling schema fields**
-`schema.prisma:22` `User.parentAgentId` has no self-relation (the images show an
-"invite sub-agent" action in the header). `schema.prisma:70`
-`CourseInquiry.countryId` has no `@relation` to `Country` — no referential
-integrity, and the history table can't display a country name.
-
-**F-19 · Zero indexes**
-The migration contains 6 `FOREIGN KEY` constraints and **0 `CREATE INDEX`**.
-Postgres does not auto-index FK columns. Every `where: { agentId }`,
-`institution: { country: { code } }` and `orderBy: createdAt` is a sequential
-scan. Cheap to fix now, painful later.
-
-**F-20 · Controller boilerplate ×30**
-Every handler is the identical `try { … } catch (err) { next(err) }`. Pagination
-maths (`skip`, `take`, `totalPages`) is copy-pasted across 5 services with two
-different default page sizes (12 for courses, 20 elsewhere).
-
-**F-21 · No shared frontend primitives**
-The filter card + `Apply Filter` / `Clear Filter` pair appears on **10 of the 11
-screens in the images**; the table card + empty state on 6; the PDF-tile grid on
-5. Today each page hand-rolls its own markup. Building these three components
-first is the difference between ~11 similar files and ~11 config objects.
-
-**F-22 · `.view active` is dead weight from the mockup**
-`index.css:267-268` sets `.view { display: none }` and `.view.active { display: block }`
-— a tab-switching mechanism from the original single-page HTML. Every feature
-component now hardcodes `className="view active"`; omit `active` by accident and
-the page renders invisible with no error. Routing already does this job.
-
-**F-23 · `app-shell` class has no styles** — used in `App.jsx`, absent from the
-CSS (verified by diffing all JSX class names against all CSS selectors: it is
-the only orphan). Harmless, but it's the seam where the mockup was cut.
-
-**F-24 · `multer` is a dependency with zero imports** — presumably reserved for
-the Document Bank uploads, which don't exist yet.
-
-**F-25 · No tooling** — no ESLint, no Prettier, no tests, no CI, no
-`.nvmrc`/engines. About to matter a lot more with 11 new screens landing.
-
-**F-26 · `node_modules` are Windows binaries in a WSL checkout**
-`backend/node_modules/.prisma/client/query_engine-windows.dll.node`, and
-`npx vite build` fails outright: `Cannot find module '@rollup/rollup-linux-x64-gnu'`.
-The frontend cannot currently be built from this shell. Reinstall per-platform
-before anything else.
-
-**F-27 · README is out of sync** — the status table overstates six rows (see
-Part 0), and "Next steps" items 3 and 4 are the same sentence duplicated.
+Features:
+- Debounced search (350ms) on program browser
+- Sidebar filters: country (with flag emoji + institution count), program level radio buttons
+- Active filter pills with individual × clear buttons
+- Skeleton loading cards during fetch
+- Stage filter chips on My Applications
+- Application progress tracker (8-step visual stepper)
+- Student profile with student-specific fields (DOB, passport, nationality, address)
 
 ---
 
-# Part 2 — Refactor plan
+## Phase 6 — Production audit + bug fixes (11 issues)
 
-Ordered so that nothing later has to be redone. Each phase ends in a working app.
-
-## Phase 0 — Safety net (½ day)
-
-1. `git init`, `.gitignore` already correct, first commit as the "before" baseline.
-   Branch `refactor/foundation`.
-2. Rotate the credentials in `backend/.env`, confirm it is untracked, keep
-   `.env.example` as the contract. Add a `config.js` that reads and **validates**
-   env at boot with zod and throws on a missing secret.
-3. `rm -rf node_modules && npm install` in both packages from this shell (F-26),
-   add `engines.node` and `.nvmrc`.
-4. ESLint + Prettier at the root, one shared config, `npm run lint` in both.
-5. `app.js`: helmet, `express.json({ limit: '1mb' })`, morgan, an origin
-   allow-list, `express-rate-limit` on `/api/auth/*`, a JSON 404 handler, and
-   `/api/health` upgraded to probe the DB with `SELECT 1` (F-05).
-
-## Phase 1 — Auth correctness (1 day)
-
-6. Split registration: public `POST /auth/register` hard-codes `role: 'AGENT'`
-   and ignores any role in the body; new `POST /users` behind
-   `requireRole('SUPER_ADMIN')` for staff creation (F-01).
-7. Add `GET /auth/me`, `POST /auth/refresh`, `POST /auth/logout`. Refresh token
-   moves to an httpOnly, `sameSite=strict` cookie; add a `RefreshToken` table so
-   logout can actually revoke (F-03).
-8. `useAuth`: access token in memory, user hydrated from `/auth/me` on boot with
-   a `loading` state so `ProtectedRoute` can wait instead of guessing. Invert the
-   role check to fail closed (F-02).
-9. `client.js`: replace the `window.location.href` bailout with a single-flight
-   refresh-and-retry queue; only redirect once refresh itself fails.
-
-## Phase 2 — Data model (1–2 days)
-
-10. One migration covering: indexes on every FK and `createdAt` used for
-    ordering (F-19); `parentAgentId` self-relation and `CourseInquiry.countryId`
-    relation (F-18); `createdAt`/`updatedAt`/`archivedAt` on every model;
-    `Course.archivedAt` for soft delete (F-13); `Country.flagEmoji` +
-    `sortOrder` + `currencyCode`; `Institution.logoUrl` + `isTrending`;
-    `Course.currencyCode` so fees stop being CAD-by-assumption (F-16).
-11. Rename `Course.status` → `Course.badges` (it holds pill labels like
-    "Instant Offer", and reads as a lifecycle field next to
-    `Application.primaryStatus`).
-12. Rewrite `seed.js`: all 15 countries from the strip with flags and
-    currencies (F-10), realistic institutions per country with logos, and at
-    least one row for every new reference table in Phase 3 so no screen ships
-    with an untestable empty state.
-
-## Phase 3 — Backend structure (2 days)
-
-13. `asyncHandler` wrapper and a `paginate({ page, pageSize })` util with one
-    default; delete ~30 try/catch blocks and 5 copies of the skip/take maths (F-20).
-14. `validate(schema, 'body'|'query'|'params')` middleware + a zod schema file
-    per module (F-04).
-15. New `countries` module — `GET /api/countries` — the unblock for F-09.
-16. Normalise every list response to `{ items, meta: { total, page, pageSize, totalPages } }`.
-17. `NotFoundError` / `ConflictError` / `ValidationError` classes so
-    `errorHandler` maps Prisma codes (P2002 → 409, P2003 → 409, P2025 → 404)
-    instead of blanket 500s (F-13).
-
-## Phase 4 — Frontend primitives (2 days)
-
-These three components carry the 11 new screens. Build them before the screens.
-
-18. **`<FilterBar />`** — driven by a config array of field descriptors
-    (`select` | `text` | `date`), renders the exact `filter-card` / `filter-grid`
-    markup already in the CSS, plus the `Apply Filter` / `Clear Filter` pair from
-    every screenshot. Pairs with a `useUrlFilters()` hook that syncs state to the
-    query string, matching the reference portal's
-    `?country_id=…&university_id=…` behaviour so filtered views are linkable.
-19. **`<DataTable />`** — columns config, loading row, empty row, and a built-in
-    `<Pagination>` (fixes F-11 for every table at once).
-20. **`<DocumentGrid />`** — the PDF-tile grid from the five Document Bank
-    screens, with a shared `<DocumentTile>`.
-21. `<CountrySelect />` and `<InstitutionSelect />` on top of `/api/countries`
-    and `/api/institutions`, with a shared `useReferenceData` cache. Retire the
-    UUID text input (F-09).
-22. Delete `.view` / `.view.active` from the CSS and the `className="view active"`
-    from all 9 feature components; introduce a `<Page title subtitle actions>`
-    wrapper that owns `page-head` instead (F-22, F-23).
-23. Split `index.css` into `styles/tokens.css`, `shell.css`, `components.css`,
-    `pages.css`. Same rules, same order — a mechanical move, verified by
-    screenshot diff.
-
-## Phase 5 — Repair the existing screens (1–2 days)
-
-24. Application flow (F-07): add a course picker — `CourseCard`'s
-    "Create application" navigates to `/add-application?courseId=…`, and the form
-    reads it, shows the resolved course, and also offers a searchable
-    `<CourseSelect>` for direct entry.
-25. Wire the three dead `CourseFinder` selects to real destination /
-    institution / degree-level filters, and extend
-    `courses.service.searchCourses` to match institution name as well as course
-    title. Reset `page` on country change (F-12).
-26. Give `ApplicationHistory` and `CourseInquiryHistory` the full filter set
-    their services already accept, plus pagination.
-27. Fix the copy and currency issues in F-16, wire both header CTAs, wire or
-    remove the header search (F-15), and wire `menu-toggle` + render
-    `<SidebarOverlay>` so mobile nav works (F-14).
-28. Rewrite the README status table honestly, drop the duplicated next-step
-    (F-27).
+| # | Bug | Fix |
+|---|---|---|
+| 1 | `isoCode` field missing from DB crashed `/api/countries` | Migration added, service returns it |
+| 2 | `countries.controller` double-destructured `_count` after service already flattened it | Controller simplified to pass through directly |
+| 3 | `AdminLoginPage` wrong-role error never showed | Local `wrongRoleErr` state instead of `mutation.reset()` pattern |
+| 4 | `PartnerLoginPage` showed form forever to authenticated students | All authenticated users redirected via `homePathFor(role)` |
+| 5 | `reports/admin-stats` had double `requireRole` | Simplified to single `requireRole('ADMIN','SUPER_ADMIN')` |
+| 6 | `notifications` routes were open to STUDENT | Added `partnerAuth` restriction |
+| 7 | `STAGE_COLOR` used `bg` key instead of `background` | Fixed CSS property name |
+| 8 | `institutionCount` was undefined everywhere | Service flattens `_count.institutions` → `institutionCount` |
+| 9 | Admin course edit modal: institution picker empty on load | `useEffect` re-runs match when `institutions` array arrives |
+| 10 | Student program browser fired API on every keypress | Added `useDebounced(350ms)` hook |
+| 11 | `StudentProfile` used render-time setState | Fixed to `useEffect` pattern |
 
 ---
 
-# Part 3 — Implementation plan for the screens in the images
+## Phase 7 — Agency branding
 
-The 20 screenshots are `instantapply.net/partner` — the target feature set.
-Eleven distinct screens, all sharing one shell.
+### Backend
+- `AgencyProfile` model: `agencyName`, `logoUrl`, `website`, `accentColor`
+- `GET /api/agency` — get resolved profile (sub-agents inherit parent's)
+- `PUT /api/agency` — upsert (top-level agents only, enforced via DB lookup)
+- `DELETE /api/agency` — reset to NV branding
+- `POST /api/agency/logo` — multipart logo upload (local disk or S3)
+- `agencyProfile` returned in login, refresh, and `/me` responses
 
-## 3.0 Shell work every screen depends on
+### Frontend
+- `LogoCropper` component: canvas drag-to-move, corner-resize, live preview at 64/40/28px
+- `extractDominantColorFromData()` — samples cropped image pixels, buckets by hue, returns most vibrant hex
+- Color auto-detected from logo on crop; agent can override
+- `useTheme.js` — derives full `--accent-800` through `--accent-50` scale from one hex using HSL math
+- `applyTheme(hex)` / `resetTheme()` — sets/removes CSS vars on `:root`
+- Theme applied on `setSession`, `bootstrap`, `setAgencyProfile` — zero flash on reload
+- Theme reset on `logout`
 
-Visible in every screenshot, currently missing:
+---
 
-- **Two global announcement banners** above the page content: a red one
-  ("this list of universities are blacklisted…") with a `Click for list` button
-  opening a blacklisted-institutions modal, and a blue one ("Declaration form is
-  a Mandatory Document for Application") with `Download Declaration Form`.
-  → `Announcement` model (`variant`, `message`, `ctaLabel`, `ctaUrl`,
-  `isActive`, `sortOrder`), `GET /api/announcements`, `<AnnouncementBar>` in the
-  shell. Admin-editable, not hardcoded.
-- **Flag chips** in the country strip (F-10), sourced from `/api/countries`
-  rather than the hardcoded array.
-- **Header actions**: invite-sub-agent (person+), notifications bell with count,
-  messages bubble with count, avatar menu. Three of the four are new.
-- **Expandable sidebar sections** — images 3 and 6 show `Entry Requirements`
-  and `Document Bank` expanding into sub-items. `navConfig.js` needs a
-  `children` array and `Sidebar.jsx` a disclosure state that auto-opens on the
-  active child route.
+## Phase 8 — Profile management (all roles)
 
-## 3.1 Data model additions
+### Backend
+- `User`: added `phone`, `bio`, `avatarUrl`, `isActive` fields via migration
+- `GET /api/profile` — any authenticated user
+- `PUT /api/profile` — update name, phone, bio, avatarUrl
+- `POST /api/profile/password` — change password (validates current, revokes all sessions)
+- `POST /api/profile/avatar` — upload avatar (local disk or S3, removes old local file)
+- Login blocked for `isActive: false` users
 
-```prisma
-model UniversityCommission {          // images 1–2
-  id            String  @id @default(uuid())
-  institutionId String
-  tiers         Json    // [{ label: "1-5 Students", rate: "15%" }, …] — the
-                        // screenshots show 1–2 free-form tiers per row
-  notes         String?
-  institution   Institution @relation(...)
-  @@unique([institutionId])
-}
+### Frontend — `ProfilePage` (shared across all roles)
+- Avatar upload with `LogoCropper` crop UI
+- Name, phone, bio fields
+- Email shown read-only
+- Change password with strength meter (5-level: Weak/Fair/Good/Strong)
+- Student-only section: nationality, DOB, passport, address
+- Account info: role badge, join date, active status
+- Quick links: agents → Agency Settings, admins → Admin Panel, students → My Applications
+- Available at `/partner/profile`, `/admin/profile`, `/profile`
 
-enum StudyLevel { UG PG }
+### Header avatar dropdown (all portals)
+Replaced the minimal "Log out" dropdown with a proper menu:
+- User avatar (image if set, initials fallback)
+- Name, email, role badge
+- My profile link
+- Agency settings (agents only)
+- Admin panel (admins only)
+- My applications (students only)
+- Sign out (navigates to the correct login page for the user's portal)
+- Closes on click-outside
 
-model EntryRequirement {              // images 3–4
-  id                   String     @id @default(uuid())
-  institutionId        String
-  level                StudyLevel
-  englishRequirement   String     // "IELTS 6.5 overall no less than 6.0, …"
-  academicRequirement  String
-  offerTimeline        String     // "48 to 72 hours", "1 Week"
-  credibilityInterview Boolean
-  financialInformation String
-  institution          Institution @relation(...)
-  @@unique([institutionId, level])
-}
+---
 
-model ImportantUpdate {               // images 5–6
-  id            String   @id @default(uuid())
-  title         String
-  body          String
-  publishDate   DateTime
-  countryId     String?
-  institutionId String?
-  attachmentUrl String?              // drives the download icon
-}
+## Phase 9 — Student portal search fixes
 
-enum DocumentCategory { VISA_DOCUMENT REFUND_FORM INSTITUTE_BROCHURE SOP LOR }
-
-model Document {                      // images 7–18, all five categories
-  id            String @id @default(uuid())
-  category      DocumentCategory
-  title         String
-  fileUrl       String
-  countryId     String?
-  institutionId String?
-  sortOrder     Int    @default(0)
-  @@index([category, countryId, institutionId])
-}
-
-model SupportContact {                // image 21
-  id        String  @id @default(uuid())
-  name      String
-  phone     String
-  avatarUrl String?
-  sortOrder Int     @default(0)
-}
-
-model Notification {                  // replaces the derived stub (F-17)
-  id            String   @id @default(uuid())
-  userId        String
-  applicationId String?
-  kind          String   // "NEW_APPLICATION" | "INFO_QUERY" | "DOCUMENT_QUERY"
-  title         String
-  body          String
-  readAt        DateTime?
-  createdAt     DateTime @default(now())
-  @@index([userId, readAt])
-}
-
-model UsefulInformation {             // image 19 panel
-  id String @id @default(uuid()) …
-}
-```
-
-Plus, on `Application`:
-
-```prisma
-reference   Int      @default(autoincrement()) @unique  // the "POEC ID: 4367"
-intakeLabel String                                      // "March 2027"
-stage       ApplicationStage                            // the 8 Report tiles
-deadlineAt  DateTime?                                   // "Upcoming Deadlines"
-
-enum ApplicationStage {
-  PROFILE_ASSESSMENT APPLICATION CONDITIONAL_OFFER UNCONDITIONAL_OFFER
-  FEES_PAYMENT CAS_LETTER VISA_APPLICATION VISA_APPROVAL
-}
-enum CourseInquiryStage { INQUIRY PENDING OFFERED APPLIED }
-```
-
-`stage` as an enum is what makes the Report screen a single `groupBy` instead of
-eight hand-counted queries — and it replaces today's free-text
-`primaryStatus` / `secondaryStatus` pair, which no code can reason about.
-
-## 3.2 API surface
-
-| Endpoint | Serves |
+| Fix | Detail |
 |---|---|
-| `GET /api/countries` | every dropdown + the flag strip |
-| `GET /api/announcements` | the two global banners |
-| `GET /api/institutions?country=&search=&blacklisted=` | dropdowns + `Click for list` modal |
-| `GET /api/commissions?country=&search=` | Universities Commission |
-| `GET /api/entry-requirements?level=UG|PG&country=&institutionId=&english=&credibilityInterview=` | UG + PG Requirements |
-| `GET /api/important-updates?from=&to=&countryId=&institutionId=` | Important Updates |
-| `GET /api/important-updates/:id` | the eye/Details action |
-| `GET /api/documents?category=&countryId=&institutionId=&search=` | all five Document Bank screens |
-| `GET /api/support-contacts` | Help & Support |
-| `GET /api/reports/summary` | the 12 Report tiles, one `groupBy` per enum |
-| `GET /api/institutions/trending` | Trending Universities carousel |
-| `GET /api/applications/deadlines?upcoming=true` | Upcoming Deadlines panel |
-| `GET /api/notifications?unread=`, `PATCH /:id/read` | bell + Recent Notifications feed |
-| `GET/POST /api/messages` | the messages badge + Help & Support "Message" links |
-| `POST /api/sub-agents` | the invite-sub-agent header action |
-| `POST /api/documents` (multipart, admin) | finally uses `multer` (F-24) |
-
-Everything except reports and messages is a plain filtered list — which is why
-Phase 4's `FilterBar` + `DataTable` pays for itself immediately.
-
-## 3.3 Screen-by-screen build
-
-Each is `<Page>` + `<FilterBar config>` + `<DataTable columns>` or
-`<DocumentGrid>`. Route names align with `navConfig.js` so F-08 closes.
-
-| # | Route | Screen | Shape | Notes from the images |
-|---|---|---|---|---|
-| 1 | `/commission` | Universities Commission | filters: Country, Search by Name → table: Country, University Name, Commission | commission cell renders multi-line tiers ("1-5 Students: 15%" / "6+ Students: 17%") |
-| 2 | `/entry-requirements/ug` | UG Entry Requirements | filters: Country, Institution, English Requirement, Credibility Interview → 6-col table | long free-text cells; table needs `overflow-x: auto` |
-| 3 | `/entry-requirements/pg` | PG Entry Requirements | same component, `level=PG` | subtitle "Post Graduate Programs" |
-| 4 | `/updates` | Important Updates | filters: Publish Date From/To, Country Preferences, University → table w/ Details column | two row actions: eye (detail modal) and download (only when `attachmentUrl` exists — image 5 shows one row with both, one with only the eye) |
-| 5 | `/documents/visa` | Visa Documents | filters: Country, Institution, Search → `DocumentGrid` | 18 tiles incl. per-country "List of documents for …" |
-| 6 | `/documents/refund-forms` | Refund Forms | same | 5 tiles |
-| 7 | `/documents/brochures` | Institute Brochures | same | image 11 is the **empty state** — "No Data Found" with filters applied. Build that state deliberately |
-| 8 | `/documents/sop` | SOP Documents | same | ~50 tiles → needs pagination or virtualisation, unlike the other four |
-| 9 | `/documents/lor` | LOR Documents | same | 6 tiles |
-| 10 | `/report` | Report | stat tiles + carousel + feed + 2 panels | detailed below |
-| 11 | `/help` | Help & Support | contact card grid | name, phone, `Message` link → opens the message thread |
-
-Screens 5–9 are **one** `<DocumentBankPage category>` component behind five
-routes, not five files.
-
-**Report (`/report`, images 19–20)** is the only composite screen:
-
-- Row 1 — 8 stat tiles: Profile Assessment, Applications, Condition Offers,
-  UnConditional Offers, Fees Payment, CAS Letters, Visa Application,
-  Visa Approval. One `groupBy: ['stage']` over the agent's applications.
-- Row 2 — "Course Inquiry": Course Inquiry, Pending Course, Offered Course,
-  Applied Course. One `groupBy` over `CourseInquiryStage`.
-- "Trending Universities" logo carousel. Note: three logos in image 20 render as
-  broken-image alt text in the reference portal — our `<InstitutionLogo>` must
-  fall back to the initials chip `CourseCard` already uses.
-- "Recent Application Notifications" — avatar, `POEC ID: 4367 - RMIT University -
-  March 2027`, message excerpt, timestamp, eye action, `View All`.
-- "Useful Informations" and "Upcoming Application Deadlines" — both empty in the
-  screenshots; ship the designed empty state (icon + message), not a blank box.
-
-All counts are agent-scoped, reusing the `req.user.role === 'AGENT'` scoping
-already correct in `applications.controller.js`.
+| HTML entities in JSX | `&rsquo;` → real apostrophes in program level labels |
+| No debounce on search | 350ms debounce prevents API call per keypress |
+| No flag emoji in country dropdown | Added `{c.flagEmoji}` + institution count to options |
+| No active filter indicators | Active filter pill chips with × clear buttons |
+| No "clear all" on empty state | Button added when filters are applied and results are 0 |
+| No loading skeleton | Skeleton pulse animation during initial load |
+| No stage filter on My Applications | Stage chip filter row added |
+| No pagination on My Applications | `<Pagination>` with 10 per page |
+| `isFetching` indicator missing | "updating…" text shown during background refetch |
 
 ---
 
-# Part 4 — Sequence & estimates
+## Database migration history
 
-| Phase | Work | Est. | Exit criteria |
-|---|---|---|---|
-| 0 | Safety net | 0.5d | git history exists; both packages build in WSL; lint passes; `/api/health` probes the DB |
-| 1 | Auth correctness | 1d | F-01…F-03 closed; refresh across a 15-min boundary keeps the session; agent hitting `/admin/*` after refresh is redirected |
-| 2 | Data model | 1.5d | one migration; 15 countries + every new table seeded; no screen has an untestable empty state |
-| 3 | Backend structure | 2d | zod on every route; `/api/countries` live; uniform `{ items, meta }`; Prisma error codes mapped |
-| 4 | Frontend primitives | 2d | `FilterBar` / `DataTable` / `DocumentGrid` used by ≥1 existing screen; `.view` gone; CSS split with no visual diff |
-| 5 | Repair existing screens | 1.5d | an application can be created end-to-end; every dropdown populated; every table paginated |
-| 6 | Reference-data modules | 2d | all endpoints in §3.2 live with seeded data |
-| 7 | The 11 screens | 3.5d | every `navConfig` path resolves; F-08 closed |
-| 8 | Shell completion | 1.5d | banners, flags, expandable sidebar, notifications, messages, sub-agent invite |
-| 9 | Hardening | 2d | Vitest on services + guards, Playwright on login→apply→report, a11y pass on tables/dropdowns, README rewritten |
+| # | Migration | What it added |
+|---|---|---|
+| 1 | `20260803033157_new` | Initial schema |
+| 2 | `20260803170000_add_refresh_tokens` | RefreshToken table |
+| 3 | `20260803190000_refresh_token_revoke_reason` | revokedReason enum |
+| 4 | `20260804090000_data_model_overhaul` | Full schema overhaul |
+| 5 | `20260806120000_program_api_overhaul` | Program API shape (slug, programLevel, CourseIntake) |
+| 6 | `20260806200000_add_student_role` | STUDENT role, StudentProfile table |
+| 7 | `20260806210000_add_country_isocode` | Country.isoCode |
+| 8 | `20260815120000_add_agency_profile` | AgencyProfile table |
+| 9 | `20260815140000_add_user_profile_fields` | User.phone, bio, avatarUrl |
+| 10 | `20260810100000_add_user_isactive` | User.isActive |
+| 11 | `20260815160000_agency_accent_color` | AgencyProfile.accentColor |
+| 12 | (profile fields) | User profile fields |
 
-**≈17.5 working days.** Phases 0–2 are prerequisites for everything; 3+4 can run
-in parallel across two people; 6 and 7 parallelise per screen once 4 lands.
+---
 
-## Things to decide before Phase 2
+## Security summary
 
-1. **Is `instantapply.net` the design target or a competitor to differentiate
-   from?** It changes whether §3.3 is a spec or a starting point.
-2. **Who maintains the reference data** (commissions, requirements, documents)?
-   The plan assumes admin CRUD screens are needed — that's ~5 more screens not
-   costed above. If it's a CSV/ops import instead, say so now: the existing
-   `POST /api/courses/bulk-import` becomes the pattern.
-3. **File storage for the Document Bank** — S3/R2 presigned URLs, or local disk?
-   Affects the `multer` wiring in Phase 6.
-4. **`primaryStatus`/`secondaryStatus`** — the enum in §3.1 replaces them. If
-   real data already exists in those columns, we need the mapping table.
+| Concern | How addressed |
+|---|---|
+| Token storage | Access token in memory, refresh in httpOnly cookie |
+| Replay attacks | ROTATED token replayed → all sessions revoked |
+| Role escalation | Public register hard-codes AGENT; staff creation behind SUPER_ADMIN |
+| Cross-portal data | Students blocked from partner endpoints; partners from student endpoints |
+| Session bleed | `queryClient.clear()` on every session boundary |
+| Account takeover | Password change revokes all other sessions immediately |
+| Deactivated accounts | `isActive: false` blocks login and immediately revokes all sessions |
+| CORS | Allow-list driven; misconfigured origins fail closed |
+| Rate limiting | Applied to `/api/auth/*` |
+
+---
+
+## What is NOT yet built
+
+| Feature | Notes |
+|---|---|
+| Email verification | Students register without email verification |
+| Password reset flow | No "forgot password" — admin must create new account |
+| Real-time notifications | Polling only, no WebSocket |
+| E2E test suite | Manual API verification only |
+| S3 file upload (tested) | Code is complete; needs real credentials to test |
+| Admin analytics | Beyond the 6 stat cards, no charts or trends |
+| Application messaging | Help & Support contacts exist; no in-app thread |

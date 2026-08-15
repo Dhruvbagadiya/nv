@@ -9,7 +9,7 @@ import { ConflictError, NotFoundError } from '../../utils/httpErrors.js';
 // Not paginated. There are 15 rows and every consumer wants all of them, so
 // pagination would be pure ceremony.
 export async function listCountries({ withInstitutionsOnly = false } = {}) {
-  return prisma.country.findMany({
+  const rows = await prisma.country.findMany({
     where: withInstitutionsOnly
       ? { institutions: { some: { archivedAt: null } } }
       : undefined,
@@ -20,17 +20,18 @@ export async function listCountries({ withInstitutionsOnly = false } = {}) {
       flagEmoji: true,
       isoCode: true,
       currencyCode: true,
-      // Was omitted, so the admin table's Order column rendered blank AND the
-      // edit form seeded sortOrder from undefined — saving any country silently
-      // reset it to 0 and reshuffled the header strip.
       sortOrder: true,
-      // Lets a filter show "United Kingdom (30)" and lets the UI grey out
-      // destinations with nothing behind them, instead of the current behaviour
-      // where picking one silently returns an empty grid.
       _count: { select: { institutions: { where: { archivedAt: null } } } },
     },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
   });
+
+  // Flatten _count so callers read `country.institutionCount` directly.
+  // Also keep isoCode in the response for flag rendering on the frontend.
+  return rows.map(({ _count, ...c }) => ({
+    ...c,
+    institutionCount: _count.institutions,
+  }));
 }
 
 

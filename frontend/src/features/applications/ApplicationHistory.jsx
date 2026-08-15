@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { fetchApplications } from '../../api/applications.js';
@@ -5,6 +6,7 @@ import Flag from '../../components/ui/Flag.jsx';
 import Page from '../../components/ui/Page.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
+import ApplicationDetail from './ApplicationDetail.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
 import { APPLICATION_STAGES, applicationStageLabel } from '../../constants/referenceData.js';
@@ -29,6 +31,7 @@ const FILTER_DEFAULTS = {
 
 export default function ApplicationHistory() {
   const navigate = useNavigate();
+  const [selectedId, setSelectedId] = useState(null);
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
   const { options: countryOptions } = useCountries();
   const { options: institutionOptions } = useInstitutions(
@@ -155,7 +158,16 @@ export default function ApplicationHistory() {
         emptyMessage="No applications match these filters."
         meta={data?.meta}
         onPageChange={setPage}
+        onRowClick={(row) => setSelectedId(row.id)}
+        rowClickTitle="View details"
       />
+
+      {selectedId && (
+        <ApplicationDetail
+          applicationId={selectedId}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
     </Page>
   );
 }

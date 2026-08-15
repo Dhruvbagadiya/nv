@@ -25,6 +25,9 @@ export default function DataTable({
   // { items, meta: { total, page, pageSize, totalPages } }.
   meta,
   onPageChange,
+  // Optional: makes each row clickable with a pointer cursor.
+  onRowClick,
+  rowClickTitle,
 }) {
   const colSpan = columns.length;
 
@@ -76,7 +79,12 @@ export default function DataTable({
             {showRows &&
               !isLoading &&
               rows.map((row) => (
-                <tr key={getRowKey(row)}>
+                <tr
+                  key={getRowKey(row)}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  title={rowClickTitle}
+                  style={onRowClick ? { cursor: 'pointer' } : undefined}
+                >
                   {columns.map((col) => (
                     <td key={col.key} className={col.className}>
                       {col.render ? col.render(row) : row[col.key]}

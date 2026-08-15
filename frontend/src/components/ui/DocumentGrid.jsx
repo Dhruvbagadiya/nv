@@ -45,12 +45,20 @@ export default function DocumentGrid({
   isLoading,
   isError,
   emptyMessage = 'No Data Found',
+  // Accept both a `meta` object (new shape) and the legacy flat props so every
+  // existing caller continues to work without changes.
+  meta,
   page,
   totalPages,
   total,
   pageSize,
   onPageChange,
 }) {
+  // Resolve pagination values from either source.
+  const pg       = meta?.page       ?? page;
+  const tPages   = meta?.totalPages ?? totalPages;
+  const tot      = meta?.total      ?? total;
+  const pgSize   = meta?.pageSize   ?? pageSize;
   if (isLoading) {
     return (
       <div className="doc-panel">
@@ -89,10 +97,10 @@ export default function DocumentGrid({
       </div>
       {onPageChange && (
         <Pagination
-          page={page}
-          totalPages={totalPages}
-          total={total}
-          pageSize={pageSize}
+          page={pg}
+          totalPages={tPages}
+          total={tot}
+          pageSize={pgSize}
           onChange={onPageChange}
         />
       )}

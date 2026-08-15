@@ -1,49 +1,55 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchStudentProfile, updateStudentProfile } from '../../api/students.js';
 import { useAuth } from '../../store/useAuth.js';
 
+const EMPTY_FORM = { nationality: '', dateOfBirth: '', passportNo: '', phone: '', address: '' };
+
 export default function StudentProfile() {
   const queryClient = useQueryClient();
-  const user = useAuth((s) => s.user);
-  const logout = useAuth((s) => s.logout);
+  const user   = useAuth((s) => s.user);
+  const logout   = useAuth((s) => s.logout);
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['student-profile'],
     queryFn: fetchStudentProfile,
   });
 
-  const [form, setForm] = useState({
-    nationality: '', dateOfBirth: '', passportNo: '', phone: '', address: '',
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [saved, setSaved] = useState(false);
 
-  // Seeded during render rather than in an effect: setState inside an effect costs
-  // a second render pass, and React documents this compare-with-previous pattern
-  // for "reset state when a value changes".
-  const [seededFrom, setSeededFrom] = useState(null);
-  if (profile && seededFrom !== profile.userId) {
-    setSeededFrom(profile.userId);
+  // Seed form from API data once it arrives. useEffect is the correct pattern —
+  // the previous "setState during render" approach triggered React's warning and
+  // could cause double renders in StrictMode.
+  useEffect(() => {
+    if (!profile) return;
     setForm({
-      nationality: profile.nationality ?? '',
+      nationality: profile.nationality  ?? '',
       dateOfBirth: profile.dateOfBirth
         ? new Date(profile.dateOfBirth).toISOString().slice(0, 10)
         : '',
-      passportNo: profile.passportNo ?? '',
-      phone: profile.phone ?? '',
-      address: profile.address ?? '',
+      passportNo:  profile.passportNo  ?? '',
+      phone:       profile.phone       ?? '',
+      address:     profile.address     ?? '',
     });
-  }
+  }, [profile]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const mutation = useMutation({
     mutationFn: () => updateStudentProfile({
-      nationality:  form.nationality  || undefined,
-      dateOfBirth:  form.dateOfBirth  || undefined,
-      passportNo:   form.passportNo   || undefined,
-      phone:        form.phone        || undefined,
-      address:      form.address      || undefined,
+      nationality: form.nationality  || undefined,
+      dateOfBirth: form.dateOfBirth  || undefined,
+      passportNo:  form.passportNo   || undefined,
+      phone:       form.phone        || undefined,
+      address:     form.address      || undefined,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-profile'] });
@@ -68,7 +74,7 @@ export default function StudentProfile() {
             <h1 className="student-profile-name">{user?.name}</h1>
             <div className="student-profile-email">{user?.email}</div>
           </div>
-          <button className="student-profile-logout" onClick={logout}>Sign out</button>
+          <button className="student-profile-logout" onClick={handleLogout}>Sign out</button>
         </div>
 
         <div className="student-profile-card">
@@ -77,35 +83,55 @@ export default function StudentProfile() {
             This information is used to pre-fill your applications.
           </p>
 
-          {isLoading ? <p>Loading…</p> : (
+          {isLoading ? (
+            <p>Loading…</p>
+          ) : (
             <form onSubmit={handleSubmit}>
               <div className="student-profile-grid">
                 <div className="student-apply-field">
                   <label>Nationality</label>
-                  <input type="text" value={form.nationality} onChange={(e) => set('nationality', e.target.value)} placeholder="e.g. Indian" />
+                  <input type="text" value={form.nationality}
+                    onChange={(e) => set('nationality', e.target.value)}
+                    placeholder="e.g. Indian" />
                 </div>
                 <div className="student-apply-field">
                   <label>Date of birth</label>
-                  <input type="date" value={form.dateOfBirth} onChange={(e) => set('dateOfBirth', e.target.value)} />
+                  <input type="date" value={form.dateOfBirth}
+                    onChange={(e) => set('dateOfBirth', e.target.value)} />
                 </div>
                 <div className="student-apply-field">
                   <label>Passport number</label>
-                  <input type="text" value={form.passportNo} onChange={(e) => set('passportNo', e.target.value)} placeholder="e.g. P1234567" />
+                  <input type="text" value={form.passportNo}
+                    onChange={(e) => set('passportNo', e.target.value)}
+                    placeholder="e.g. P1234567" />
                 </div>
                 <div className="student-apply-field">
                   <label>Phone number</label>
-                  <input type="text" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+91 9000000000" />
+                  <input type="text" value={form.phone}
+                    onChange={(e) => set('phone', e.target.value)}
+                    placeholder="+91 9000000000" />
                 </div>
                 <div className="student-apply-field" style={{ gridColumn: '1 / -1' }}>
                   <label>Address</label>
-                  <textarea value={form.address} onChange={(e) => set('address', e.target.value)}
-                    placeholder="Your current address" rows={3}
-                    style={{ width: '100%', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '7px 9px', fontFamily: 'var(--font-sans)', fontSize: 13, resize: 'vertical', background: 'var(--canvas)' }} />
+                  <textarea
+                    value={form.address}
+                    onChange={(e) => set('address', e.target.value)}
+                    placeholder="Your current address"
+                    rows={3}
+                    style={{
+                      width: '100%', border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)', padding: '7px 9px',
+                      fontFamily: 'var(--font-sans)', fontSize: 13,
+                      resize: 'vertical', background: 'var(--canvas)',
+                    }}
+                  />
                 </div>
               </div>
 
               {mutation.isError && (
-                <div className="student-auth-error">{mutation.error?.response?.data?.error ?? 'Save failed.'}</div>
+                <div className="student-auth-error">
+                  {mutation.error?.response?.data?.error ?? 'Save failed.'}
+                </div>
               )}
               {saved && (
                 <div style={{ color: 'var(--success-700)', fontWeight: 600, fontSize: 13, marginTop: 8 }}>

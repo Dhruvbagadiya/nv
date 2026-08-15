@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { login } from '../../api/auth.js';
 import { useAuth } from '../../store/useAuth.js';
+import { homePathFor } from '../../routes/homePath.js';
 
 const PARTNER_ROLES = ['AGENT', 'ADMIN', 'SUPER_ADMIN'];
 
 export default function PartnerLoginPage() {
   const navigate   = useNavigate();
-  const location   = useLocation();
   const setSession = useAuth((s) => s.setSession);
   const status     = useAuth((s) => s.status);
   const user       = useAuth((s) => s.user);
@@ -19,13 +19,18 @@ export default function PartnerLoginPage() {
     mutationFn: () => login(email, password),
     onSuccess: (data) => {
       setSession(data);
-      const from = location.state?.from ?? '/partner/dashboard';
-      navigate(from, { replace: true });
+      // Always navigate to the role's home after login — never restore the previous
+      // user's `from` URL, which would show stale data from a different account
+      // even though the cache has been cleared (the query hasn't fired yet).
+      navigate(homePathFor(data.user.role), { replace: true });
     },
   });
 
-  if (status === 'authenticated' && PARTNER_ROLES.includes(user?.role)) {
-    return <Navigate to="/partner/dashboard" replace />;
+  // Any signed-in user goes to their own portal home.
+  // Previously only PARTNER_ROLES redirected, so a student who opened /partner/login
+  // while already signed in was shown the form forever.
+  if (status === 'authenticated') {
+    return <Navigate to={homePathFor(user?.role)} replace />;
   }
 
   const handleSubmit = (e) => {

@@ -241,3 +241,28 @@
 
 /* Grid item inside .student-detail-stats. */
 .student-detail-stat { min-width: 0; }
+
+/* ── Active filter pills ──────────────────────────────────────────────── */
+.student-filter-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--accent-50); border: 1px solid var(--accent-100);
+  border-radius: var(--radius-pill); padding: 3px 8px 3px 10px;
+  font-size: 11px; font-weight: 600; color: var(--accent-700);
+}
+.student-filter-pill button {
+  background: none; border: none; cursor: pointer; color: var(--accent-700);
+  font-size: 13px; line-height: 1; padding: 0; font-family: inherit;
+  display: flex; align-items: center;
+}
+.student-filter-pill button:hover { color: var(--danger-700); }
+
+/* ── Skeleton loading cards ───────────────────────────────────────────── */
+.student-card-skeleton {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); min-height: 200px;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .5; }
+}

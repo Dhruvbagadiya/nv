@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.js';
+import { requireRole } from '../../middleware/rbac.js';
 import { validate } from '../../middleware/validate.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { listNotificationsQuery, idParam } from './notifications.schemas.js';
@@ -11,20 +12,15 @@ import {
 } from './notifications.controller.js';
 
 const router = Router();
+// Notifications are partner-facing. Students have no notifications table rows and
+// the bell icon doesn't exist in the student shell, so this is partner-only.
+const partnerAuth = [requireAuth, requireRole('AGENT', 'ADMIN', 'SUPER_ADMIN')];
 
-// Static segments before /:id.
-// The badge polls this rather than fetching a page of rows to count them.
-router.get('/unread-count', requireAuth, asyncHandler(unreadCountHandler));
-router.post('/read-all', requireAuth, asyncHandler(markAllReadHandler));
+router.get('/unread-count', ...partnerAuth, asyncHandler(unreadCountHandler));
+router.post('/read-all',    ...partnerAuth, asyncHandler(markAllReadHandler));
 
-// GET /api/notifications?unreadOnly=true&page=
-router.get(
-  '/',
-  requireAuth,
-  validate(listNotificationsQuery, 'query'),
-  asyncHandler(listNotificationsHandler)
-);
+router.get('/', ...partnerAuth, validate(listNotificationsQuery, 'query'), asyncHandler(listNotificationsHandler));
 
-router.patch('/:id/read', requireAuth, validate(idParam, 'params'), asyncHandler(markReadHandler));
+router.patch('/:id/read', ...partnerAuth, validate(idParam, 'params'), asyncHandler(markReadHandler));
 
 export default router;

@@ -18,13 +18,9 @@ import {
 
 const router = Router();
 
-// GET /api/countries?withInstitutionsOnly=true
-router.get(
-  '/',
-  requireAuth,
-  validate(listCountriesQuery, 'query'),
-  asyncHandler(listCountriesHandler)
-);
+// GET /api/countries — public so unauthenticated students can load the country
+// filter on the programme browser without signing in.
+router.get('/', validate(listCountriesQuery, 'query'), asyncHandler(listCountriesHandler));
 
 
 // Reads stay open to every authenticated user — students need the list to browse.

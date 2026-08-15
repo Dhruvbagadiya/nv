@@ -5,8 +5,12 @@ import DataTable from '../../components/ui/DataTable.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
-import { fetchAllUsers, createUser } from '../../api/admin.js';
+import {
+  fetchAllUsers, createUser,
+  fetchUserDetail, updateUserAdmin, setUserActive, revokeUserSessions,
+} from '../../api/admin.js';
 import { formatDate } from '../../utils/format.js';
+import { applicationStageLabel, APPLICATION_STAGES } from '../../constants/referenceData.js';
 
 const FILTER_DEFAULTS = { role: '', search: '', page: 1 };
 
@@ -14,62 +18,48 @@ const ROLES = [
   { value: 'SUPER_ADMIN', label: 'Super Admin' },
   { value: 'ADMIN',       label: 'Admin' },
   { value: 'AGENT',       label: 'Agent' },
+  { value: 'STUDENT',     label: 'Student' },
 ];
 const ROLE_LABEL = Object.fromEntries(ROLES.map((r) => [r.value, r.label]));
-
 const ROLE_COLORS = {
   SUPER_ADMIN: { background: 'var(--purple-100)', color: 'var(--purple-700)' },
   ADMIN:       { background: 'var(--info-100)',   color: 'var(--info-700)' },
   AGENT:       { background: 'var(--success-100)',color: 'var(--success-700)' },
+  STUDENT:     { background: 'var(--accent-100)', color: 'var(--accent-700)' },
 };
 
+// ── Create user modal ─────────────────────────────────────────────────────────
 function CreateUserModal({ onClose, onSaved }) {
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'AGENT' });
   const [error, setError] = useState(null);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-
   const save = useMutation({
     mutationFn: createUser,
     onSuccess: onSaved,
     onError: (e) => setError(e.response?.data?.error ?? 'Could not create user.'),
   });
-
-  const submit = (e) => {
-    e.preventDefault();
-    setError(null);
-    save.mutate(form);
-  };
-
   return (
     <Modal title="Create user" onClose={onClose}>
-      <form onSubmit={submit}>
+      <form onSubmit={(e) => { e.preventDefault(); setError(null); save.mutate(form); }}>
         <div className="form-field">
           <label className="flabel" htmlFor="u-name">Full name *</label>
-          <input id="u-name" type="text" value={form.name}
-            onChange={(e) => set('name', e.target.value)} required />
+          <input id="u-name" type="text" value={form.name} onChange={(e) => set('name', e.target.value)} required />
         </div>
         <div className="form-field">
           <label className="flabel" htmlFor="u-email">Email *</label>
-          <input id="u-email" type="email" value={form.email}
-            onChange={(e) => set('email', e.target.value)} required />
+          <input id="u-email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} required />
         </div>
         <div className="form-field">
           <label className="flabel" htmlFor="u-password">Password *</label>
-          <input id="u-password" type="password" value={form.password}
-            onChange={(e) => set('password', e.target.value)}
-            required minLength={10} placeholder="Min 10 characters" />
+          <input id="u-password" type="password" value={form.password} onChange={(e) => set('password', e.target.value)} required minLength={10} placeholder="Min 10 characters" />
         </div>
         <div className="form-field">
           <label className="flabel" htmlFor="u-role">Role *</label>
           <select id="u-role" value={form.role} onChange={(e) => set('role', e.target.value)} required>
-            {ROLES.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
+            {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </div>
-
         {error && <p className="form-error">{error}</p>}
-
         <div className="submit-row" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
           <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn btn-primary" disabled={save.isPending}>
@@ -81,9 +71,218 @@ function CreateUserModal({ onClose, onSaved }) {
   );
 }
 
+// ── User detail panel ─────────────────────────────────────────────────────────
+function UserDetailPanel({ userId, onClose }) {
+  const queryClient = useQueryClient();
+  const [editForm, setEditForm] = useState(null);   // null = view, or {name, role}
+  const [editError, setEditError] = useState(null);
+  const [actionMsg, setActionMsg] = useState(null);
+
+  const { data: user, isLoading } = useQuery({
+    queryKey: ['admin-user-detail', userId],
+    queryFn: () => fetchUserDetail(userId),
+    enabled: Boolean(userId),
+  });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-user-detail', userId] });
+    queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+  };
+
+  const updateMut = useMutation({
+    mutationFn: (payload) => updateUserAdmin(userId, payload),
+    onSuccess: () => { setEditForm(null); setEditError(null); invalidate(); },
+    onError: (e) => setEditError(e.response?.data?.error ?? 'Update failed.'),
+  });
+
+  const activeMut = useMutation({
+    mutationFn: (v) => setUserActive(userId, v),
+    onSuccess: () => { setActionMsg(null); invalidate(); },
+    onError: (e) => setActionMsg(e.response?.data?.error ?? 'Action failed.'),
+  });
+
+  const revokeMut = useMutation({
+    mutationFn: () => revokeUserSessions(userId),
+    onSuccess: (r) => {
+      setActionMsg(`✓ ${r.revokedCount} session${r.revokedCount !== 1 ? 's' : ''} revoked.`);
+      invalidate();
+    },
+    onError: (e) => setActionMsg(e.response?.data?.error ?? 'Action failed.'),
+  });
+
+  if (isLoading) return <Modal title="User" onClose={onClose}><p className="picker-empty">Loading…</p></Modal>;
+  if (!user) return <Modal title="User" onClose={onClose}><p className="form-error">Could not load user.</p></Modal>;
+
+  const initials = user.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+
+  return (
+    <Modal title="User details" subtitle={user.email} onClose={onClose} wide>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* ── Header ─────────────────────────────────────────────────── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: '50%', flexShrink: 0,
+            background: user.avatarUrl ? 'transparent'
+              : 'linear-gradient(150deg, var(--accent-500), var(--accent-700))',
+            color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 16, fontWeight: 700, overflow: 'hidden',
+          }}>
+            {user.avatarUrl
+              ? <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : initials}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--ink-950)' }}>{user.name}</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-500)' }}>{user.email}</div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 5, flexWrap: 'wrap', alignItems: 'center' }}>
+              <span className="status-pill" style={ROLE_COLORS[user.role] ?? {}}>{ROLE_LABEL[user.role] ?? user.role}</span>
+              {!user.isActive && <span className="status-pill" style={{ background: 'var(--danger-100)', color: 'var(--danger-700)' }}>Deactivated</span>}
+              {user.parentAgentId && <span style={{ fontSize: 11, color: 'var(--ink-500)' }}>Sub-agent</span>}
+              <span style={{ fontSize: 11, color: 'var(--ink-400)', marginLeft: 2 }}>Joined {formatDate(user.createdAt)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Activity summary ────────────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          {[
+            ['Applications', user.applicationCount],
+            ['Inquiries', user.inquiryCount],
+            ['Sub-agents', user.subAgentCount],
+          ].map(([label, value]) => (
+            <div key={label} style={{
+              background: 'var(--canvas)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)', padding: '10px 12px', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink-950)', fontFamily: 'var(--font-mono)' }}>{value ?? 0}</div>
+              <div style={{ fontSize: 11, color: 'var(--ink-500)', fontWeight: 600 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Recent applications ─────────────────────────────────────── */}
+        {user.recentApplications?.length > 0 && (
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--ink-400)', marginBottom: 8 }}>
+              Recent applications
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {user.recentApplications.slice(0, 5).map((app) => (
+                <div key={app.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  gap: 10, background: 'var(--canvas)', border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-sm)', padding: '7px 10px', fontSize: 12,
+                }}>
+                  <div>
+                    <div className="cell-strong" style={{ fontSize: 12 }}>{app.studentName}</div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-500)' }}>{app.course?.institution?.name} · #{app.reference}</div>
+                  </div>
+                  <span style={{ fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--radius-pill)', background: 'var(--info-100)', color: 'var(--info-700)', whiteSpace: 'nowrap' }}>
+                    {applicationStageLabel(app.stage)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Active sessions ─────────────────────────────────────────── */}
+        <div style={{
+          background: 'var(--canvas)', border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-sm)', padding: '10px 12px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
+        }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 12.5, color: 'var(--ink-950)' }}>
+              {user.activeSessions} active session{user.activeSessions !== 1 ? 's' : ''}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--ink-500)' }}>Devices currently signed in</div>
+          </div>
+          {user.activeSessions > 0 && (
+            <button
+              className="btn btn-outline"
+              style={{ fontSize: 12 }}
+              disabled={revokeMut.isPending}
+              onClick={() => window.confirm('Sign out all devices for this user?') && revokeMut.mutate()}
+            >
+              {revokeMut.isPending ? 'Revoking…' : 'Revoke all sessions'}
+            </button>
+          )}
+        </div>
+
+        {actionMsg && (
+          <p style={{ fontSize: 12.5, color: actionMsg.startsWith('✓') ? 'var(--success-700)' : 'var(--danger-700)', fontWeight: 600, margin: 0 }}>
+            {actionMsg}
+          </p>
+        )}
+
+        {/* ── Edit form ───────────────────────────────────────────────── */}
+        {editForm ? (
+          <div style={{ background: 'var(--accent-50)', border: '1px solid var(--accent-100)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--ink-950)', marginBottom: 12 }}>Edit user</div>
+            <form onSubmit={(e) => { e.preventDefault(); setEditError(null); updateMut.mutate(editForm); }}>
+              <div className="form-field">
+                <label className="flabel" htmlFor="ue-name">Name</label>
+                <input id="ue-name" type="text" value={editForm.name}
+                  onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} required />
+              </div>
+              <div className="form-field">
+                <label className="flabel" htmlFor="ue-role">Role</label>
+                <select id="ue-role" value={editForm.role}
+                  onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value }))}>
+                  {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+              </div>
+              {editError && <p className="form-error">{editError}</p>}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="submit" className="btn btn-primary" disabled={updateMut.isPending}>
+                  {updateMut.isPending ? 'Saving…' : 'Save changes'}
+                </button>
+                <button type="button" className="btn btn-outline" onClick={() => setEditForm(null)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        ) : (
+          // Action row when not editing
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-outline"
+              onClick={() => setEditForm({ name: user.name, role: user.role })}
+            >
+              Edit
+            </button>
+            <button
+              className="btn btn-outline"
+              style={{ color: user.isActive ? 'var(--danger-700)' : 'var(--success-700)' }}
+              disabled={activeMut.isPending}
+              onClick={() => {
+                const msg = user.isActive
+                  ? `Deactivate ${user.name}? They will be signed out immediately.`
+                  : `Reactivate ${user.name}?`;
+                if (window.confirm(msg)) activeMut.mutate(!user.isActive);
+              }}
+            >
+              {activeMut.isPending
+                ? (user.isActive ? 'Deactivating…' : 'Activating…')
+                : (user.isActive ? 'Deactivate account' : 'Reactivate account')}
+            </button>
+          </div>
+        )}
+
+        <div className="modal-foot" style={{ padding: 0, justifyContent: 'flex-start' }}>
+          <button type="button" className="btn btn-outline" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function AdminUsers() {
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
 
   const { data, isLoading, isError, isFetching } = useQuery({
@@ -106,12 +305,15 @@ export default function AdminUsers() {
       render: (u) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{
-            width: 30, height: 30, borderRadius: '50%',
-            background: 'linear-gradient(150deg, var(--accent-500), var(--accent-700))',
+            width: 30, height: 30, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+            background: u.avatarUrl ? 'transparent'
+              : 'linear-gradient(150deg, var(--accent-500), var(--accent-700))',
             color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 11, fontWeight: 700, flexShrink: 0,
+            fontSize: 11, fontWeight: 700,
           }}>
-            {u.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
+            {u.avatarUrl
+              ? <img src={u.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : u.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
           </div>
           <div>
             <div className="cell-strong">{u.name}</div>
@@ -124,10 +326,15 @@ export default function AdminUsers() {
       key: 'role',
       header: 'Role',
       render: (u) => (
-        <span className="status-pill" style={ROLE_COLORS[u.role] ?? {}}>
-          {ROLE_LABEL[u.role] ?? u.role}
-        </span>
+        <span className="status-pill" style={ROLE_COLORS[u.role] ?? {}}>{ROLE_LABEL[u.role] ?? u.role}</span>
       ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (u) => !u.isActive
+        ? <span className="status-pill" style={{ background: 'var(--danger-100)', color: 'var(--danger-700)' }}>Deactivated</span>
+        : <span style={{ fontSize: 11, color: 'var(--success-700)', fontWeight: 600 }}>Active</span>,
     },
     {
       key: 'stats',
@@ -142,7 +349,7 @@ export default function AdminUsers() {
       ),
     },
     {
-      key: 'parentAgentId',
+      key: 'type',
       header: 'Type',
       render: (u) => u.parentAgentId
         ? <span style={{ fontSize: 11, color: 'var(--ink-500)' }}>Sub-agent</span>
@@ -158,7 +365,7 @@ export default function AdminUsers() {
   return (
     <Page
       title="Users"
-      subtitle="All portal accounts — agents, admins and super admins"
+      subtitle="All portal accounts — click any row for details"
       actions={<button className="btn btn-primary" onClick={() => setCreating(true)}>Create user</button>}
     >
       <FilterBar fields={filterFields} values={draft} onChange={setField}
@@ -173,12 +380,21 @@ export default function AdminUsers() {
         meta={data?.meta}
         onPageChange={setPage}
         getRowKey={(r) => r.id}
+        onRowClick={(u) => setSelectedId(u.id)}
+        rowClickTitle="View user details"
       />
 
       {creating && (
         <CreateUserModal
           onClose={() => setCreating(false)}
           onSaved={() => { invalidate(); setCreating(false); }}
+        />
+      )}
+
+      {selectedId && (
+        <UserDetailPanel
+          userId={selectedId}
+          onClose={() => setSelectedId(null)}
         />
       )}
     </Page>

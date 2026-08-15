@@ -17,6 +17,8 @@ import DocumentBank from './features/documentBank/DocumentBank.jsx';
 import Report from './features/report/Report.jsx';
 import HelpSupport from './features/help/HelpSupport.jsx';
 import PartnerLoginPage from './features/auth/PartnerLoginPage.jsx';
+import AgencySettings from './features/partner/AgencySettings.jsx';
+import ProfilePage    from './features/profile/ProfilePage.jsx';
 
 // ── Admin panel ────────────────────────────────────────────────────────
 import AdminLoginPage from './features/auth/AdminLoginPage.jsx';
@@ -101,7 +103,7 @@ export default function App() {
       } />
       <Route path="/profile" element={
         <ProtectedRoute allowedRoles={['STUDENT']} loginPath="/login" redirectPath="/programs">
-          <StudentShell><StudentProfile /></StudentShell>
+          <StudentShell><ProfilePage /></StudentShell>
         </ProtectedRoute>
       } />
 
@@ -131,6 +133,8 @@ export default function App() {
               <Route path="documents/lor"          element={<DocumentBank category="LOR" />} />
               <Route path="report"           element={<Report />} />
               <Route path="help"             element={<HelpSupport />} />
+              <Route path="settings"         element={<AgencySettings />} />
+              <Route path="profile"          element={<ProfilePage />} />
               <Route path="*"               element={<NotFound />} />
             </Routes>
           </PartnerShell>
@@ -163,6 +167,7 @@ export default function App() {
                   <AdminUsers />
                 </ProtectedRoute>
               } />
+              <Route path="profile" element={<ProfilePage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </PartnerShell>

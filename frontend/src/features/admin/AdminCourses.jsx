@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import Page from '../../components/ui/Page.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
@@ -117,12 +117,25 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
     })),
   });
 
-  // For edit, find the institution by slug match
+  // For edit, find the institution by slug or name match.
+  // useState initializer runs once — if institutions loads after the modal opens,
+  // the match will be empty. useEffect re-runs when institutions arrives.
   const [instId, setInstId] = useState(() => {
     if (!isEdit) return '';
-    const match = institutions.find((i) => i.slug === attr.school?.slug || i.name === attr.school?.name);
+    const match = institutions.find(
+      (i) => i.slug === attr.school?.slug || i.name === attr.school?.name
+    );
     return match?.id ?? '';
   });
+
+  // Re-run the match when the institutions list finishes loading.
+  useEffect(() => {
+    if (!isEdit || instId) return;
+    const match = institutions.find(
+      (i) => i.slug === attr.school?.slug || i.name === attr.school?.name
+    );
+    if (match) setInstId(match.id);
+  }, [institutions, isEdit, instId, attr.school?.slug, attr.school?.name]);
 
   const [error, setError] = useState(null);
   const set = (k, v) => setForm((f) => {

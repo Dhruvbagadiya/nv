@@ -65,8 +65,14 @@ function NavGroup({ item }) {
 }
 
 export default function Sidebar() {
-  const user = useAuth((s) => s.user);
-  const role = user?.role;
+  const user          = useAuth((s) => s.user);
+  const agencyProfile = useAuth((s) => s.agencyProfile);
+  const role          = user?.role;
+
+  // Resolve display name and logo — agency profile wins over the NV default.
+  const agencyName    = agencyProfile?.agencyName ?? 'NV Immigration';
+  const logoUrl       = agencyProfile?.logoUrl    ?? null;
+  const initials      = agencyName.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
   // A section with no `roles` field is visible to everyone; a section with `roles`
   // only renders if the current user's role is in that list.
@@ -77,24 +83,35 @@ export default function Sidebar() {
   return (
     <div className="sidebar" id="sidebar">
       <div className="sidebar-brand">
-        <div className="brand-mark">
-          <svg
-            className="icon-svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M6 21V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v16" />
-            <path d="M6 21h12" />
-            <path d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1" />
-          </svg>
-        </div>
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt={agencyName}
+            style={{
+              width: 27, height: 27, borderRadius: 8, objectFit: 'contain',
+              border: '1px solid var(--border)', padding: 2,
+              background: 'var(--surface)', flexShrink: 0,
+            }}
+          />
+        ) : (
+          <div className="brand-mark">
+            <svg className="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 21V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v16"/>
+              <path d="M6 21h12"/>
+              <path d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1"/>
+            </svg>
+          </div>
+        )}
         <div className="brand-text">
-          <div className="b-name">NV Immigration</div>
-          <div className="b-sub">Partner Portal</div>
+          <div className="b-name" style={{ maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {agencyName}
+          </div>
+          {agencyProfile ? (
+            <div className="b-sub">Powered by NV</div>
+          ) : (
+            <div className="b-sub">Partner Portal</div>
+          )}
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Modal from '../ui/Modal.jsx';
-import { fetchSubAgents, createSubAgent } from '../../api/admin.js';
+import { fetchSubAgents, createSubAgent, removeSubAgent } from '../../api/admin.js';
 import { useAuth } from '../../store/useAuth.js';
 
 // The header's person+ icon. The schema has supported this all along
@@ -27,11 +27,14 @@ export default function SubAgentButton() {
     mutationFn: createSubAgent,
     onSuccess: (subAgent) => {
       queryClient.invalidateQueries({ queryKey: ['sub-agents'] });
-      // The password is shown once, here — there is no email delivery, so the agent
-      // has to pass it on themselves.
       setCreated({ ...subAgent, password: form.password });
       setForm({ name: '', email: '', password: '' });
     },
+  });
+
+  const remove = useMutation({
+    mutationFn: removeSubAgent,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sub-agents'] }),
   });
 
   const close = () => {
@@ -115,9 +118,24 @@ export default function SubAgentButton() {
                       <div className="cell-strong">{s.name}</div>
                       <div className="picker-sub">{s.email}</div>
                     </div>
-                    <span className="picker-sub">
-                      {s.applicationCount} application{s.applicationCount === 1 ? '' : 's'}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="picker-sub">
+                        {s.applicationCount} application{s.applicationCount === 1 ? '' : 's'}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        style={{ fontSize: 11, color: 'var(--danger-700)', padding: '0 6px', height: 24 }}
+                        disabled={remove.isPending}
+                        onClick={() => {
+                          if (window.confirm(`Remove ${s.name} from your agency? Their account and applications are kept.`)) {
+                            remove.mutate(s.id);
+                          }
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

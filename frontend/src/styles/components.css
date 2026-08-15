@@ -259,3 +259,95 @@
     overflow: hidden; overflow-wrap: anywhere;
   }
 
+
+  /* ===================== ANNOUNCEMENT STACK ===================== */
+  /* Wraps the list of banners above every page. Was missing, so the banners
+     rendered but stacked with no gap and no separation from the page content. */
+  .announcement-stack { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+
+  /* ===================== FLAGS ===================== */
+  /* Real <img> flag rendered by Flag.jsx */
+  .flag-img  { display: inline-block; border-radius: 2px; vertical-align: middle; flex-shrink: 0; }
+  /* Text fallback when the image 404s or isoCode is unknown */
+  .flag-fallback {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--canvas); border: 1px solid var(--border);
+    border-radius: 3px; font-size: 9px; font-weight: 700;
+    color: var(--ink-600); line-height: 1; flex-shrink: 0; vertical-align: middle;
+  }
+  /* Flag preview inside the AdminCountries form */
+  .flag-preview { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--ink-500); }
+
+  /* ===================== CHOICE FIELD ===================== */
+  /* Collapsible searchable field used on the Course Inquiry form. */
+  .choice-field { position: relative; margin-bottom: 6px; }
+  .choice-head { width: 100%; justify-content: space-between !important; cursor: pointer; }
+  .choice-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .choice-value { font-size: 12.5px; color: var(--ink-950); font-weight: 400; }
+
+  .choice-panel {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); box-shadow: var(--shadow-md); overflow: hidden;
+  }
+  .choice-search {
+    width: 100%; height: 34px; border: none; border-bottom: 1px solid var(--border);
+    padding: 0 10px; font-size: 12.5px; font-family: var(--font-sans);
+    background: var(--canvas); outline: none;
+  }
+  .choice-search:focus { background: var(--surface); }
+  .choice-list {
+    list-style: none; margin: 0; padding: 0;
+    max-height: 220px; overflow-y: auto;
+  }
+  .choice-list::-webkit-scrollbar { width: 6px; }
+  .choice-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+  .choice-empty { padding: 10px 12px; font-size: 12px; color: var(--ink-500); text-align: center; }
+  .choice-option {
+    width: 100%; text-align: left; background: none; border: none;
+    padding: 8px 12px; font-size: 12.5px; font-family: var(--font-sans);
+    color: var(--ink-700); cursor: pointer; display: flex; align-items: center; gap: 8px;
+    transition: background .1s;
+  }
+  .choice-option:hover, .choice-option.active { background: var(--canvas); }
+  .choice-option.selected { background: var(--accent-50); color: var(--accent-700); font-weight: 600; }
+  .choice-icon { display: inline-flex; align-items: center; flex-shrink: 0; }
+
+  /* ===================== LOGO CROPPER ===================== */
+  .logo-cropper, .logo-cropper-pick {
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .logo-cropper-heading {
+    font-size: 11.5px; color: var(--ink-500); font-weight: 600; text-align: center;
+  }
+  .logo-cropper-dropzone {
+    border: 2px dashed var(--border-strong); border-radius: var(--radius);
+    padding: 32px 20px; display: flex; flex-direction: column; align-items: center;
+    gap: 8px; cursor: pointer; background: var(--canvas); transition: border-color .13s, background .13s;
+  }
+  .logo-cropper-dropzone:hover { border-color: var(--accent-500); background: var(--accent-50); }
+  .logo-cropper-hint { font-size: 13px; font-weight: 600; color: var(--ink-700); }
+  .logo-cropper-sub  { font-size: 11px; color: var(--ink-400); }
+  .logo-cropper-canvas {
+    display: block; max-width: 100%; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); margin: 0 auto; user-select: none;
+  }
+  .logo-cropper-preview-row {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .logo-cropper-preview-label {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--ink-400);
+  }
+  .logo-cropper-preview-sizes {
+    display: flex; align-items: flex-end; gap: 14px;
+  }
+  .logo-cropper-preview-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .logo-cropper-preview-sz {
+    font-size: 10px; color: var(--ink-400); font-family: var(--font-mono);
+  }
+  .logo-cropper-actions {
+    display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;
+  }

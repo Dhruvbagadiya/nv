@@ -23,13 +23,12 @@ import {
 const router = Router();
 const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
 
-// GET /api/courses?country=CA&search=data&tag=prime&programLevel=MASTERS_DEGREE&institutionId=&page=1
-router.get('/', requireAuth, validate(listCoursesQuery, 'query'), asyncHandler(listCoursesHandler));
+// GET /api/courses — public so unauthenticated students can browse the programme
+// catalogue without signing in first. Individual course detail is also public.
+// Writes remain admin-only.
+router.get('/', validate(listCoursesQuery, 'query'), asyncHandler(listCoursesHandler));
 
-// Course detail, used by the New Application screen. Declared after the list
-// route and before the admin writes; "bulk-import" is a POST so it cannot be
-// swallowed by this GET.
-router.get('/:id', requireAuth, validate(idParam, 'params'), asyncHandler(getCourseHandler));
+router.get('/:id', validate(idParam, 'params'), asyncHandler(getCourseHandler));
 
 // Admin-only writes.
 // bulk-import must be declared before /:id, or "bulk-import" is parsed as an id

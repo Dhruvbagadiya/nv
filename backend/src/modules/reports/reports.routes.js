@@ -10,6 +10,6 @@ const router = Router();
 const partnerAuth = [requireAuth, requireRole('AGENT', 'ADMIN', 'SUPER_ADMIN')];
 
 router.get('/summary', ...partnerAuth, asyncHandler(summaryHandler));
-router.get('/admin-stats', ...partnerAuth, requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(adminStatsHandler));
+router.get('/admin-stats', requireAuth, requireRole('ADMIN', 'SUPER_ADMIN'), asyncHandler(adminStatsHandler));
 
 export default router;

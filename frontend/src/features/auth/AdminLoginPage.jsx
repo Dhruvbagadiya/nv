@@ -8,52 +8,60 @@ import { homePathFor } from '../../routes/homePath.js';
 const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN'];
 
 export default function AdminLoginPage() {
-  const navigate   = useNavigate();
-  const location   = useLocation();
-  const setSession = useAuth((s) => s.setSession);
-  const status     = useAuth((s) => s.status);
-  const user       = useAuth((s) => s.user);
+  const navigate    = useNavigate();
+  const location    = useLocation();
+  const setSession  = useAuth((s) => s.setSession);
+  const status      = useAuth((s) => s.status);
+  const user        = useAuth((s) => s.user);
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
+  // Track wrong-role error in local state instead of relying on mutation.isSuccess
+  // + mutation.data — reset() clears data immediately, so the check was always false.
+  const [wrongRoleErr, setWrongRoleErr] = useState(false);
 
+  // Must be before early returns so hook count is stable across renders.
   const mutation = useMutation({
     mutationFn: () => login(email, password),
     onSuccess: (data) => {
       if (!ADMIN_ROLES.includes(data.user.role)) {
-        mutation.reset();
+        // Deliberately do NOT call setSession — we don't want to log this person
+        // in at all. Just show the error.
+        setWrongRoleErr(true);
         return;
       }
+      setWrongRoleErr(false);
       setSession(data);
-      navigate(location.state?.from ?? '/admin', { replace: true });
+      // Navigate to the role's home — not location.state?.from — so a previous
+      // user's URL is never restored into a freshly-logged-in different session.
+      navigate(homePathFor(data.user.role), { replace: true });
     },
   });
 
-  // Already signed in as admin — skip the login page.
-  if (status === 'authenticated' && ADMIN_ROLES.includes(user?.role)) {
-    return <Navigate to="/admin" replace />;
+  // Clear wrong-role error when the user changes the email/password fields.
+  const handleEmailChange = (e) => { setWrongRoleErr(false); setEmail(e.target.value); };
+  const handlePasswordChange = (e) => { setWrongRoleErr(false); setPassword(e.target.value); };
+
+  // Already authenticated — send every role to their own home, not just admins.
+  // Placed after all hooks so the hook count is stable.
+  if (status === 'authenticated') {
+    return <Navigate to={homePathFor(user?.role)} replace />;
   }
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setWrongRoleErr(false);
     mutation.mutate();
   };
 
-  // Detect "wrong role" — logged in but not admin.
-  const wrongRole =
-    mutation.isSuccess && !ADMIN_ROLES.includes(mutation.data?.user?.role);
-
-  const errorMsg = wrongRole
+  const errorMsg = wrongRoleErr
     ? 'This account does not have admin access.'
-    : mutation.error?.response?.data?.error ?? (mutation.isError ? 'Invalid email or password.' : null);
-
-  // Had no signed-in check, so an already-authenticated admin was shown the
-  // sign-in form again. Placed after every hook.
-  if (status === 'authenticated') return <Navigate to={homePathFor(user?.role)} replace />;
+    : mutation.isError
+      ? (mutation.error?.response?.data?.error ?? 'Invalid email or password.')
+      : null;
 
   return (
     <div className="admin-login-page">
       <div className="admin-login-card">
-        {/* Brand */}
         <div className="admin-login-brand">
           <div className="admin-login-logo">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
@@ -75,39 +83,18 @@ export default function AdminLoginPage() {
         <form onSubmit={handleSubmit} className="admin-login-form">
           <div className="admin-login-field">
             <label htmlFor="al-email">Email</label>
-            <input
-              id="al-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@example.com"
-              autoComplete="username"
-              required
-              autoFocus
-            />
+            <input id="al-email" type="email" value={email} onChange={handleEmailChange}
+              placeholder="admin@example.com" autoComplete="username" required autoFocus />
           </div>
           <div className="admin-login-field">
             <label htmlFor="al-password">Password</label>
-            <input
-              id="al-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••"
-              autoComplete="current-password"
-              required
-            />
+            <input id="al-password" type="password" value={password} onChange={handlePasswordChange}
+              placeholder="••••••••••" autoComplete="current-password" required />
           </div>
 
-          {errorMsg && (
-            <div className="admin-login-error">{errorMsg}</div>
-          )}
+          {errorMsg && <div className="admin-login-error">{errorMsg}</div>}
 
-          <button
-            type="submit"
-            className="admin-login-btn"
-            disabled={mutation.isPending}
-          >
+          <button type="submit" className="admin-login-btn" disabled={mutation.isPending}>
             {mutation.isPending ? 'Signing in…' : 'Sign in'}
           </button>
         </form>

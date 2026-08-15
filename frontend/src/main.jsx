@@ -4,14 +4,13 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App.jsx';
 import { useAuth } from './store/useAuth.js';
-import './index.css'; // extracted directly from the proven HTML mockup
+import './index.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // A 401 is handled by the axios interceptor (refresh + retry once);
-      // retrying here as well would multiply the work and could trip the
-      // auth rate limit. 4xx are not worth retrying at all.
+      // 401s are handled by the axios interceptor (refresh + retry once).
+      // Retrying here as well would multiply requests and could trip the rate limit.
       retry: (failureCount, error) => {
         const status = error?.response?.status;
         if (status >= 400 && status < 500) return false;
@@ -23,9 +22,14 @@ const queryClient = new QueryClient({
   },
 });
 
+// Register the QueryClient with the auth store BEFORE bootstrap().
+// This means the very first setSession / setAnonymous call already has access to
+// queryClient.clear(), so even the initial session restore can clean up if needed.
+useAuth.getState().setQueryClient(queryClient);
+
 // Restore the session from the httpOnly refresh cookie before the first render
-// settles. Until this resolves, useAuth.status is 'loading' and ProtectedRoute
-// holds off on deciding anything — which is what stops the guard failing open.
+// settles. Until this resolves, useAuth.status === 'loading' and ProtectedRoute
+// holds off on deciding anything.
 useAuth.getState().bootstrap();
 
 ReactDOM.createRoot(document.getElementById('root')).render(

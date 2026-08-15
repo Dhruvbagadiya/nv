@@ -39,12 +39,17 @@ export const updateMoiAcceptance  = (id, b) => api.put(`/moi-institutions/${id}`
 export const deleteMoiAcceptance  = (id)    => api.delete(`/moi-institutions/${id}`);
 
 // ---- sub-agents ----
-export const fetchSubAgents = () => api.get('/auth/sub-agents').then((r) => r.data.items);
-export const createSubAgent = (b) => api.post('/auth/sub-agents', b).then((r) => r.data);
+export const fetchSubAgents  = ()     => api.get('/auth/sub-agents').then((r) => r.data.items);
+export const createSubAgent  = (b)    => api.post('/auth/sub-agents', b).then((r) => r.data);
+export const removeSubAgent  = (id)   => api.delete(`/auth/sub-agents/${id}`);
 
-// ---- users (SUPER_ADMIN only) ----
-export const fetchAllUsers = (p) => api.get('/auth/users', { params: p }).then((r) => r.data);
-export const createUser    = (b) => api.post('/auth/users', b).then((r) => r.data);
+// ---- users (SUPER_ADMIN list + ADMIN detail/management) ----
+export const fetchAllUsers        = (p)     => api.get('/auth/users', { params: p }).then((r) => r.data);
+export const createUser           = (b)     => api.post('/auth/users', b).then((r) => r.data);
+export const fetchUserDetail      = (id)    => api.get(`/auth/users/${id}`).then((r) => r.data);
+export const updateUserAdmin      = (id, b) => api.put(`/auth/users/${id}`, b).then((r) => r.data);
+export const setUserActive        = (id, v) => api.patch(`/auth/users/${id}/active`, { isActive: v }).then((r) => r.data);
+export const revokeUserSessions   = (id)    => api.post(`/auth/users/${id}/revoke-sessions`).then((r) => r.data);
 
 // ---- admin dashboard stats ----
 export const fetchAdminStats = () => api.get('/reports/admin-stats').then((r) => r.data);

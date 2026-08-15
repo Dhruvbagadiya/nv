@@ -13,6 +13,8 @@ const REFERENCE_QUERY = {
   retry: 1,
 };
 
+// These queries are now public — no auth required.
+// api client adds bearer token only when it exists; absent token is fine here.
 export function useCountries(options = {}) {
   const query = useQuery({
     queryKey: ['countries', options],
@@ -23,12 +25,13 @@ export function useCountries(options = {}) {
   return {
     ...query,
     countries: query.data ?? [],
-    // Ready-made for <FilterBar>'s select fields. Showing the count means a user
-    // can see a destination is empty before picking it, instead of selecting one
-    // and getting an unexplained blank grid.
+    // institutionCount is flattened from _count.institutions in the service.
+    // Show it in the option label so agents can see which destinations have content.
     options: (query.data ?? []).map((c) => ({
       value: c.code,
-      label: c.institutionCount ? `${c.name} (${c.institutionCount})` : c.name,
+      label: c.institutionCount
+        ? `${c.name} (${c.institutionCount})`
+        : c.name,
     })),
   };
 }

@@ -1,15 +1,24 @@
-# NV Immigration — Partner Portal
+# NV Immigration Portal
 
-Agent-facing portal for a study-visa consultancy. Agents search a course
-catalogue, submit applications for their students, track them through a visa
-pipeline, and read the reference data they need to advise (commission rates,
-entry requirements, document templates, policy updates).
+A full-stack multi-portal immigration platform with three distinct portals running from one codebase and one backend.
 
 ```
 nv-immigration-portal/
-├── backend/     Express + Prisma + PostgreSQL API   (15 modules)
-└── frontend/    React (Vite) + React Query + Zustand
+├── backend/    Express + Prisma + PostgreSQL  (18+ modules)
+└── frontend/   React (Vite) + TanStack Query + Zustand
 ```
+
+---
+
+## Portals
+
+| URL (local) | Who | Login |
+|---|---|---|
+| `localhost:5173/partner/login` | Partner agents & sub-agents | `agent@example.com` |
+| `localhost:5173/admin/login` | Admin & Super Admin | `admin@example.com` / `super@example.com` |
+| `localhost:5173/login` | Students | Register a new account |
+
+All passwords in the seed: `password123` (agents/admins) — students register themselves.
 
 ---
 
@@ -19,22 +28,14 @@ nv-immigration-portal/
 
 ```bash
 cd backend
-cp .env.example .env          # then fill it in — see the notes in that file
+cp .env.example .env          # fill in DATABASE_URL and JWT secrets
 npm install
-npm run prisma:migrate        # applies 4 migrations
-npm run prisma:seed           # 15 countries, 24 institutions, 72 courses, + reference data
+npm run prisma:deploy         # applies all 12 migrations
+npm run prisma:seed           # 15 countries, 24 institutions, 97+ courses, reference data
 npm run dev                   # http://localhost:4000
 ```
 
-The seed is **idempotent** — re-run it as often as you like. It prints the four
-logins it creates, all with password `password123`:
-
-| Email | Role | What it shows |
-|---|---|---|
-| `agent@example.com` | AGENT | the main partner-facing experience (8 applications) |
-| `subagent@example.com` | AGENT | a sub-agent under the above (3 applications) |
-| `admin@example.com` | ADMIN | adds the Admin sidebar section; sees all 11 applications |
-| `super@example.com` | SUPER_ADMIN | can additionally `POST /api/auth/users` |
+The seed is **idempotent** — re-run as often as needed.
 
 ### 2. Frontend
 
@@ -44,202 +45,262 @@ npm install
 npm run dev                   # http://localhost:5173
 ```
 
-Vite proxies `/api/*` to `http://localhost:4000`, which keeps the frontend and
-API on one origin in development. That matters: the refresh token is an httpOnly
-`SameSite=Strict` cookie, and a cross-origin setup would drop it.
-
-### Verifying a change
-
-```bash
-npm run verify                         # from the repo root: lint + 68 tests + build
-npm --prefix backend run verify:auth   # 30 auth integration checks (needs a live DB)
-```
+Vite proxies `/api/*` to `localhost:4000`. The refresh token is an httpOnly `SameSite=Strict` cookie — keep frontend and API on the same origin in development.
 
 ---
 
-## ⚠️ Environment notes (Windows + WSL)
+## URL structure
 
-If you work on this from WSL while the repo lives on a Windows drive, two things
-will bite you. Both have cost real time.
+### Partner portal (`/partner/*`)
+| Route | Screen |
+|---|---|
+| `/partner/login` | Partner login |
+| `/partner/dashboard` | Course finder / program browser |
+| `/partner/ask-team` | Course inquiry form |
+| `/partner/history` | Course inquiry history |
+| `/partner/add-application` | New application |
+| `/partner/app-history` | Application history |
+| `/partner/moi-accepted` | MOI acceptances |
+| `/partner/commission` | University commission rates |
+| `/partner/entry-requirements/ug` | UG entry requirements |
+| `/partner/entry-requirements/pg` | PG entry requirements |
+| `/partner/updates` | Important updates |
+| `/partner/documents/*` | Document bank (5 categories) |
+| `/partner/report` | Report dashboard |
+| `/partner/help` | Help & support |
+| `/partner/settings` | Agency branding settings |
+| `/partner/profile` | Profile management |
 
-**1. Postgres on the Windows host is not reachable from inside WSL.**
-`localhost` resolves inside the WSL VM, not on Windows. The simplest workaround is
-to run DB-touching commands with the Windows node, which resolves it correctly and
-needs no config change:
+### Admin panel (`/admin/*`)
+| Route | Screen |
+|---|---|
+| `/admin/login` | Admin login (dark theme, rejects non-admin) |
+| `/admin` | Admin dashboard (stat cards + quick actions) |
+| `/admin/institutions` | Institution CRUD |
+| `/admin/courses` | Course CRUD with intake management |
+| `/admin/commissions` | Commission rates |
+| `/admin/entry-requirements` | Entry requirements |
+| `/admin/moi` | MOI acceptances CRUD |
+| `/admin/updates` | Important updates |
+| `/admin/documents` | Document bank management |
+| `/admin/announcements` | Portal banners |
+| `/admin/support-contacts` | Support team |
+| `/admin/users` | User management (SUPER_ADMIN only) |
+| `/admin/profile` | Profile management |
 
-```bash
-node.exe prisma/seed.js
-node.exe node_modules/prisma/build/index.js migrate deploy
-node.exe server.js
-```
-
-`node.exe` is on the PATH inside WSL via `/mnt/c/Program Files/nodejs`. The
-alternative — opening the Windows firewall to the WSL subnet — is documented in
-`backend/.env.example`.
-
-**2. Windows and WSL share `node_modules`, but native modules are per-platform.**
-Whichever side ran `npm install` last wins, and the other then fails with
-`Cannot find native binding` (rollup) or `could not locate the Query Engine`
-(Prisma). Re-run `npm install` on the side you're working from. Prisma is exempt
-because `schema.prisma` declares `binaryTargets` for both.
+### Student portal (`/*`)
+| Route | Screen |
+|---|---|
+| `/login` | Student login + register |
+| `/programs` | Program browser (public, no auth required) |
+| `/programs/:id` | Program detail |
+| `/apply/:courseId` | Apply form (auth required) |
+| `/my-applications` | Application tracker with stage filter |
+| `/my-applications/:id` | Application detail + progress tracker |
+| `/profile` | Student profile |
 
 ---
 
-## How it's organised
+## Architecture
 
-### Backend — one folder per business area
+### Backend — `src/modules/<area>/`
 
-`backend/src/modules/<area>/` contains four files, and nothing else needs touching
-to add a feature:
+Each module has exactly four files:
 
 | File | Responsibility |
 |---|---|
-| `*.service.js` | database access and business rules. Knows nothing about HTTP. |
-| `*.controller.js` | reads the request, calls the service, shapes the response. No try/catch — see below. |
-| `*.schemas.js` | zod schemas. Every route validates its body, query and params. |
-| `*.routes.js` | URL wiring, auth and role guards, and which schema applies where. |
+| `*.service.js` | Database queries and business logic. No HTTP knowledge. |
+| `*.controller.js` | Reads request → calls service → shapes response. No try/catch. |
+| `*.schemas.js` | Zod schemas for body, query, params. |
+| `*.routes.js` | URL wiring, auth guards, role guards, schema assignment. |
 
-`courses/` is the fullest example — copy its four-file shape.
+**Modules:** `auth`, `agency`, `announcements`, `applications`, `commissions`, `countries`, `courseInquiries`, `courses`, `documents`, `entryRequirements`, `importantUpdates`, `institutions`, `moiInstitutions`, `notifications`, `profile`, `reports`, `students`, `support`
 
-Three shared pieces are load-bearing:
+**Shared utilities:**
+- `utils/asyncHandler.js` — wraps every route handler so controllers contain no try/catch
+- `utils/pagination.js` — `paginateQuery()` returns `{ items, meta: { total, page, pageSize, totalPages } }` for every list
+- `utils/httpErrors.js` — typed errors (`NotFoundError`, `ConflictError`, `ForbiddenError`, `UnauthorizedError`, `BadRequestError`)
+- `utils/storage.js` — S3/R2 file upload with local disk fallback
+- `src/config.js` — validates all env vars at boot via Zod; missing JWT secret = startup failure
 
-- **`utils/asyncHandler.js`** — Express 4 does not catch rejections from async
-  handlers; an uncaught one hangs the request forever. Every route is wrapped, so
-  controllers contain no try/catch.
-- **`utils/pagination.js`** — `paginateQuery` plus one uniform list shape.
-  **Every list endpoint returns `{ items, meta: { total, page, pageSize, totalPages } }`.**
-- **`utils/httpErrors.js`** — typed errors (`NotFoundError`, `ConflictError`, …) so
-  services express intent without knowing about status codes.
-  `middleware/errorHandler.js` also maps Prisma's `P2002`/`P2003`/`P2025` onto
-  409/404 rather than letting a constraint violation surface as a 500.
+### Frontend — `src/`
 
-`src/config.js` reads and **validates** the entire environment at boot. A missing
-or placeholder JWT secret is a startup failure with a readable message, not a 500
-on the first login.
+**API layer** (`src/api/`): one file per backend module, all using the shared axios `client.js` with single-flight refresh-and-retry.
 
-### Frontend — features on top of shared primitives
+**State** (`src/store/`):
+- `useAuth.js` — user, accessToken, agencyProfile, status (loading/authenticated/anonymous). Clears TanStack Query cache on every session boundary to prevent data bleed between users.
+- `useCountryFilter.js` — selected destination synced across the partner dashboard
 
-`frontend/src/components/ui/` is where the leverage is. The reference design has
-the same filter card on 10 of its 11 screens, the same table card on 6, and the
-same document-tile grid on 5, so these are built once:
+**Shared components** (`src/components/`):
+- `ui/Page` — every screen's title/subtitle/actions header
+- `ui/FilterBar` — config-driven filter fields + Apply/Clear
+- `ui/DataTable` — columns config with loading, empty, error, and pagination states
+- `ui/Pagination` — standalone or inside DataTable
+- `ui/DocumentGrid` — the PDF tile grid (all 5 Document Bank categories)
+- `ui/Modal` — focus trap, Escape key, background scroll lock
+- `ui/StatTile` — Report dashboard stat tiles
+- `ui/LogoCropper` — canvas-based image crop with drag + resize handles, live preview thumbnails
+- `admin/AdminResourcePage` — generic CRUD page for admin modules
+- `admin/ResourceForm` — config-driven form for create/edit modals
 
-| Primitive | Used by |
-|---|---|
-| `Page` | every screen (title, subtitle, header actions) |
-| `FilterBar` | config-driven filter fields + Apply/Clear |
-| `DataTable` | columns config with loading, empty, **error** and pagination states |
-| `Pagination` | inside DataTable, or standalone for the card grid |
-| `DocumentGrid` | all five Document Bank categories |
-| `Modal` | Escape, focus trap, restores focus, locks background scroll |
-| `StatTile` | the Report dashboard |
-
-Plus two hooks:
-
-- **`hooks/useUrlFilters.js`** — filter state lives in the query string, so
-  filtered views are linkable and back/forward behave. It also enforces "any filter
-  change resets to page 1" in one place. **Pass `defaults` as a module-level
-  constant**, not an inline object; it must be a stable reference.
-- **`hooks/useReferenceData.js`** — cached `useCountries()` / `useInstitutions()`
-  for the dropdowns.
-
-`components/layout/navConfig.js` is the single source of truth for the sidebar. Add
-a page there once and the link, icon and (for entries with `children`) the
-expandable group all appear. You never edit `Sidebar.jsx` to add a menu item.
-
-### Consolidations worth knowing before you add a file
-
-- **Entry Requirements** is *one* component rendered at two routes with a `level`
-  prop. UG and PG are the same table over the same data.
-- **Document Bank** is *one* component behind five routes with a `category` prop.
-- The **Report** screen is one composite `GET /api/reports/summary`, not six
-  requests. It's a dashboard; every panel is needed at once.
+**Hooks:**
+- `hooks/useUrlFilters.js` — filter state lives in the URL query string; shareable, back/forward-aware
+- `hooks/useReferenceData.js` — cached `useCountries()` / `useInstitutions()` for dropdowns
+- `hooks/useTheme.js` — derives full `--accent-*` CSS variable scale from a single hex color; `applyTheme()` / `resetTheme()`
 
 ---
 
 ## Data model
 
-`backend/prisma/schema.prisma` is commented throughout. The parts that surprise
-people:
+### Key decisions
 
-- **`Application.stage`** is an enum of the 8 pipeline steps the Report screen
-  counts, with a free-text `stageNote` beside it for the human detail. The enum is
-  what makes that screen a single `groupBy`.
-- **`Application.reference`** is a sequential integer (the "POEC ID"), because
-  agents read these out on the phone. A uuid is not dictatable.
-- **`Course.badges`** holds display pills ("Instant Offer"). It is decoration, not a
-  lifecycle field.
-- **Soft delete.** `Course` and the reference tables have `archivedAt`. Withdrawing
-  a course from the catalogue must not erase the applications submitted against it
-  — and a hard delete would fail on the foreign key anyway.
-- **`UniversityCommission.tiers` is `Json`** on purpose. Real commission data is
-  irregular: one flat rate, or bands by student volume, or per-programme rates.
-- **`RefreshToken`** stores a SHA-256 hash, never the token, and records *why* it
-  was revoked. Only a `ROTATED` token being replayed implies theft; a `LOGOUT` one
-  is a stale tab and must not sign you out on your other devices.
-- **Currency lives on `Country`.** Tuition in one country is not quoted in two
-  currencies, and hardcoding one is how every UK course came to be priced in CAD.
+- **`Application.stage`** is a typed enum driving the Report screen's 8 stat tiles via a single `groupBy`. `stageNote` holds the human-readable detail beside it.
+- **`Application.reference`** is a sequential integer (the "POEC ID") — agents read these over the phone.
+- **Soft delete** everywhere — `Course`, `Institution`, `Document`, etc. have `archivedAt`. Applications keep pointing at their course after it's withdrawn.
+- **`RefreshToken`** stores a SHA-256 hash (never the token itself) and records *why* it was revoked. Only a `ROTATED` token replayed implies theft.
+- **`AgencyProfile`** holds `agencyName`, `logoUrl`, `website`, and `accentColor` (hex). A sub-agent inherits their parent's profile automatically.
+- **`StudentProfile`** holds student-specific fields: nationality, date of birth, passport number, address.
+- **`User.isActive`** — soft-disable accounts without losing history. Deactivation immediately revokes all active sessions.
+- **Currency lives on `Country`**, not on courses. Two courses at the same university are not quoted in different currencies.
 
-Every foreign key and ordering column is indexed. Postgres does not do this for
-you, and the first migration shipped 6 foreign keys with 0 indexes.
+### Migrations applied (12 total)
+1. Initial schema
+2. Refresh tokens
+3. Refresh token revoke reason
+4. Data model overhaul (program API shape, enums, CourseIntake table)
+5. Program API overhaul (slug, programLevel enum, minLength/maxLength)
+6. Add student role
+7. Add country isoCode
+8. Add agency profile
+9. Add user isActive
+10. Add user profile fields (phone, bio, avatarUrl)
+11. Add agency accent color
+12. Add user profile fields
 
 ---
 
-## Status
+## Authentication
 
-| Area | State |
+- Access token: **in memory only** (never localStorage)
+- Refresh token: **httpOnly cookie**, SHA-256 hashed in DB
+- Session restore: `bootstrap()` calls `POST /api/auth/refresh` on app mount
+- Token refresh: single-flight axios interceptor — concurrent 401s queue behind one refresh
+- Replay detection: a `ROTATED` token replayed revokes all sessions for that user
+- Role isolation: STUDENT is blocked from partner endpoints; AGENT is blocked from student endpoints; admin stats require ADMIN+
+
+### Roles
+| Role | Access |
 |---|---|
-| Auth (login, refresh rotation, replay detection, revoking logout, RBAC) | ✅ verified against a live DB |
-| Courses (search, filters, soft delete, bulk-import endpoint) | ✅ |
-| Applications (create, filtered history, stage pipeline, detail) | ✅ end-to-end |
-| Course inquiries | ✅ |
-| MOI accepted · Commission · Entry Requirements (UG/PG) | ✅ |
-| Important Updates (+ detail modal) | ✅ |
-| Document Bank — all five categories | ✅ read-only |
-| Report dashboard | ✅ |
-| Help & Support | ✅ `tel:` and WhatsApp links |
-| Notifications (unread count, mark read/all) | ✅ |
-| Global announcement banners | ✅ admin-editable via API |
-| Admin UI | ✅ institutions, courses, commissions, entry requirements, updates, documents, banners, support contacts |
-| Document upload | 🟡 S3/R2 presigned flow built and gated on env vars. **Untested against a real bucket** — no credentials yet. Registering by URL works regardless. |
-| Sub-agent management | ✅ header action; an agent creates logins under their own agency, one level deep |
-| Backend tests | 🟡 `scripts/verify-auth.mjs` covers auth. No Vitest suite yet. |
-| E2E tests | ⬜ |
-
-**Not verified:** nobody has loaded the assembled app in a browser. The screens are
-covered by render tests against fixtures copied from live API responses, and every
-endpoint has been exercised against the real database, but CSS layout and visual
-fidelity are unconfirmed. Expect the newer screens to need visual tuning.
-
-`IMPLEMENTATION_PLAN.md` holds the original audit — 27 findings, what each was, and
-how it was closed — plus the remaining phases.
+| `SUPER_ADMIN` | Everything including user management |
+| `ADMIN` | Admin panel + partner portal |
+| `AGENT` | Partner portal + agency settings |
+| `STUDENT` | Student portal only |
 
 ---
 
-## Conventions
+## Agency branding (per-agent theming)
 
-- **No control that does nothing.** A button with no handler, a `<select>` with no
-  options, a download icon with no file — all were removed or wired. Most of this
-  project's bug list was that one pattern.
-- **Fail closed.** Guards reject unless explicitly permitted. `ProtectedRoute` has
-  three states, not two, because "we don't know yet" must not be treated as
-  authenticated.
-- **Distinguish empty from broken.** A failed request must never render as "no
-  data". `DataTable` has separate error and empty states for exactly this.
-- **Required means required.** `level` on entry requirements and `category` on
-  documents have no default. Quietly defaulting would make the other screens look
-  empty.
-- Access token in memory only; refresh token in an httpOnly cookie. Nothing
-  auth-related goes in `localStorage`.
+Each top-level agent can set:
+- **Agency name** — replaces "NV Immigration" in the sidebar
+- **Logo** — uploaded with in-browser crop, saved to local disk or S3
+- **Accent color** — picked from 12 presets, native color picker, or auto-detected from logo
+
+The color drives the full `--accent-*` CSS variable scale globally for that agent's session. Sub-agents inherit their parent's branding. Changes take effect immediately with no page reload.
+
+---
+
+## Program API response shape
+
+Courses are returned in a standard `program` resource format:
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "type": "program",
+      "attributes": {
+        "name": "Master of Science - Data Analytics",
+        "programLevel": "masters_degree",
+        "school": { "name": "...", "city": "...", "countryCode": "CA", "slug": "...", "logoThumbnailUrl": "..." },
+        "programIntakes": [{ "id": 123, "startDate": "2027-01-01", "submissionDeadline": "2026-08-15", ... }],
+        "tuition": 15000,
+        "applicationFee": 100,
+        "currency": "CAD",
+        "minLength": 12,
+        "maxLength": 24,
+        "tags": ["top_programs", "instant_offer"],
+        "commission": { "type": "percentage", "rateTo": 14, "isTierAdjusted": true }
+      }
+    }
+  ],
+  "meta": { "counts": { "total": 97 }, "page": 1, "pageSize": 12, "totalPages": 9 }
+}
+```
+
+Courses and institutions `GET` endpoints are public (no auth required) so the student program browser works without login.
+
+---
+
+## Bulk program import
+
+```bash
+node scripts/import-programs.mjs path/to/data.json
+```
+
+Accepts the same JSON shape as the program API response. Handles 100k+ records via batched transactions (500/batch). Idempotent — safe to re-run. Preserves source intake integer IDs, advances the serial sequence after import.
+
+---
 
 ## Scripts
 
-| Command | Where | Does |
+| Command | Where | What |
 |---|---|---|
-| `npm run verify` | root | lint + tests + build |
-| `npm run lint` / `lint:fix` | root | ESLint over both packages |
-| `npm run format` | root | Prettier (skips `index.css` and migrations) |
-| `npm test` | root | Vitest, 68 tests |
-| `npm run dev` | backend | API with `--watch` |
-| `npm run prisma:migrate` / `:seed` / `:studio` | backend | schema and data |
-| `npm run verify:auth` | backend | 30 auth integration checks against a live DB |
-| `npm run dev` / `build` | frontend | Vite |
+| `npm run dev` | `backend/` | API server with `--watch` |
+| `npm run prisma:deploy` | `backend/` | Apply pending migrations |
+| `npm run prisma:seed` | `backend/` | Seed all reference data |
+| `npm run prisma:generate` | `backend/` | Regenerate Prisma client |
+| `npm run dev` | `frontend/` | Vite dev server |
+| `npm run build` | `frontend/` | Production build |
+
+---
+
+## Environment variables
+
+See `backend/.env.example` for the full list. Required:
+
+```
+DATABASE_URL=postgresql://...
+JWT_ACCESS_SECRET=...         # min 32 chars
+JWT_REFRESH_SECRET=...        # min 32 chars, different from above
+COOKIE_SECRET=...
+```
+
+Optional (for S3/R2 file storage):
+```
+STORAGE_ENABLED=true
+STORAGE_BUCKET=...
+STORAGE_REGION=...
+STORAGE_ACCESS_KEY_ID=...
+STORAGE_SECRET_ACCESS_KEY=...
+STORAGE_PUBLIC_BASE_URL=...
+STORAGE_ENDPOINT=...          # for R2/MinIO
+```
+
+Without `STORAGE_ENABLED=true`, uploads go to `backend/uploads/` and are served at `/uploads/*`.
+
+---
+
+## Session isolation
+
+When a user logs out and a different user logs in, the TanStack Query cache is **cleared immediately** via `queryClient.clear()`. This prevents any data from a previous user's session appearing in the new session — even briefly. The theme is also reset on logout and re-applied on login.
+
+---
+
+## Known limitations
+
+- No email verification for student registration
+- No password reset flow (admin must create a new account)
+- Document file upload works locally; S3/R2 requires credentials in `.env`
+- No automated test suite beyond manual API verification scripts
+- The dynamic import warning in the Vite build (`auth.js`) is a pre-existing non-error warning — it does not affect functionality

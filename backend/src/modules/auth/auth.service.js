@@ -8,12 +8,9 @@ import { ConflictError, ForbiddenError, UnauthorizedError } from '../../utils/ht
 // parentAgentId is included because the frontend needs it to decide whether to
 // offer sub-agent management — only a top-level agent can have sub-agents.
 const PUBLIC_USER_FIELDS = {
-  id: true,
-  name: true,
-  email: true,
-  role: true,
-  parentAgentId: true,
-  createdAt: true,
+  id: true, name: true, email: true, role: true,
+  isActive: true, phone: true, bio: true, avatarUrl: true,
+  parentAgentId: true, createdAt: true,
 };
 
 // A hash of a value no password will ever produce. Used to spend comparable CPU
@@ -53,6 +50,10 @@ export async function login(email, password) {
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) throw new UnauthorizedError('Invalid email or password');
+
+  if (!user.isActive) {
+    throw new UnauthorizedError('This account has been deactivated. Contact an administrator.');
+  }
 
   const { token: refreshToken, expiresAt } = await issueRefreshToken(user.id);
 
@@ -196,6 +197,24 @@ export async function listSubAgents({ parentAgentId }) {
   });
 }
 
+// Detach a sub-agent from the agency. Their account and applications are kept —
+// they become an independent agent (parentAgentId = null).
+export async function removeSubAgent({ parentAgentId, subAgentId }) {
+  const sub = await prisma.user.findUnique({
+    where: { id: subAgentId },
+    select: { id: true, parentAgentId: true },
+  });
+  if (!sub) throw new NotFoundError('Sub-agent not found');
+  if (sub.parentAgentId !== parentAgentId) {
+    throw new ForbiddenError('That user is not a sub-agent of your agency');
+  }
+  return prisma.user.update({
+    where: { id: subAgentId },
+    data: { parentAgentId: null },
+    select: PUBLIC_USER_FIELDS,
+  });
+}
+
 // SUPER_ADMIN only — full user list for the admin panel.
 export async function listAllUsers({ role, search, page = 1, pageSize = 25 } = {}) {
   const safePage     = Math.max(1, Math.trunc(Number(page)     || 1));
@@ -250,4 +269,140 @@ async function createUserWithRole({ name, email, password, role }) {
     data: { name, email, passwordHash, role },
     select: PUBLIC_USER_FIELDS,
   });
+}
+
+// ============================================================
+// User management — ADMIN / SUPER_ADMIN only
+// ============================================================
+
+import { NotFoundError } from '../../utils/httpErrors.js';
+
+/**
+ * Full profile + activity breakdown for a single user.
+ * Returns everything the admin user-detail panel needs in one call.
+ */
+export async function getUserDetail(id) {
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      ...PUBLIC_USER_FIELDS,
+      updatedAt: true,
+      parentAgent:  { select: { id: true, name: true, email: true } },
+      subAgents:    { select: { id: true, name: true, email: true, isActive: true, createdAt: true } },
+      // Active (non-revoked, non-expired) refresh tokens = active sessions
+      refreshTokens: {
+        where: { revokedAt: null, expiresAt: { gt: new Date() } },
+        select: { id: true, createdAt: true, expiresAt: true },
+        orderBy: { createdAt: 'desc' },
+      },
+      _count: {
+        select: {
+          applications:    true,
+          courseInquiries: true,
+          subAgents:       true,
+          refreshTokens:   { where: { revokedAt: null, expiresAt: { gt: new Date() } } },
+        },
+      },
+    },
+  });
+
+  if (!user) throw new NotFoundError('User not found');
+
+  // Applications grouped by stage for the mini stat tiles
+  const appsByStage = await prisma.application.groupBy({
+    by: ['stage'],
+    where: { agentId: id },
+    _count: { _all: true },
+  });
+
+  // Last 10 applications for the activity feed
+  const recentApplications = await prisma.application.findMany({
+    where: { agentId: id },
+    select: {
+      id: true, reference: true, studentName: true, stage: true,
+      stageNote: true, createdAt: true, updatedAt: true,
+      course: {
+        select: {
+          title: true,
+          institution: { select: { name: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+  });
+
+  // Last 5 course inquiries
+  const recentInquiries = await prisma.courseInquiry.findMany({
+    where: { agentId: id },
+    select: {
+      id: true, nationality: true, stage: true, intake: true, courseType: true,
+      createdAt: true,
+      country: { select: { name: true, flagEmoji: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 5,
+  });
+
+  const { _count, refreshTokens, ...rest } = user;
+
+  return {
+    ...rest,
+    activeSessions:      _count.refreshTokens,
+    applicationCount:    _count.applications,
+    inquiryCount:        _count.courseInquiries,
+    subAgentCount:       _count.subAgents,
+    sessions:            refreshTokens,
+    applicationsByStage: Object.fromEntries(appsByStage.map((r) => [r.stage, r._count._all])),
+    recentApplications,
+    recentInquiries,
+  };
+}
+
+/** Update a user's name and/or role. */
+export async function updateUser(id, { name, role }) {
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) throw new NotFoundError('User not found');
+
+  return prisma.user.update({
+    where: { id },
+    data: {
+      ...(name !== undefined && { name }),
+      ...(role !== undefined && { role }),
+    },
+    select: PUBLIC_USER_FIELDS,
+  });
+}
+
+/** Flip isActive. Deactivating also revokes every active session immediately. */
+export async function setUserActive(id, isActive) {
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) throw new NotFoundError('User not found');
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id }, data: { isActive } });
+    if (!isActive) {
+      // Revoke all sessions so the user is kicked out immediately, not just
+      // blocked on next login.
+      await tx.refreshToken.updateMany({
+        where: { userId: id, revokedAt: null },
+        data: { revokedAt: new Date(), revokedReason: 'LOGOUT' },
+      });
+    }
+  });
+
+  return prisma.user.findUnique({ where: { id }, select: PUBLIC_USER_FIELDS });
+}
+
+/** Revoke every active session for a user (force re-login everywhere). */
+export async function revokeAllUserSessions(id) {
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) throw new NotFoundError('User not found');
+
+  const { count } = await prisma.refreshToken.updateMany({
+    where: { userId: id, revokedAt: null },
+    data: { revokedAt: new Date(), revokedReason: 'LOGOUT' },
+  });
+
+  return { revokedCount: count };
 }
