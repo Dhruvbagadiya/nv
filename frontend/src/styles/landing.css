@@ -598,3 +598,26 @@
 @media (prefers-reduced-motion: reduce) {
   .intro { display: none; }
 }
+
+/* offset-path fallback.
+ *
+ * If the browser cannot animate offset-path on an SVG <g>, the plane stays
+ * parked at the origin and the whole sequence reads as "nothing happened" —
+ * the failure is silent, which is the worst kind. This gives it a plain
+ * translate/rotate flight instead: less graceful through the loop, but it
+ * flies. */
+@supports not (offset-path: path("M0 0 L1 1")) {
+  .intro-plane {
+    offset-path: none;
+    animation: intro-fly-fallback 6.4s cubic-bezier(.45,0,.3,1) forwards;
+  }
+  @keyframes intro-fly-fallback {
+    0%   { transform: translate(1420px, 250px) rotate(180deg); }
+    20%  { transform: translate(640px, 330px) rotate(180deg); }
+    70%  { transform: translate(620px, 330px) rotate(180deg); }
+    80%  { transform: translate(400px, 150px) rotate(300deg); }
+    88%  { transform: translate(640px, 340px) rotate(400deg); }
+    100% { transform: translate(1420px, 120px) rotate(520deg); }
+  }
+  .intro-trail { display: none; }
+}

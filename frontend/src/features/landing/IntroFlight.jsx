@@ -8,10 +8,10 @@ import { useEffect, useRef, useState } from 'react';
  *
  * Three decisions worth knowing about:
  *
- * 1. It plays ONCE PER SESSION (sessionStorage). A six-second intro is
- *    delightful the first time and infuriating on every page view, and a
- *    returning visitor who came back to find a phone number should not have to
- *    sit through it. Skip is always available.
+ * 1. It plays on EVERY load, by request. That is a real trade — a visitor who
+ *    came back only to find a phone number pays seven seconds for it — so Skip
+ *    is large, visible from the first frame, and returns them straight to the
+ *    page. prefers-reduced-motion still bypasses it completely.
  *
  * 2. The plane is drawn TOP-DOWN, not side-on. A side view rotated through a
  *    loop spends half the loop upside down and reads as a crash; a top-down
@@ -24,7 +24,6 @@ import { useEffect, useRef, useState } from 'react';
  *    between a dozen approximated waypoints.
  */
 
-const SESSION_KEY = 'nv-intro-played';
 const TOTAL_MS = 7000;
 
 export default function IntroFlight({ onDone }) {
@@ -33,20 +32,13 @@ export default function IntroFlight({ onDone }) {
 
   useEffect(() => {
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const seen = sessionStorage.getItem(SESSION_KEY);
 
-    if (reduced || seen) {
+    if (reduced) {
       setState('done');
       onDone?.();
       return;
     }
 
-    // The "seen" flag is written in finish(), NOT here. Writing it up front
-    // meant StrictMode's development double-invoke read back the flag its own
-    // first pass had just written, decided the intro had already played, and
-    // rendered nothing — so the sequence was invisible locally while working in
-    // production. Marking it only once the flight is over is also more honest:
-    // an intro the visitor never actually saw has not been played.
     setState('playing');
     // Scrolling mid-flight would show the page sliding under a fixed overlay.
     document.body.style.overflow = 'hidden';
@@ -62,7 +54,6 @@ export default function IntroFlight({ onDone }) {
   const finish = () => {
     clearTimeout(timer.current);
     document.body.style.overflow = '';
-    sessionStorage.setItem(SESSION_KEY, '1');
     setState('done');
     onDone?.();
   };
