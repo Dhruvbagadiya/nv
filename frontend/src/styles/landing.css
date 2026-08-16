@@ -587,16 +587,19 @@
 /* ── Stage ─────────────────────────────────────────────────────────────── */
 .io-scene { position: absolute; inset: 0; }
 .io-ground {
-  position: absolute; left: 0; right: 0; bottom: 22vh; height: 0;
+  position: absolute; left: 0; right: 0; bottom: 20vh; height: 0;
   border-top: 2px dashed rgba(90,100,114,.2);
 }
 
 /* ── Plane ─────────────────────────────────────────────────────────────── */
 /* Sized in vw with a floor and ceiling so it is neither a stamp on a wide
    monitor nor wider than a phone. */
+/* bottom sits below the ground line on purpose: the artwork carries ~8% empty
+   padding under the wheels, so aligning the element to the line leaves the
+   plane visibly floating above it. */
 .io-plane {
-  position: absolute; bottom: 22vh; left: 0;
-  width: clamp(320px, 46vw, 720px);
+  position: absolute; bottom: 16vh; left: 0;
+  width: clamp(340px, 48vw, 760px);
   transform: translateX(120vw);
   animation: io-fly 9s cubic-bezier(.42,0,.3,1) forwards;
 }
@@ -626,21 +629,21 @@
 }
 .io-seat img { display: block; width: 100%; height: auto; }
 
-/* Geometry, derived from the artwork rather than guessed:
-     plane   — fuselage spans 6–93% of its canvas; the three seat backs sit at
-               38%, 49% and 60%, with the seat base at 50% of canvas height
-     figures — both are horizontally centred in their canvas and near
-               full-height; the man covers ~28% of his canvas width, the pair
-               ~46% of theirs
-   So each box is roughly 3.5x the width of the person inside it, and `left`
-   backs off half the box width from the target seat. Everything is a percentage
-   of the plane, so it holds at every viewport. */
+/* Worked out from the drawings, not guessed:
+     plane   — seat backs centred at 39%, 50% and 61% of canvas width; seat base
+               at 50% of canvas height
+     man     — occupies 35–64% of his canvas width, 4–96% of its height
+     couple  — 27–73% wide, 6–96% tall
+   Each box therefore runs ~3.5x the width of the person inside it, `left` backs
+   off half that to land on the seat, and `bottom` puts the hips on the cushion.
+   `height` crops to roughly the top half of the body, which is what shows above
+   a seat back. All percentages of the plane, so it holds at any viewport. */
 .io-seat-1 {
-  left: 25.5%; bottom: 48%; width: 25%; height: 13%;
+  left: 17.5%; bottom: 50%; width: 43.5%; height: 22%;
   animation: io-seat 9s steps(1,end) forwards;
 }
 .io-seat-2 {
-  left: 37%; bottom: 48%; width: 35%; height: 13%;
+  left: 31.5%; bottom: 50%; width: 48%; height: 24%;
   animation: io-seat-late 9s steps(1,end) forwards;
 }
 @keyframes io-seat      { 0%,35% { opacity: 0; } 36%,100% { opacity: 1; transform: none; } }
@@ -648,12 +651,11 @@
 
 /* ── Walking figures ───────────────────────────────────────────────────── */
 .io-walker {
-  position: absolute; bottom: 22vh; left: 0;
-  /* Scaled against the aircraft: its fuselage is about 40% of the plane's own
-     height, so a figure slightly taller than that reads correctly beside it.
-     The people are near full-height within their canvases, so element height
-     and person height are close to the same thing. */
-  height: clamp(150px, 23vh, 250px); width: auto;
+  position: absolute; bottom: 19vh; left: 0;
+  /* Matched to the seated scale so nobody changes size on boarding: a seated
+     figure works out at roughly a fifth of the plane's width, and these are
+     near full-height within their own canvases. */
+  height: clamp(120px, 17vh, 190px); width: auto;
   opacity: 0;
 }
 .io-walk-traveller { animation: io-walk-a 9s linear forwards, io-bob .5s ease-in-out infinite; }
@@ -665,16 +667,16 @@
 @keyframes io-walk-a {
   0%, 11% { opacity: 0; transform: translateX(-22vw); }
   13%     { opacity: 1; transform: translateX(-12vw); }
-  30%     { opacity: 1; transform: translateX(32vw); }
-  35%     { opacity: 1; transform: translateX(39vw); }
-  36%,100%{ opacity: 0; transform: translateX(40vw); }
+  30%     { opacity: 1; transform: translateX(44vw); }
+  35%     { opacity: 1; transform: translateX(50vw); }
+  36%,100%{ opacity: 0; transform: translateX(51vw); }
 }
 @keyframes io-walk-b {
   0%, 36% { opacity: 0; transform: translateX(-26vw); }
   38%     { opacity: 1; transform: translateX(-14vw); }
-  56%     { opacity: 1; transform: translateX(34vw); }
-  61%     { opacity: 1; transform: translateX(41vw); }
-  62%,100%{ opacity: 0; transform: translateX(42vw); }
+  56%     { opacity: 1; transform: translateX(46vw); }
+  61%     { opacity: 1; transform: translateX(52vw); }
+  62%,100%{ opacity: 0; transform: translateX(53vw); }
 }
 /* A whole-body bob reads as walking at this speed; it does not need articulated
    limbs, which the supplied artwork will not have. */
