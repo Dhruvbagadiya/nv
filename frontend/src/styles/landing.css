@@ -516,10 +516,40 @@
 @media (max-width: 620px) {
   .lp-section { padding: var(--s-6) 0; }
   .lp-grid-4, .lp-grid-3, .lp-steps { grid-template-columns: 1fr; }
+  /* The footer carries three full postal addresses. Two columns of those on a
+     phone is a wall of wrapped text; one column is legible. */
+  .lp-footer-inner { grid-template-columns: 1fr; gap: var(--s-4); }
+  .lp-footer-about { max-width: none; }
   .lp-utility-inner { height: auto; padding: 8px 0; font-size: 11.5px; justify-content: center; text-align: center; }
   .lp-about-media, .lp-why-media { min-height: 340px; }
   .lp-marquee-item { font-size: 19px; }
   .lp-btn { width: 100%; }
+  .lp-cta-row { width: 100%; }
+  /* The two round badges are absolutely positioned and sized in px, so at this
+     width they start overlapping the photographs they sit beside. */
+  .lp-badge-round { width: 112px; height: 112px; left: 0; }
+  .lp-badge-round strong { font-size: 25px; }
+  .lp-badge-round span { font-size: 10px; max-width: 78px; }
+  .lp-seal { width: 96px; height: 96px; }
+  .lp-seal-core { font-size: 19px; }
+  .lp-years { padding: 13px 18px; }
+  .lp-years strong { font-size: 24px; }
+  .lp-trust-items { gap: var(--s-2) var(--s-3); }
+  .lp-tabs { border-radius: var(--radius); }
+  .lp-tab { min-width: calc(50% - 4px); }
+}
+
+/* Small phones. Everything above still fits at 360px; these are the few places
+   that stop being comfortable below it. */
+@media (max-width: 420px) {
+  /* nowrap keeps the underline attached to the accent word, but at this width
+     the word is wider than the column. */
+  .lp-h1-accent { white-space: normal; }
+  .lp-stats-inner { grid-template-columns: 1fr; gap: var(--s-3); }
+  .lp-stat + .lp-stat { border-left: 0; border-top: 1px solid rgba(255,255,255,.13); padding-top: var(--s-3); }
+  .lp-method small { font-size: 11px; }
+  .lp-header-inner { height: 64px; }
+  .lp-brand-mark { width: 36px; height: 36px; border-radius: 10px; }
 }
 
 /* ── Reduced motion ────────────────────────────────────────────────────── */
