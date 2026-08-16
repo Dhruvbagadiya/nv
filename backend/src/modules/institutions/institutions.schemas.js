@@ -1,12 +1,18 @@
 import { z } from 'zod';
 import { optionalText, queryBool } from '../../utils/queryTypes.js';
 
+// `page` deliberately has no .default(1): its absence is the signal that the
+// caller wants the whole (capped) list rather than a page. Every dropdown in the
+// app fetches this endpoint and would break if it silently started receiving
+// page 1 of N, so pagination is opt-in.
 export const listInstitutionsQuery = z.object({
   country:        optionalText(8),
   search:         optionalText(200),
   blacklisted:    queryBool,
   trending:       queryBool,
   includeArchived: queryBool,
+  page:           z.coerce.number().int().positive().optional(),
+  pageSize:       z.coerce.number().int().positive().max(100).optional(),
 });
 
 export const createInstitutionBody = z

@@ -7,9 +7,24 @@ const hexColor = z
   .nullable()
   .optional();
 
+// Accept either a full URL (https://cdn.example.com/logo.png)
+// or a local relative path from the uploads endpoint (/uploads/logos/...)
+const logoUrlSchema = z
+  .string()
+  .max(500)
+  .refine(
+    (v) => {
+      try { new URL(v); return true; } catch { /* not absolute */ }
+      return v.startsWith('/uploads/');
+    },
+    { message: 'Must be a valid URL or a /uploads/ path' }
+  )
+  .nullable()
+  .optional();
+
 export const upsertAgencyBody = z.object({
   agencyName:  z.string().trim().min(1).max(120),
-  logoUrl:     z.string().url().max(500).nullable().optional(),
+  logoUrl:     logoUrlSchema,
   website:     z.string().url().max(300).nullable().optional(),
   accentColor: hexColor,
 }).strict();

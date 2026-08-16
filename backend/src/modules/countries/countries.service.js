@@ -1,37 +1,57 @@
 import { prisma } from '../../utils/prisma.js';
 import { ConflictError, NotFoundError } from '../../utils/httpErrors.js';
+import { paginateQuery } from '../../utils/pagination.js';
 
 // The endpoint that did not exist, and whose absence was the single root cause of
 // every dead dropdown in the app: the header strip had 15 country chips hardcoded
 // in a React component while every <select> elsewhere held one static
 // placeholder <option>, because there was nothing to populate them from.
 //
-// Not paginated. There are 15 rows and every consumer wants all of them, so
-// pagination would be pure ceremony.
-export async function listCountries({ withInstitutionsOnly = false } = {}) {
+const COUNTRY_SELECT = {
+  id: true,
+  code: true,
+  name: true,
+  flagEmoji: true,
+  isoCode: true,
+  currencyCode: true,
+  sortOrder: true,
+  _count: { select: { institutions: { where: { archivedAt: null } } } },
+};
+
+const COUNTRY_ORDER = [{ sortOrder: 'asc' }, { name: 'asc' }];
+
+function countryWhere({ withInstitutionsOnly = false } = {}) {
+  return withInstitutionsOnly ? { institutions: { some: { archivedAt: null } } } : undefined;
+}
+
+// Flatten _count so callers read `country.institutionCount` directly.
+// Also keep isoCode in the response for flag rendering on the frontend.
+function flattenCount({ _count, ...c }) {
+  return { ...c, institutionCount: _count.institutions };
+}
+
+// Unpaginated, for the header strip and every <select> in the app: they all want
+// the full list, and at this size pagination would be pure ceremony.
+export async function listCountries(filters = {}) {
   const rows = await prisma.country.findMany({
-    where: withInstitutionsOnly
-      ? { institutions: { some: { archivedAt: null } } }
-      : undefined,
-    select: {
-      id: true,
-      code: true,
-      name: true,
-      flagEmoji: true,
-      isoCode: true,
-      currencyCode: true,
-      sortOrder: true,
-      _count: { select: { institutions: { where: { archivedAt: null } } } },
-    },
-    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    where: countryWhere(filters),
+    select: COUNTRY_SELECT,
+    orderBy: COUNTRY_ORDER,
   });
 
-  // Flatten _count so callers read `country.institutionCount` directly.
-  // Also keep isoCode in the response for flag rendering on the frontend.
-  return rows.map(({ _count, ...c }) => ({
-    ...c,
-    institutionCount: _count.institutions,
-  }));
+  return rows.map(flattenCount);
+}
+
+// Paged, for the admin table only — so it behaves like every other admin CRUD
+// screen rather than growing without bound as countries are added.
+export async function listCountriesPage(filters, pageArgs) {
+  const result = await paginateQuery(
+    prisma.country,
+    { where: countryWhere(filters), select: COUNTRY_SELECT, orderBy: COUNTRY_ORDER },
+    pageArgs
+  );
+
+  return { ...result, items: result.items.map(flattenCount) };
 }
 
 

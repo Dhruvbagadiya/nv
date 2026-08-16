@@ -1,5 +1,6 @@
 import { prisma } from '../../utils/prisma.js';
 import { ConflictError } from '../../utils/httpErrors.js';
+import { paginateQuery } from '../../utils/pagination.js';
 
 const INSTITUTION_INCLUDE = { country: true };
 
@@ -11,22 +12,38 @@ function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-export async function listInstitutions({ country, search, blacklisted, trending, includeArchived }) {
+function institutionWhere({ country, search, blacklisted, trending, includeArchived }) {
+  return {
+    ...(includeArchived ? {} : { archivedAt: null }),
+    ...(search && { name: { contains: search, mode: 'insensitive' } }),
+    ...(country && { country: { code: country } }),
+    ...(blacklisted !== undefined && { isBlacklisted: blacklisted }),
+    ...(trending !== undefined && { isTrending: trending }),
+  };
+}
+
+// The unpaginated form, for the dropdowns: they need every option at once, so
+// the only bound is the hard cap.
+export async function listInstitutions(filters) {
   return prisma.institution.findMany({
-    where: {
-      ...(includeArchived ? {} : { archivedAt: null }),
-      ...(search && { name: { contains: search, mode: 'insensitive' } }),
-      ...(country && { country: { code: country } }),
-      ...(blacklisted !== undefined && { isBlacklisted: blacklisted }),
-      ...(trending !== undefined && { isTrending: trending }),
-    },
+    where: institutionWhere(filters),
     include: INSTITUTION_INCLUDE,
     orderBy: { name: 'asc' },
-    // Hard cap. This endpoint has no pagination because it populates dropdowns,
-    // which need the whole list — but "the whole list" must not become unbounded
-    // as the catalogue grows. Callers that need more should search.
+    // Hard cap. "The whole list" must not become unbounded as the catalogue
+    // grows. Callers that need more should page (below) or search.
     take: MAX_INSTITUTION_OPTIONS,
   });
+}
+
+// The paged form, for the admin table. Without this the table shared the
+// dropdown's capped list and would silently stop showing rows past the cap,
+// with nothing on screen to say the list had been truncated.
+export async function listInstitutionsPage(filters, pageArgs) {
+  return paginateQuery(
+    prisma.institution,
+    { where: institutionWhere(filters), include: INSTITUTION_INCLUDE, orderBy: { name: 'asc' } },
+    pageArgs
+  );
 }
 
 export async function listTrending({ limit = 12 } = {}) {

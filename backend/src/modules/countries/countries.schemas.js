@@ -6,6 +6,10 @@ export const listCountriesQuery = z.object({
   // truthy, which is a classic way to end up with a filter that cannot be
   // switched off. queryBool also maps an empty value to "not set".
   withInstitutionsOnly: queryBool,
+  // No .default(1) — absence is what selects the unpaginated list. See the
+  // controller.
+  page:     z.coerce.number().int().positive().optional(),
+  pageSize: z.coerce.number().int().positive().max(100).optional(),
 });
 
 // The portal's own shorthand. Uppercase and short — it appears in URLs

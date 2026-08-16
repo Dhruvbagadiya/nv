@@ -41,7 +41,41 @@ router.get(
 
 // Static segments, admin-only. Both before /:id.
 router.get('/storage-status', ...admin, asyncHandler(storageStatusHandler));
-router.post('/upload-url', ...admin, validate(uploadUrlBody), asyncHandler(uploadUrlHandler));
+router.post('/upload-url',    ...admin, validate(uploadUrlBody), asyncHandler(uploadUrlHandler));
+
+// POST /api/documents/upload — multipart file upload.
+// Works with local disk when S3 is not configured (same as /api/agency/logo).
+import multer from 'multer';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+
+const _dir = dirname(fileURLToPath(import.meta.url));
+const DOCS_UPLOAD_DIR = path.join(_dir, '..', '..', '..', 'uploads', 'documents');
+
+const docUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB for documents
+});
+
+router.post(
+  '/upload',
+  ...admin,
+  docUpload.single('file'),
+  asyncHandler(async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file provided.' });
+
+    const ext      = path.extname(req.file.originalname) || '.bin';
+    const filename = `${crypto.randomUUID()}${ext}`;
+
+    fs.mkdirSync(DOCS_UPLOAD_DIR, { recursive: true });
+    fs.writeFileSync(path.join(DOCS_UPLOAD_DIR, filename), req.file.buffer);
+
+    res.json({ fileUrl: `/uploads/documents/${filename}` });
+  })
+);
 
 // GET /api/documents?category=VISA_DOCUMENT&countryId=&institutionId=&search=
 router.get(

@@ -19,12 +19,22 @@ export const createImportantUpdate  = (b)    => api.post('/important-updates', b
 export const updateImportantUpdate  = (id, b) => api.put(`/important-updates/${id}`, b).then((r) => r.data);
 export const archiveImportantUpdate = (id)   => api.delete(`/important-updates/${id}`);
 
-// ---- documents ----
 export const createDocument     = (b)     => api.post('/documents', b).then((r) => r.data);
 export const updateDocument     = (id, b) => api.put(`/documents/${id}`, b).then((r) => r.data);
 export const archiveDocument    = (id)    => api.delete(`/documents/${id}`);
 export const fetchStorageStatus = ()      => api.get('/documents/storage-status').then((r) => r.data);
 export const createUploadUrl    = (b)     => api.post('/documents/upload-url', b).then((r) => r.data);
+
+// Upload a document file to the server (local disk or S3).
+// Used by AdminDocuments when the user picks a file from the file input.
+export async function uploadFile(file, _category) {
+  const form = new FormData();
+  form.append('file', file, file.name);
+  const { data } = await api.post('/documents/upload', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.fileUrl;
+}
 
 // ---- commissions (upsert keyed on institutionId) ----
 export const upsertCommission = (b) => api.put('/commissions', b).then((r) => r.data);
@@ -50,12 +60,15 @@ export const fetchUserDetail      = (id)    => api.get(`/auth/users/${id}`).then
 export const updateUserAdmin      = (id, b) => api.put(`/auth/users/${id}`, b).then((r) => r.data);
 export const setUserActive        = (id, v) => api.patch(`/auth/users/${id}/active`, { isActive: v }).then((r) => r.data);
 export const revokeUserSessions   = (id)    => api.post(`/auth/users/${id}/revoke-sessions`).then((r) => r.data);
+export const adminResetPassword   = (id, p) => api.post(`/auth/users/${id}/reset-password`, { newPassword: p }).then((r) => r.data);
 
 // ---- admin dashboard stats ----
 export const fetchAdminStats = () => api.get('/reports/admin-stats').then((r) => r.data);
 
 // Uploads the file straight to the bucket using a signed URL.
-export async function uploadFile(file, category) {
+// Only usable once S3/R2 credentials are configured; uploadFile() above is the
+// path that also works against local disk.
+export async function uploadFileSigned(file, category) {
   const { uploadUrl, fileUrl, requiredHeaders } = await createUploadUrl({
     filename:    file.name,
     contentType: file.type,

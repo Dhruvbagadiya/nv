@@ -4,6 +4,10 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 import { config } from './config.js';
 import { prisma } from './utils/prisma.js';
@@ -57,8 +61,11 @@ app.use(express.json({ limit: config.jsonBodyLimit }));
 app.use(cookieParser()); // reads the httpOnly refresh cookie
 app.use(morgan(config.isProduction ? 'combined' : 'dev'));
 
-// Credential stuffing had nothing standing in its way before. Deliberately
-// narrow — auth routes only — so ordinary browsing is never throttled.
+// Credential stuffing had nothing standing in its way before. Scoped to the
+// endpoints that actually verify a password: mounted on the whole /api/auth
+// router it also counted /refresh, /me and the SUPER_ADMIN /users screen, so a
+// couple of minutes of ordinary admin browsing spent the budget and then locked
+// the user out of their own session — /refresh was throttled along with it.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,
@@ -79,7 +86,11 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Each module owns its routes + controller + service — this file only wires them.
-app.use('/api/auth', authLimiter, authRoutes);
+// The limiter goes on the credential endpoints only; /register also covers
+// /register/student, since app.use matches on path prefix.
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth', authRoutes);
 // The endpoint whose absence left every country dropdown in the app empty.
 app.use('/api/countries', countryRoutes);
 app.use('/api/courses', courseRoutes);
@@ -103,12 +114,8 @@ app.use('/api/students', studentRoutes);
 app.use('/api/agency',   agencyRoutes);
 app.use('/api/profile',  profileRoutes);
 
-// Serve locally-uploaded logos when S3 is not configured.
-// Path: /uploads/logos/<uuid>.png
-import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
-const __dirname = dirname(fileURLToPath(import.meta.url));
+// Serve locally-uploaded files (logos, avatars, documents) when S3 is not configured.
+// /uploads/<type>/<uuid>.ext  →  backend/uploads/<type>/<uuid>.ext
 app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
 
 // Unknown /api/* used to fall through to Express's default HTML 404, which a

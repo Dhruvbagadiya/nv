@@ -7,7 +7,7 @@ import Modal from '../../components/ui/Modal.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import {
   fetchAllUsers, createUser,
-  fetchUserDetail, updateUserAdmin, setUserActive, revokeUserSessions,
+  fetchUserDetail, updateUserAdmin, setUserActive, revokeUserSessions, adminResetPassword,
 } from '../../api/admin.js';
 import { formatDate } from '../../utils/format.js';
 import { applicationStageLabel, APPLICATION_STAGES } from '../../constants/referenceData.js';
@@ -74,9 +74,11 @@ function CreateUserModal({ onClose, onSaved }) {
 // ── User detail panel ─────────────────────────────────────────────────────────
 function UserDetailPanel({ userId, onClose }) {
   const queryClient = useQueryClient();
-  const [editForm, setEditForm] = useState(null);   // null = view, or {name, role}
-  const [editError, setEditError] = useState(null);
-  const [actionMsg, setActionMsg] = useState(null);
+  const [editForm,    setEditForm]    = useState(null); // { name, role }
+  const [editError,   setEditError]   = useState(null);
+  const [actionMsg,   setActionMsg]   = useState(null);
+  const [resetForm,   setResetForm]   = useState(false);
+  const [newPassword, setNewPassword] = useState('');
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['admin-user-detail', userId],
@@ -108,6 +110,17 @@ function UserDetailPanel({ userId, onClose }) {
       invalidate();
     },
     onError: (e) => setActionMsg(e.response?.data?.error ?? 'Action failed.'),
+  });
+
+  const resetMut = useMutation({
+    mutationFn: (pwd) => adminResetPassword(userId, pwd),
+    onSuccess: (r) => {
+      setActionMsg(`✓ ${r.message}`);
+      setResetForm(false);
+      setNewPassword('');
+      invalidate();
+    },
+    onError: (e) => setActionMsg(e.response?.data?.error ?? 'Reset failed.'),
   });
 
   if (isLoading) return <Modal title="User" onClose={onClose}><p className="picker-empty">Loading…</p></Modal>;
@@ -245,28 +258,78 @@ function UserDetailPanel({ userId, onClose }) {
           </div>
         ) : (
           // Action row when not editing
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              className="btn btn-outline"
-              onClick={() => setEditForm({ name: user.name, role: user.role })}
-            >
-              Edit
-            </button>
-            <button
-              className="btn btn-outline"
-              style={{ color: user.isActive ? 'var(--danger-700)' : 'var(--success-700)' }}
-              disabled={activeMut.isPending}
-              onClick={() => {
-                const msg = user.isActive
-                  ? `Deactivate ${user.name}? They will be signed out immediately.`
-                  : `Reactivate ${user.name}?`;
-                if (window.confirm(msg)) activeMut.mutate(!user.isActive);
-              }}
-            >
-              {activeMut.isPending
-                ? (user.isActive ? 'Deactivating…' : 'Activating…')
-                : (user.isActive ? 'Deactivate account' : 'Reactivate account')}
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn btn-outline" onClick={() => { setResetForm(false); setEditForm({ name: user.name, role: user.role }); }}>
+                Edit
+              </button>
+              <button
+                className="btn btn-outline"
+                style={{ color: 'var(--warning-700)' }}
+                onClick={() => { setEditForm(null); setResetForm((v) => !v); setNewPassword(''); }}
+              >
+                Reset password
+              </button>
+              <button
+                className="btn btn-outline"
+                style={{ color: user.isActive ? 'var(--danger-700)' : 'var(--success-700)' }}
+                disabled={activeMut.isPending}
+                onClick={() => {
+                  const msg = user.isActive
+                    ? `Deactivate ${user.name}? They will be signed out immediately.`
+                    : `Reactivate ${user.name}?`;
+                  if (window.confirm(msg)) activeMut.mutate(!user.isActive);
+                }}
+              >
+                {activeMut.isPending
+                  ? (user.isActive ? 'Deactivating…' : 'Activating…')
+                  : (user.isActive ? 'Deactivate' : 'Reactivate')}
+              </button>
+            </div>
+
+            {/* Inline reset-password form */}
+            {resetForm && (
+              <div style={{
+                background: 'var(--warning-100)', border: '1px solid var(--warning-700)',
+                borderRadius: 'var(--radius-sm)', padding: 12,
+              }}>
+                <div style={{ fontWeight: 700, fontSize: 12.5, color: 'var(--ink-950)', marginBottom: 8 }}>
+                  Set a new password for {user.name}
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input
+                    type="text"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="New password (min 10 chars)"
+                    minLength={10}
+                    style={{
+                      flex: 1, minWidth: 200, height: 34,
+                      border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                      padding: '0 10px', fontFamily: 'var(--font-sans)', fontSize: 13,
+                      background: 'var(--canvas)',
+                    }}
+                  />
+                  <button
+                    className="btn btn-primary"
+                    disabled={resetMut.isPending || newPassword.length < 10}
+                    onClick={() => {
+                      if (window.confirm(`Reset password for ${user.name}? This will sign them out everywhere.`)) {
+                        resetMut.mutate(newPassword);
+                      }
+                    }}
+                  >
+                    {resetMut.isPending ? 'Resetting…' : 'Confirm reset'}
+                  </button>
+                  <button className="btn btn-outline" onClick={() => { setResetForm(false); setNewPassword(''); }}>
+                    Cancel
+                  </button>
+                </div>
+                <div className="field-hint" style={{ marginTop: 6 }}>
+                  The user will be signed out on all devices immediately.
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -1,7 +1,15 @@
 import * as institutionsService from './institutions.service.js';
 
 export async function listInstitutionsHandler(req, res) {
-  res.json({ items: await institutionsService.listInstitutions(req.query) });
+  const { page, pageSize, ...filters } = req.query;
+
+  // Asking for a page opts into the paged shape, { items, meta }. Callers that
+  // do not — every dropdown in the app — keep getting the bare { items } they
+  // already expect.
+  if (page === undefined) {
+    return res.json({ items: await institutionsService.listInstitutions(filters) });
+  }
+  res.json(await institutionsService.listInstitutionsPage(filters, { page, pageSize }));
 }
 
 export async function listTrendingHandler(req, res) {

@@ -1,11 +1,18 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import Page from '../../components/ui/Page.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Flag from '../../components/ui/Flag.jsx';
-import { fetchCountries } from '../../api/countries.js';
+import { fetchCountriesPage } from '../../api/countries.js';
 import { createCountry, updateCountry, deleteCountry } from '../../api/admin.js';
+import { useUrlFilters } from '../../hooks/useUrlFilters.js';
+
+// This screen has no filter bar, so `page` is the only URL-backed state — but it
+// goes through useUrlFilters anyway so paging is linkable and back/forward-aware,
+// as on every other admin table. Module-level for the stable reference the hook
+// documents as required.
+const FILTER_DEFAULTS = { page: 1 };
 
 // Countries are reference data everything else hangs off — institutions,
 // inquiries, updates and documents all point at them, and `code` appears in saved
@@ -121,10 +128,15 @@ export default function AdminCountries() {
   const [editing, setEditing] = useState(null);
   const [removeError, setRemoveError] = useState(null);
 
-  const { data: countries = [], isLoading, isError, error } = useQuery({
-    queryKey: ['admin-countries'],
-    queryFn: () => fetchCountries(),
+  const { applied, setPage } = useUrlFilters(FILTER_DEFAULTS);
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['admin-countries', applied],
+    queryFn: () => fetchCountriesPage({ page: applied.page }),
+    placeholderData: keepPreviousData,
   });
+
+  const countries = data?.items ?? [];
 
   const invalidate = () => {
     // The header strip and every country dropdown read the same query.
@@ -198,6 +210,8 @@ export default function AdminCountries() {
         isError={isError}
         error={error}
         emptyMessage="No countries configured."
+        meta={data?.meta}
+        onPageChange={data?.meta ? setPage : undefined}
       />
 
       {editing && (

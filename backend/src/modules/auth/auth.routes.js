@@ -8,6 +8,8 @@ import {
   registerSchema,
   createUserSchema,
   createSubAgentBody,
+  updateUserBody,
+  idParam,
 } from './auth.schemas.js';
 import {
   loginHandler,
@@ -25,6 +27,7 @@ import {
   updateUserHandler,
   setUserActiveHandler,
   revokeUserSessionsHandler,
+  adminResetPasswordHandler,
 } from './auth.controller.js';
 
 const router = Router();
@@ -61,11 +64,20 @@ router.post('/users', requireAuth, requireRole('SUPER_ADMIN'), validate(createUs
 // SUPER_ADMIN only — full user list for the admin panel.
 router.get('/users', requireAuth, requireRole('SUPER_ADMIN'), asyncHandler(listAllUsersHandler));
 
-// Admin user management — ADMIN or SUPER_ADMIN.
-const adminAuth = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
-router.get('/users/:id',               ...adminAuth, asyncHandler(getUserDetailHandler));
-router.put('/users/:id',               ...adminAuth, asyncHandler(updateUserHandler));
-router.patch('/users/:id/active',      ...adminAuth, asyncHandler(setUserActiveHandler));
-router.post('/users/:id/revoke-sessions', ...adminAuth, asyncHandler(revokeUserSessionsHandler));
+// User management — SUPER_ADMIN, matching POST/GET /users above.
+//
+// These were ADMIN-or-SUPER_ADMIN while the list beside them was SUPER_ADMIN
+// only, which is not a workable split: an ADMIN could not see the user list but
+// could still write to any record whose id they knew. With `role` unvalidated on
+// the update, that meant an ADMIN could PUT themselves to SUPER_ADMIN, or reset
+// a SUPER_ADMIN's password and take the account. The admin UI gates the whole
+// Users screen to SUPER_ADMIN already, so nothing was relying on ADMIN reaching
+// these.
+const superAdminAuth = [requireAuth, requireRole('SUPER_ADMIN')];
+router.get('/users/:id',                  ...superAdminAuth, validate(idParam, 'params'), asyncHandler(getUserDetailHandler));
+router.put('/users/:id',                  ...superAdminAuth, validate(idParam, 'params'), validate(updateUserBody), asyncHandler(updateUserHandler));
+router.patch('/users/:id/active',         ...superAdminAuth, validate(idParam, 'params'), asyncHandler(setUserActiveHandler));
+router.post('/users/:id/revoke-sessions', ...superAdminAuth, validate(idParam, 'params'), asyncHandler(revokeUserSessionsHandler));
+router.post('/users/:id/reset-password',  ...superAdminAuth, validate(idParam, 'params'), asyncHandler(adminResetPasswordHandler));
 
 export default router;

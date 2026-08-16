@@ -103,30 +103,35 @@ function DocumentForm({ initial, onClose, onSaved, storage }) {
           <label className="flabel" htmlFor="doc-file">
             File
           </label>
-          {/* Uploads are optional: a document can always be registered by URL, and
-              storage may not be configured at all. */}
+          {/* Always show the file picker — upload goes to local disk when S3
+              is not configured, or to the bucket when it is. */}
+          <input
+            id="doc-file"
+            type="file"
+            disabled={upload.isPending}
+            onChange={(e) => e.target.files?.[0] && upload.mutate(e.target.files[0])}
+          />
           {storage?.enabled ? (
-            <>
-              <input
-                id="doc-file"
-                type="file"
-                accept={storage.allowedContentTypes.join(',')}
-                disabled={upload.isPending}
-                onChange={(e) => e.target.files?.[0] && upload.mutate(e.target.files[0])}
-              />
-              <div className="field-hint">
-                Max {Math.round(storage.maxBytes / 1024 / 1024)} MB. Uploads go straight to
-                storage, not through this server.
-              </div>
-            </>
+            <div className="field-hint">
+              Max {Math.round(storage.maxBytes / 1024 / 1024)} MB · uploaded to cloud storage.
+            </div>
           ) : (
             <div className="field-hint">
-              File uploads are not configured on this server, so paste a URL below instead. Set
-              S3_BUCKET, S3_REGION and the key pair to enable them.
+              Saved to the server's local disk. Configure S3/R2 env vars to use cloud storage instead.
             </div>
           )}
-          {upload.isPending && <div className="field-hint">Uploading…</div>}
+          {upload.isPending && (
+            <div className="field-hint" style={{ color: 'var(--accent-700)' }}>Uploading…</div>
+          )}
           {uploadError && <p className="form-error">{uploadError}</p>}
+          {values.fileUrl && !upload.isPending && (
+            <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+              <span style={{ color: 'var(--success-700)', fontWeight: 600 }}>✓ File ready</span>
+              <a href={values.fileUrl} target="_blank" rel="noopener noreferrer" className="alert-link">
+                Preview
+              </a>
+            </div>
+          )}
         </div>
 
         <div className="form-field">

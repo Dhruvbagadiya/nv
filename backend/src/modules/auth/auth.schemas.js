@@ -34,6 +34,20 @@ export const createUserSchema = z
   })
   .strict();
 
+// Admin user management. `PUT /users/:id` forwarded req.body straight into
+// prisma.user.update, so `role` was writable by anyone who reached the route —
+// the same hole registerSchema above closes, reopened on the update path.
+// `.strict()` for the same reason: a caller probing for the old behaviour is
+// told no rather than quietly getting a no-op.
+export const idParam = z.object({ id: z.string().uuid() });
+
+export const updateUserBody = z
+  .object({
+    name: z.string().min(1).max(120).trim().optional(),
+    role: z.enum(['SUPER_ADMIN', 'ADMIN', 'AGENT', 'STUDENT']).optional(),
+  })
+  .strict();
+
 // Same shape as public registration and, like it, with no `role` field: a
 // sub-agent is always an AGENT under the caller's agency.
 export const createSubAgentBody = z

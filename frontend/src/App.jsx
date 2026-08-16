@@ -34,6 +34,7 @@ import AdminDocuments from './features/admin/AdminDocuments.jsx';
 import AdminAnnouncements from './features/admin/AdminAnnouncements.jsx';
 import AdminSupportContacts from './features/admin/AdminSupportContacts.jsx';
 import AdminUsers from './features/admin/AdminUsers.jsx';
+import AdminApplications from './features/admin/AdminApplications.jsx';
 
 // ── Student portal ─────────────────────────────────────────────────────
 import StudentLoginPage from './features/student/StudentLoginPage.jsx';
@@ -60,7 +61,10 @@ function PartnerShell({ children }) {
       <div className="layout">
         <Sidebar />
         <main className="main">
-          <AnnouncementBar />
+          {/* Blacklist + declaration-form banners hidden for now. Restore by
+              uncommenting; the announcements themselves are still in the DB and
+              editable at /admin/announcements. */}
+          {/* <AnnouncementBar /> */}
           {children}
         </main>
       </div>
@@ -162,6 +166,7 @@ export default function App() {
               <Route path="documents"         element={<AdminDocuments />} />
               <Route path="announcements"     element={<AdminAnnouncements />} />
               <Route path="support-contacts"  element={<AdminSupportContacts />} />
+              <Route path="applications"      element={<AdminApplications />} />
               <Route path="users" element={
                 <ProtectedRoute allowedRoles={SUPER_ADMIN_ROLES} loginPath="/admin/login" redirectPath="/admin">
                   <AdminUsers />

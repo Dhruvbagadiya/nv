@@ -1,11 +1,16 @@
 import * as countriesService from './countries.service.js';
 
 export async function listCountriesHandler(req, res) {
-  const items = await countriesService.listCountries({
-    withInstitutionsOnly: req.query.withInstitutionsOnly,
-  });
-  // Service already flattens _count.institutions -> institutionCount
-  res.json({ items });
+  const { page, pageSize, ...filters } = req.query;
+
+  // Same opt-in contract as /api/institutions: asking for a page returns
+  // { items, meta }, and callers that do not ask — the header strip and every
+  // dropdown — keep getting the whole list they already expect.
+  // Service already flattens _count.institutions -> institutionCount.
+  if (page === undefined) {
+    return res.json({ items: await countriesService.listCountries(filters) });
+  }
+  res.json(await countriesService.listCountriesPage(filters, { page, pageSize }));
 }
 
 export async function createCountryHandler(req, res) {

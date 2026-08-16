@@ -120,3 +120,11 @@ export async function setUserActiveHandler(req, res) {
 export async function revokeUserSessionsHandler(req, res) {
   res.json(await authService.revokeAllUserSessions(req.params.id));
 }
+
+export async function adminResetPasswordHandler(req, res) {
+  const { newPassword } = req.body;
+  if (!newPassword || newPassword.length < 10) {
+    return res.status(400).json({ error: 'New password must be at least 10 characters.' });
+  }
+  res.json(await authService.adminResetPassword(req.params.id, newPassword));
+}

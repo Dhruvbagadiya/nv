@@ -406,3 +406,21 @@ export async function revokeAllUserSessions(id) {
 
   return { revokedCount: count };
 }
+
+/** Admin resets a user's password. Also revokes all active sessions. */
+export async function adminResetPassword(id, newPassword) {
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) throw new NotFoundError('User not found');
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id }, data: { passwordHash } });
+    // Force re-login everywhere so the old password cannot still be used.
+    await tx.refreshToken.updateMany({
+      where: { userId: id, revokedAt: null },
+      data: { revokedAt: new Date(), revokedReason: 'LOGOUT' },
+    });
+  });
+
+  return { message: `Password reset. ${user.name} will need to sign in again.` };
+}

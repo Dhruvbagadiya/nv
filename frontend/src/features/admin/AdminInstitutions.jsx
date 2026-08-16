@@ -8,7 +8,7 @@ import Modal from '../../components/ui/Modal.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 import {
-  fetchInstitutions,
+  fetchInstitutionsPage,
   createInstitution,
   updateInstitution,
   setBlacklist,
@@ -152,21 +152,24 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
 export default function AdminInstitutions() {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(null);
-  const { applied, draft, setField, apply, clear } = useUrlFilters(FILTER_DEFAULTS);
+  const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
   const { countries } = useCountries();
 
   const countryOptions = countries.map((c) => ({ value: c.code, label: c.name }));
 
-  const { data: institutions = [], isLoading, isError, isFetching } = useQuery({
+  const { data, isLoading, isError, isFetching } = useQuery({
     queryKey: ['admin-institutions', applied],
-    queryFn: () => fetchInstitutions({
+    queryFn: () => fetchInstitutionsPage({
       country:         applied.country         || undefined,
       search:          applied.search          || undefined,
       blacklisted:     applied.blacklisted     || undefined,
       includeArchived: applied.includeArchived || undefined,
+      page:            applied.page,
     }),
     placeholderData: keepPreviousData,
   });
+
+  const institutions = data?.items ?? [];
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin-institutions'] });
 
@@ -291,6 +294,8 @@ export default function AdminInstitutions() {
         isError={isError}
         emptyMessage="No institutions match these filters."
         getRowKey={(r) => r.id}
+        meta={data?.meta}
+        onPageChange={data?.meta ? setPage : undefined}
       />
 
       {editing !== null && (
