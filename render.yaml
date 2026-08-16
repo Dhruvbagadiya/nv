@@ -1,0 +1,85 @@
+# Render blueprint. Lives at the repo root because it declares both services.
+#
+# Deploy: Render dashboard -> New -> Blueprint -> point at this repo.
+# Secrets marked `sync: false` are NOT stored here; Render prompts for them on
+# first deploy and keeps them in its own store.
+services:
+  # ── API ────────────────────────────────────────────────────────────────────
+  - type: web
+    name: nv-immigration-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /api/health
+    # Migrations run as a release step, not on container start: N instances
+    # starting at once would race the same migration.
+    preDeployCommand: npx prisma migrate deploy
+    # Local-disk uploads only survive redeploys if a disk is mounted. Delete this
+    # block once S3/R2 is configured — it is the fallback, not the destination.
+    disk:
+      name: uploads
+      mountPath: /app/uploads
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nv-immigration-db
+          property: connectionString
+      # Render generates these once and keeps them stable across deploys.
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      # Must match the deployed frontend origin exactly, or the browser blocks
+      # every credentialed request.
+      - key: CORS_ORIGIN
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_REGION
+        sync: false
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_PUBLIC_BASE_URL
+        sync: false
+      - key: MAIL_PROVIDER
+        sync: false
+      - key: MAIL_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+
+  # ── Frontend ───────────────────────────────────────────────────────────────
+  - type: web
+    name: nv-immigration-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    routes:
+      # Same-origin proxy. This is what keeps the sameSite=strict refresh cookie
+      # working: without it the API is a different registrable domain, the
+      # browser drops the cookie, and users log in then immediately log out.
+      - type: rewrite
+        source: /api/*
+        destination: https://nv-immigration-api.onrender.com/api/*
+      # SPA fallback — every non-asset path is handled by react-router.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+databases:
+  - name: nv-immigration-db
+    plan: basic-256mb
+    postgresMajorVersion: "16"

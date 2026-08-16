@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+!.env.production.example
+
+# Locally uploaded files must not be baked into the image — the container gets a
+# volume (or S3) for these.
+uploads
+
+tests
+*.test.js
+.git
+.gitignore
+Dockerfile
+.dockerignore

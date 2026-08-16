@@ -1,0 +1,76 @@
+# Single-box production stack: nginx (TLS + SPA + reverse proxy) in front of the
+# API. Postgres is NOT here on purpose — use RDS. A database in a container on
+# the same box as the app is one `docker compose down -v` away from total data
+# loss, and you inherit backups, patching and point-in-time recovery yourself.
+#
+# From the repo root:
+#     docker compose -f deploy/docker-compose.prod.yml up -d --build
+
+# Docker's default json-file driver has NO size limit: on a small EC2 root
+# volume, morgan's per-request line will fill the disk over months and the first
+# symptom is Postgres writes failing, not "logs too big". Capped here so
+# `docker compose logs` still has useful history without being a liability.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  api:
+    logging: *default-logging
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../backend/.env.production
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+    volumes:
+      # Only meaningful while S3/R2 is unconfigured. Named volume rather than a
+      # bind mount so it survives `docker compose down` (without -v).
+      - uploads:/app/uploads
+    # Not published to the host: nginx reaches it over the compose network, so
+    # the API has no public port of its own.
+    expose:
+      - "4000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  web:
+    logging: *default-logging
+    build:
+      # Repo root — frontend/Dockerfile needs both frontend/ and deploy/.
+      context: ..
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Renews the certificate every 12h; the entrypoint exits immediately when
+  # nothing is due, so this is cheap.
+  certbot:
+    logging: *default-logging
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
+
+volumes:
+  uploads:
