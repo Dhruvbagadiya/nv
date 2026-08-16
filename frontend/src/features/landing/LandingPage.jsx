@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useReveal, useCountUp } from './useReveal.js';
+import IntroFlight from './IntroFlight.jsx';
 
 // Public marketing home page. Everything else in this app is behind a login or
 // is portal chrome; this is the one screen a stranger sees, so it owns its own
@@ -146,6 +147,7 @@ export default function LandingPage() {
 
   return (
     <div className="lp" id="top">
+      <IntroFlight />
 
       {/* ── Utility bar ─────────────────────────────────────────────── */}
       <div className="lp-utility">

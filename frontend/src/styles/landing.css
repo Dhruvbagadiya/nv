@@ -434,3 +434,157 @@
    already sets both, .lp-hero-photo needs them adding.
    Serve them at 2x the rendered size and compress to WebP; these are the
    heaviest thing on the page and the only part that will affect load time. */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INTRO FLIGHT — the opening sequence.
+
+   One 7s timeline, split across five actors. Everything is driven by
+   animation-delay off a shared clock so the beats stay in step; changing one
+   delay shifts only that beat, which is the whole reason for not hand-rolling
+   a JS timeline.
+
+   Beat sheet:
+     0.0s  plane enters from the right and settles mid-stage
+     1.1s  traveller walks on from the left
+     2.5s  he boards
+     2.9s  the couple walk on
+     4.3s  they board
+     4.8s  the plane climbs, loops once, and leaves to the right
+     6.5s  the curtain lifts
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.intro {
+  position: fixed; inset: 0; z-index: 200;
+  background: linear-gradient(180deg, #EAF2FB 0%, #F7FAFD 58%, #FFFFFF 100%);
+  overflow: hidden;
+  animation: intro-curtain .6s ease 6.4s forwards;
+}
+@keyframes intro-curtain {
+  to { opacity: 0; visibility: hidden; }
+}
+
+.intro-stage { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.intro-skip {
+  position: absolute; top: 22px; right: 24px; z-index: 2;
+  background: rgba(255,255,255,.82); border: 1px solid var(--lp-line, #E6E8EE);
+  border-radius: var(--radius-pill); padding: 9px 18px;
+  font-family: var(--font-sans); font-size: 13px; font-weight: 700;
+  color: #5A6472; cursor: pointer; backdrop-filter: blur(6px);
+  transition: background .2s, color .2s, transform .2s;
+}
+.intro-skip:hover { background: #fff; color: var(--accent-800); transform: translateY(-1px); }
+
+/* ── Trail ─────────────────────────────────────────────────────────────── */
+.intro-trail {
+  stroke: rgba(90,100,114,.34); stroke-width: 2.5; stroke-linecap: round;
+  stroke-dasharray: 2 16;
+  /* Drawn on with a dashoffset sweep so the line appears to follow the plane
+     rather than being there from the start. */
+  stroke-dashoffset: 2600;
+  animation: intro-draw 5.4s cubic-bezier(.4,0,.25,1) .1s forwards;
+  opacity: 0;
+}
+@keyframes intro-draw {
+  0%   { opacity: 0;   stroke-dashoffset: 2600; }
+  8%   { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { opacity: .55; stroke-dashoffset: 0; }
+}
+
+.intro-ground line {
+  stroke: rgba(90,100,114,.16); stroke-width: 2; stroke-dasharray: 6 10;
+}
+
+/* ── Plane ─────────────────────────────────────────────────────────────── */
+.intro-plane {
+  offset-path: path("M 1420 250 C 1180 250, 1020 300, 780 320 C 700 327, 660 330, 640 330 C 470 330, 330 250, 360 160 C 385 88, 520 70, 585 140 C 655 214, 600 320, 700 372 C 860 455, 1120 330, 1420 120");
+  /* auto keeps the nose pointing along the curve, so the bank through the loop
+     comes free rather than being approximated with rotate keyframes. */
+  offset-rotate: auto;
+  offset-distance: 0%;
+  animation: intro-fly 6.4s cubic-bezier(.45,0,.3,1) forwards;
+}
+@keyframes intro-fly {
+  0%   { offset-distance: 0%; }
+  /* in and parked — 18% of the path is the whole right-hand approach */
+  20%  { offset-distance: 21%; }
+  /* holds while three passengers board */
+  70%  { offset-distance: 24%; }
+  /* climb, loop, and away */
+  100% { offset-distance: 100%; }
+}
+/* A slow idle rock while parked, on a separate element so it composes with the
+   path rotation instead of fighting it. */
+.intro-plane-art { animation: intro-idle 2.6s ease-in-out 1.2s 2; transform-origin: center; }
+@keyframes intro-idle {
+  0%,100% { transform: translateY(0) rotate(0); }
+  50%     { transform: translateY(-5px) rotate(-1.5deg); }
+}
+
+/* ── Characters ────────────────────────────────────────────────────────── */
+/* Each walks in, pauses, then shrinks into the fuselage as it "boards". */
+.intro-char { opacity: 0; }
+.intro-pagdi  { animation: intro-walk-pagdi  3.1s cubic-bezier(.4,0,.5,1) 1.1s forwards; }
+.intro-couple { animation: intro-walk-couple 3.0s cubic-bezier(.4,0,.5,1) 2.9s forwards; }
+
+@keyframes intro-walk-pagdi {
+  0%   { opacity: 0; transform: translate(-120px, 470px) scale(1); }
+  10%  { opacity: 1; }
+  55%  { opacity: 1; transform: translate(560px, 470px) scale(1); }
+  /* the hop aboard: up, in, and gone */
+  78%  { opacity: 1; transform: translate(628px, 392px) scale(.72); }
+  100% { opacity: 0; transform: translate(648px, 340px) scale(.3); }
+}
+@keyframes intro-walk-couple {
+  0%   { opacity: 0; transform: translate(-160px, 470px) scale(1); }
+  10%  { opacity: 1; }
+  58%  { opacity: 1; transform: translate(548px, 470px) scale(1); }
+  80%  { opacity: 1; transform: translate(624px, 394px) scale(.72); }
+  100% { opacity: 0; transform: translate(648px, 340px) scale(.3); }
+}
+
+/* Walk cycle: a small vertical bob plus scissoring legs. Two cheap animations
+   read as walking far better than one elaborate one. */
+.intro-bob { animation: intro-bob .42s ease-in-out infinite; }
+@keyframes intro-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+
+.intro-leg-a { animation: intro-step-a .42s ease-in-out infinite; transform-origin: top center; }
+.intro-leg-b { animation: intro-step-b .42s ease-in-out infinite; transform-origin: top center; }
+@keyframes intro-step-a { 0%,100% { transform: rotate(16deg); } 50% { transform: rotate(-16deg); } }
+@keyframes intro-step-b { 0%,100% { transform: rotate(-16deg); } 50% { transform: rotate(16deg); } }
+
+.intro-case { animation: intro-case .42s ease-in-out infinite; transform-origin: 40px -22px; }
+@keyframes intro-case { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+
+/* ── Caption ───────────────────────────────────────────────────────────── */
+.intro-caption {
+  position: absolute; left: 50%; bottom: 14%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--font-sans); font-size: clamp(17px, 2.4vw, 25px); font-weight: 800;
+  color: #2F3437; letter-spacing: -.01em; white-space: nowrap;
+  opacity: 0; animation: intro-caption 2.6s ease 3.6s forwards;
+}
+.intro-caption-mark {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent-700); color: var(--accent-contrast);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800;
+}
+@keyframes intro-caption {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(14px); }
+  22%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  78%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+}
+
+@media (max-width: 620px) {
+  .intro-caption { bottom: 18%; }
+  .intro-skip { top: 14px; right: 14px; }
+}
+
+/* Reduced motion never reaches here — IntroFlight returns null before render —
+   but if the query flips mid-session the curtain should not hang around. */
+@media (prefers-reduced-motion: reduce) {
+  .intro { display: none; }
+}
