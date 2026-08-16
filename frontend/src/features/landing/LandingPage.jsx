@@ -51,6 +51,13 @@ const COUNTRIES = [
   { name: 'Mauritius', iso: 'MU', group: 'Africa' },
 ];
 
+const STEPS = [
+  { n: '01', t: 'Free assessment',  b: 'Tell us where you want to go. We check eligibility before you spend anything.' },
+  { n: '02', t: 'Document check',   b: 'A precise checklist for your case, verified by us before it is submitted.' },
+  { n: '03', t: 'We apply',         b: 'Forms, fees and appointments handled end to end, with nothing left to chance.' },
+  { n: '04', t: 'You travel',       b: 'Approval tracked to the decision, then flights and stay if you want them.' },
+];
+
 const GROUPS = ['All', 'Africa', 'Asia', 'Europe', 'North America', 'Oceania'];
 
 const STATS = [
@@ -215,7 +222,14 @@ export default function LandingPage() {
                 planning your international journey.
               </p>
             </Reveal>
-            <Reveal delay={240}>
+            <Reveal delay={220}>
+              <div className="lp-hero-badges">
+                <span className="lp-chip"><b>99%</b> approval rate</span>
+                <span className="lp-chip"><b>600+</b> applications filed</span>
+                <span className="lp-chip"><b>6+</b> years, 3 offices</span>
+              </div>
+            </Reveal>
+            <Reveal delay={280}>
               <div className="lp-cta-row">
                 <a className="lp-btn lp-btn-primary" href="#services">Discover Services</a>
                 <a
@@ -248,10 +262,40 @@ export default function LandingPage() {
                 ))}
               </div>
               <div className="lp-hero-photo" role="img" aria-label="Traveller holding passports and boarding passes" />
+
+              {/* Concrete outcomes beside an abstract graphic — what makes a
+                  hero feel like a product rather than a poster. */}
+              <div className="lp-float lp-float-1">
+                <span className="lp-float-icon" style={{ background: 'var(--success-100)', color: 'var(--success-700)' }}>✓</span>
+                <span>
+                  <span className="lp-float-t">Visa approved</span>
+                  <span className="lp-float-s">Canada · Study permit</span>
+                </span>
+              </div>
+              <div className="lp-float lp-float-2">
+                <span className="lp-float-icon" style={{ background: 'var(--accent-50)', color: 'var(--accent-700)' }}>✈</span>
+                <span>
+                  <span className="lp-float-t">50+ countries</span>
+                  <span className="lp-float-s">Student · Work · Tourist</span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </section>
+
+      {/* ── Trust bar ───────────────────────────────────────────────── */}
+      <div className="lp-trust">
+        <div className="lp-wrap lp-trust-inner">
+          <span className="lp-trust-label">Why families choose us</span>
+          <div className="lp-trust-items">
+            <span className="lp-trust-item"><span>🛡️</span> Registered consultants</span>
+            <span className="lp-trust-item"><span>💬</span> Same-day WhatsApp replies</span>
+            <span className="lp-trust-item"><span>📍</span> Surat · Dehradun · Kotdwara</span>
+            <span className="lp-trust-item"><span>⭐</span> 978+ clients served</span>
+          </div>
+        </div>
+      </div>
 
       {/* ── Marquee ─────────────────────────────────────────────────── */}
       <div className="lp-marquee" aria-hidden="true">
@@ -332,6 +376,33 @@ export default function LandingPage() {
                 <a className="lp-card-link" href="#contact">
                   Read More <span aria-hidden="true">→</span>
                 </a>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Process ─────────────────────────────────────────────────── */}
+      <section className="lp-section">
+        <div className="lp-wrap">
+          <div className="lp-section-head">
+            <div>
+              <Reveal><Eyebrow>How it works</Eyebrow></Reveal>
+              <Reveal delay={80}><h2 className="lp-h2">Four steps, and we handle three of them</h2></Reveal>
+            </div>
+            <Reveal delay={140} className="lp-section-note">
+              <p className="lp-body">
+                Most people give up on a visa somewhere in the paperwork. This is the whole
+                process, start to finish, so you know exactly what you are signing up for.
+              </p>
+            </Reveal>
+          </div>
+          <div className="lp-steps">
+            {STEPS.map((s, i) => (
+              <Reveal key={s.n} delay={i * 90} className="lp-step">
+                <div className="lp-step-n">{s.n}</div>
+                <h3 className="lp-step-t">{s.t}</h3>
+                <p className="lp-step-b">{s.b}</p>
               </Reveal>
             ))}
           </div>
