@@ -40,5 +40,8 @@
   "optionalDependencies": {
     "rate-limit-redis": "^4.2.0",
     "redis": "^4.7.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   }
 }
