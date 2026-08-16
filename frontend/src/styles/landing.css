@@ -552,11 +552,17 @@
    figures are sized off the plane so the three stay in proportion.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* Transparent, not a curtain. The page renders normally underneath and the
+   flight passes over it — which is the whole appeal, and it also means the
+   visitor is never locked out of content they came for.
+   pointer-events: none is what makes that true rather than merely look true:
+   without it an invisible sheet would swallow every click for nine seconds. */
 .io {
   position: fixed; inset: 0; z-index: 200; overflow: hidden;
-  background: linear-gradient(180deg, #DCEBFB 0%, #EFF6FD 55%, #FFFFFF 100%);
+  background: transparent; pointer-events: none;
   animation: io-curtain .7s ease 8.3s forwards;
 }
+.io-skip { pointer-events: auto; }
 @keyframes io-curtain { to { opacity: 0; visibility: hidden; } }
 
 .io-skip {
@@ -570,7 +576,7 @@
 .io-skip:hover { background: #fff; color: var(--accent-800); transform: translateY(-1px); }
 
 /* ── Sky ───────────────────────────────────────────────────────────────── */
-.io-sky { position: absolute; inset: 0; }
+.io-sky { display: none; }
 .io-cloud {
   position: absolute; display: block; border-radius: 999px;
   background: #fff; filter: blur(.4px); opacity: .92;
@@ -586,10 +592,7 @@
 
 /* ── Stage ─────────────────────────────────────────────────────────────── */
 .io-scene { position: absolute; inset: 0; }
-.io-ground {
-  position: absolute; left: 0; right: 0; bottom: 20vh; height: 0;
-  border-top: 2px dashed rgba(90,100,114,.2);
-}
+.io-ground { display: none; }
 
 /* ── Plane ─────────────────────────────────────────────────────────────── */
 /* Sized in vw with a floor and ceiling so it is neither a stamp on a wide
@@ -603,7 +606,7 @@
   transform: translateX(120vw);
   animation: io-fly 9s cubic-bezier(.42,0,.3,1) forwards;
 }
-.io-plane-img { width: 100%; height: auto; display: block; }
+.io-plane-img { width: 100%; height: auto; display: block; filter: drop-shadow(0 18px 26px rgba(16,24,40,.18)); }
 
 /* It departs LEFT, the way it arrived. The plane faces left throughout — it
    flies in from the right travelling leftward — so sending it off to the right
@@ -651,6 +654,7 @@
 
 /* ── Walking figures ───────────────────────────────────────────────────── */
 .io-walker {
+  filter: drop-shadow(0 10px 16px rgba(16,24,40,.16));
   position: absolute; bottom: 19vh; left: 0;
   /* Matched to the seated scale so nobody changes size on boarding: a seated
      figure works out at roughly a fifth of the plane's width, and these are
@@ -684,6 +688,7 @@
 
 /* ── Caption ───────────────────────────────────────────────────────────── */
 .io-caption {
+  display: none;
   position: absolute; left: 50%; bottom: 11%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 13px; white-space: nowrap;
   font-family: var(--font-sans); font-size: clamp(18px, 2.6vw, 28px); font-weight: 800;

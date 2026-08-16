@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Full-screen boarding sequence, played over the landing page on load.
+ * Boarding sequence, played OVER the landing page on load.
+ *
+ * The overlay is transparent and click-through: the page renders and behaves
+ * normally underneath while the flight passes across it. Nothing is blocked and
+ * nothing has to be waited out.
  *
  * A plane flies in from off-screen right and settles. A traveller in a pagdi
  * walks on from the left and takes a seat. A couple follow and take theirs.
@@ -71,7 +75,6 @@ export default function IntroOverlay() {
         if (!alive.current) return;
         setSrc({ plane: found[0], traveller: found[1], couple: found[2] });
         setState('playing');
-        document.body.style.overflow = 'hidden';
         timer.current = setTimeout(finish, TOTAL_MS);
       })
       .catch(() => {
@@ -87,14 +90,12 @@ export default function IntroOverlay() {
     return () => {
       alive.current = false;
       clearTimeout(timer.current);
-      document.body.style.overflow = '';
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const finish = () => {
     clearTimeout(timer.current);
-    document.body.style.overflow = '';
     setState('done');
   };
 
