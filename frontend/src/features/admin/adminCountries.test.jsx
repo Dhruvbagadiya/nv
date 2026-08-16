@@ -3,7 +3,13 @@ import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-li
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-vi.mock('../../api/countries.js', () => ({ fetchCountries: vi.fn() }));
+// The screen moved to the paged endpoint, which returns { items, meta } rather
+// than a bare array — fetchCountries is still the dropdown path and is mocked
+// only so other importers of this module do not break.
+vi.mock('../../api/countries.js', () => ({
+  fetchCountries: vi.fn(),
+  fetchCountriesPage: vi.fn(),
+}));
 vi.mock('../../api/admin.js', () => ({
   createCountry: vi.fn(),
   updateCountry: vi.fn(),
@@ -25,7 +31,13 @@ function renderScreen() {
 }
 
 describe('AdminCountries', () => {
-  beforeEach(() => countriesApi.fetchCountries.mockResolvedValue([UK, PT]));
+  beforeEach(() => {
+    countriesApi.fetchCountries.mockResolvedValue([UK, PT]);
+    countriesApi.fetchCountriesPage.mockResolvedValue({
+      items: [UK, PT],
+      meta: { total: 2, page: 1, pageSize: 20, totalPages: 1 },
+    });
+  });
   afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
   it('lists countries with both codes and the institution count', async () => {

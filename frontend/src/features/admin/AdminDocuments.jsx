@@ -108,6 +108,10 @@ function DocumentForm({ initial, onClose, onSaved, storage }) {
           <input
             id="doc-file"
             type="file"
+            // Built from the server's own allow-list, so the picker cannot offer
+            // a type putObject would reject — the rejection is a 400 after the
+            // whole file has uploaded, which is a slow way to learn.
+            accept={storage?.allowedContentTypes?.join(',')}
             disabled={upload.isPending}
             onChange={(e) => e.target.files?.[0] && upload.mutate(e.target.files[0])}
           />

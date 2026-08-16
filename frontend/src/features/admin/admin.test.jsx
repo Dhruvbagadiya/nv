@@ -28,6 +28,10 @@ vi.mock('../../api/admin.js', () => ({
   upsertEntryRequirement: vi.fn(),
   fetchSubAgents: vi.fn(),
   createSubAgent: vi.fn(),
+  // SubAgentButton imports this and passes it straight to useMutation, so its
+  // absence from the mock made the component throw on mount rather than fail an
+  // assertion — which is why four unrelated SubAgentButton tests were red.
+  removeSubAgent: vi.fn(),
   uploadFile: vi.fn(),
 }));
 vi.mock('../../api/referenceScreens.js', () => ({
@@ -179,10 +183,11 @@ describe('admin resource pages', () => {
     fireEvent.click(screen.getByText('Add document'));
     await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy());
 
-    expect(screen.getByText(/uploads are not configured/i)).toBeTruthy();
-    // No file input at all when storage is off — offering one that cannot work is
-    // the bug class this project has been removing.
-    expect(document.querySelector('input[type="file"]')).toBeNull();
+    // Uploading with S3 unconfigured is no longer a dead end: POST
+    // /documents/upload writes to the server's local disk instead, so the picker
+    // is offered either way and the hint says where the file will land.
+    expect(screen.getByText(/local disk/i)).toBeTruthy();
+    expect(document.querySelector('input[type="file"]')).toBeTruthy();
     // Saving by URL still works.
     expect(screen.getByLabelText(/^File URL/)).toBeTruthy();
   });
