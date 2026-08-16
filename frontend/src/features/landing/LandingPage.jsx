@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useReveal, useCountUp } from './useReveal.js';
-import IntroFlight from './IntroFlight.jsx';
+import HeroFlight from './HeroFlight.jsx';
 
 // Public marketing home page. Everything else in this app is behind a login or
 // is portal chrome; this is the one screen a stranger sees, so it owns its own
@@ -147,7 +147,6 @@ export default function LandingPage() {
 
   return (
     <div className="lp" id="top">
-      <IntroFlight />
 
       {/* ── Utility bar ─────────────────────────────────────────────── */}
       <div className="lp-utility">
@@ -233,22 +232,7 @@ export default function LandingPage() {
               counter-rotating at the same speed so it stays upright while the
               ring carries it around. */}
           <div className="lp-hero-visual">
-            <div className="lp-orbit">
-              <div className="lp-orbit-ring" aria-hidden="true" />
-              <div className="lp-orbit-spin" aria-hidden="true">
-                {/* Images, not emoji: Windows ships no flag emoji font, so a
-                    flag character falls back to its two regional-indicator
-                    letters — "IN" instead of the Indian flag. */}
-                {['ca', 'us', 'gb', 'de', 'au', 'nz', 'sg', 'in'].map((iso, i, a) => (
-                  <span key={iso} className="lp-orbit-item" style={{ '--i': i, '--n': a.length }}>
-                    <span className="lp-orbit-flag">
-                      <img src={`https://flagcdn.com/w40/${iso}.png`} alt="" width="30" height="20" loading="lazy" />
-                    </span>
-                  </span>
-                ))}
-              </div>
-              <div className="lp-hero-photo" role="img" aria-label="Traveller holding passports and boarding passes" />
-            </div>
+            <HeroFlight />
           </div>
         </div>
       </section>
