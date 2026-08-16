@@ -10,9 +10,11 @@ import { useReveal, useCountUp } from './useReveal.js';
 // touching JSX. Images are intentionally CSS gradients with a documented swap
 // path — see IMAGE SLOTS at the bottom of landing.css.
 
-const WHATSAPP = '917037831101';
-const PHONE_DISPLAY = '+91 7037831101';
-const EMAIL = 'nvimmigrationuttarakhand@gmail.com';
+// Surat is the head office and the number every CTA on this page dials.
+// The other branches still appear in the footer with their own numbers.
+const WHATSAPP = '919925913764';
+const PHONE_DISPLAY = '+91 9925913764';
+const EMAIL = 'nvimmigrationsurat@gmail.com';
 
 const NAV = [
   { label: 'Home', href: '#top' },
@@ -71,14 +73,14 @@ const TESTIMONIALS = [
 
 const BRANCHES = [
   {
-    city: 'Kotdwara',
-    phones: ['+91 7037831101', '+91 9925913877'],
-    address: '2-3, N.V Immigration, Shrishti Honda Complex, Near Devi Mandir, Kotdwar, Uttarakhand - 246149',
-  },
-  {
     city: 'Surat',
     phones: ['+91 9925913764'],
     address: '213, Silver Stone Arcade, Singanpore Causeway Road, Katargam, Surat, Gujarat, 395004',
+  },
+  {
+    city: 'Kotdwara',
+    phones: ['+91 7037831101', '+91 9925913877'],
+    address: '2-3, N.V Immigration, Shrishti Honda Complex, Near Devi Mandir, Kotdwar, Uttarakhand - 246149',
   },
   {
     city: 'Dehradun',
@@ -512,7 +514,7 @@ export default function LandingPage() {
 
           {BRANCHES.map((b) => (
             <div key={b.city}>
-              <h4 className="lp-footer-head">{b.city} Branch</h4>
+              <h4 className="lp-footer-head">{b.city}{b.city === 'Surat' ? ' (Head Office)' : ''}</h4>
               <ul className="lp-footer-links">
                 {b.phones.map((p) => (
                   <li key={p}><a href={`tel:${p.replace(/\s/g, '')}`}>{p}</a></li>
