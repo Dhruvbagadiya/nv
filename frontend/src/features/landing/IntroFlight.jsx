@@ -41,7 +41,12 @@ export default function IntroFlight({ onDone }) {
       return;
     }
 
-    sessionStorage.setItem(SESSION_KEY, '1');
+    // The "seen" flag is written in finish(), NOT here. Writing it up front
+    // meant StrictMode's development double-invoke read back the flag its own
+    // first pass had just written, decided the intro had already played, and
+    // rendered nothing — so the sequence was invisible locally while working in
+    // production. Marking it only once the flight is over is also more honest:
+    // an intro the visitor never actually saw has not been played.
     setState('playing');
     // Scrolling mid-flight would show the page sliding under a fixed overlay.
     document.body.style.overflow = 'hidden';
@@ -57,6 +62,7 @@ export default function IntroFlight({ onDone }) {
   const finish = () => {
     clearTimeout(timer.current);
     document.body.style.overflow = '';
+    sessionStorage.setItem(SESSION_KEY, '1');
     setState('done');
     onDone?.();
   };
