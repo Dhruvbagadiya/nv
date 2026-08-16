@@ -119,8 +119,11 @@ export default function IntroOverlay() {
             second animation to keep in sync once it starts moving. */}
         <div className="io-plane">
           <img className="io-plane-img" src={src.plane} alt="" />
-          <img className="io-seat io-seat-1" src={src.traveller} alt="" />
-          <img className="io-seat io-seat-2" src={src.couple} alt="" />
+          {/* The artwork is a full-body walking figure; a whole person standing
+              in a seat reads as wrong. Each seat clips its passenger to head
+              and torso, which is what you would actually see over a seat back. */}
+          <span className="io-seat io-seat-1"><img src={src.traveller} alt="" /></span>
+          <span className="io-seat io-seat-2"><img src={src.couple} alt="" /></span>
         </div>
 
         {/* The same two images again, walking across the apron. Two copies

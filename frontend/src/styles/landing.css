@@ -616,21 +616,37 @@
 }
 
 /* Seats. Children of the plane, so once it moves they travel with it and there
-   is no second animation to keep in sync. Percentages are of the plane's own
-   width, which keeps the passengers seated at any viewport size. */
+   is no second animation to keep in sync. Everything is a percentage of the
+   plane's own width, so passengers stay seated at any viewport size.
+   overflow:hidden crops each figure to head-and-torso — the supplied art is a
+   full-body walking pose and a standing person in a seat looks wrong. */
 .io-seat {
-  position: absolute; width: 17%; height: auto;
+  position: absolute; display: block; overflow: hidden;
   opacity: 0; transform: translateY(6px);
 }
-.io-seat-1 { left: 30%; bottom: 46%; animation: io-seat 9s steps(1,end) forwards; }
-.io-seat-2 { left: 50%; bottom: 46%; width: 26%; animation: io-seat-late 9s steps(1,end) forwards; }
+.io-seat img { display: block; width: 100%; height: auto; }
+
+/* The subject sits inside a lot of transparent padding in the source files, so
+   the boxes are wider than the person appears and the negative offsets pull the
+   visible figure onto its seat. Tune these two rules against a screenshot —
+   nothing else needs to move. */
+.io-seat-1 {
+  left: 21%; bottom: 40%; width: 38%; height: 15%;
+  animation: io-seat 9s steps(1,end) forwards;
+}
+.io-seat-2 {
+  left: 33%; bottom: 40%; width: 46%; height: 15%;
+  animation: io-seat-late 9s steps(1,end) forwards;
+}
 @keyframes io-seat      { 0%,35% { opacity: 0; } 36%,100% { opacity: 1; transform: none; } }
 @keyframes io-seat-late { 0%,61% { opacity: 0; } 62%,100% { opacity: 1; transform: none; } }
 
 /* ── Walking figures ───────────────────────────────────────────────────── */
 .io-walker {
   position: absolute; bottom: 22vh; left: 0;
-  height: clamp(90px, 13vh, 180px); width: auto;
+  /* Sized generously: the figure occupies roughly the middle third of its own
+     canvas, so the element is about three times the height of the person. */
+  height: clamp(230px, 34vh, 460px); width: auto;
   opacity: 0;
 }
 .io-walk-traveller { animation: io-walk-a 9s linear forwards, io-bob .5s ease-in-out infinite; }
