@@ -626,16 +626,21 @@
 }
 .io-seat img { display: block; width: 100%; height: auto; }
 
-/* The subject sits inside a lot of transparent padding in the source files, so
-   the boxes are wider than the person appears and the negative offsets pull the
-   visible figure onto its seat. Tune these two rules against a screenshot —
-   nothing else needs to move. */
+/* Geometry, derived from the artwork rather than guessed:
+     plane   — fuselage spans 6–93% of its canvas; the three seat backs sit at
+               38%, 49% and 60%, with the seat base at 50% of canvas height
+     figures — both are horizontally centred in their canvas and near
+               full-height; the man covers ~28% of his canvas width, the pair
+               ~46% of theirs
+   So each box is roughly 3.5x the width of the person inside it, and `left`
+   backs off half the box width from the target seat. Everything is a percentage
+   of the plane, so it holds at every viewport. */
 .io-seat-1 {
-  left: 21%; bottom: 40%; width: 38%; height: 15%;
+  left: 25.5%; bottom: 48%; width: 25%; height: 13%;
   animation: io-seat 9s steps(1,end) forwards;
 }
 .io-seat-2 {
-  left: 33%; bottom: 40%; width: 46%; height: 15%;
+  left: 37%; bottom: 48%; width: 35%; height: 13%;
   animation: io-seat-late 9s steps(1,end) forwards;
 }
 @keyframes io-seat      { 0%,35% { opacity: 0; } 36%,100% { opacity: 1; transform: none; } }
@@ -644,9 +649,11 @@
 /* ── Walking figures ───────────────────────────────────────────────────── */
 .io-walker {
   position: absolute; bottom: 22vh; left: 0;
-  /* Sized generously: the figure occupies roughly the middle third of its own
-     canvas, so the element is about three times the height of the person. */
-  height: clamp(230px, 34vh, 460px); width: auto;
+  /* Scaled against the aircraft: its fuselage is about 40% of the plane's own
+     height, so a figure slightly taller than that reads correctly beside it.
+     The people are near full-height within their canvases, so element height
+     and person height are close to the same thing. */
+  height: clamp(150px, 23vh, 250px); width: auto;
   opacity: 0;
 }
 .io-walk-traveller { animation: io-walk-a 9s linear forwards, io-bob .5s ease-in-out infinite; }
