@@ -53,12 +53,32 @@ model User {
   applications    Application[]
   courseInquiries CourseInquiry[]
   refreshTokens   RefreshToken[]
+  passwordResets  PasswordResetToken[]
   notifications   Notification[]
   studentProfile  StudentProfile?
   agencyProfile   AgencyProfile?
 
   @@index([parentAgentId])
   @@index([role])
+}
+
+// Password reset. Same discipline as RefreshToken: only the SHA-256 of the token
+// is stored, so a database dump does not hand over the ability to take over
+// accounts. Single-use (usedAt) and short-lived (expiresAt) because a reset link
+// is a bearer credential that arrives over email and lives in an inbox
+// indefinitely.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 enum RefreshRevokeReason {

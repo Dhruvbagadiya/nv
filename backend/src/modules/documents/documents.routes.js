@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import multer from 'multer';
+import { putObject } from '../../utils/storage.js';
+import { BadRequestError } from '../../utils/httpErrors.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { requireRole } from '../../middleware/rbac.js';
 import { validate } from '../../middleware/validate.js';
@@ -43,21 +46,18 @@ router.get(
 router.get('/storage-status', ...admin, asyncHandler(storageStatusHandler));
 router.post('/upload-url',    ...admin, validate(uploadUrlBody), asyncHandler(uploadUrlHandler));
 
-// POST /api/documents/upload — multipart file upload.
-// Works with local disk when S3 is not configured (same as /api/agency/logo).
-import multer from 'multer';
-import crypto from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { dirname } from 'node:path';
-
-const _dir = dirname(fileURLToPath(import.meta.url));
-const DOCS_UPLOAD_DIR = path.join(_dir, '..', '..', '..', 'uploads', 'documents');
-
+// POST /api/documents/upload — multipart upload, bytes through the API.
+//
+// Delegates to putObject, so where the file lands is decided by
+// STORAGE_ENABLED rather than by this route: S3/R2 when configured, otherwise
+// backend/uploads. It previously wrote to disk itself, which meant documents
+// stayed on one box's filesystem even with a bucket configured, and — because it
+// derived the extension straight from the client's filename — accepted .html,
+// .svg and .exe. putObject enforces the same content-type allow-list the
+// presigned path uses.
 const docUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB for documents
+  limits: { fileSize: 25 * 1024 * 1024 }, // matches MAX_BYTES in storage.js
 });
 
 router.post(
@@ -65,15 +65,15 @@ router.post(
   ...admin,
   docUpload.single('file'),
   asyncHandler(async (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No file provided.' });
+    if (!req.file) throw new BadRequestError('No file provided.');
 
-    const ext      = path.extname(req.file.originalname) || '.bin';
-    const filename = `${crypto.randomUUID()}${ext}`;
+    const { fileUrl, storage } = await putObject(req.file.buffer, {
+      filename:    req.file.originalname,
+      contentType: req.file.mimetype,
+      category:    req.body?.category,
+    });
 
-    fs.mkdirSync(DOCS_UPLOAD_DIR, { recursive: true });
-    fs.writeFileSync(path.join(DOCS_UPLOAD_DIR, filename), req.file.buffer);
-
-    res.json({ fileUrl: `/uploads/documents/${filename}` });
+    res.json({ fileUrl, storage });
   })
 );
 

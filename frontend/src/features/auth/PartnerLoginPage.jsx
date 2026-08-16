@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { login } from '../../api/auth.js';
 import { useAuth } from '../../store/useAuth.js';
 import { homePathFor } from '../../routes/homePath.js';
@@ -77,6 +77,10 @@ export default function PartnerLoginPage() {
           <button className="btn btn-primary" type="submit" disabled={mutation.isPending}>
             {mutation.isPending ? 'Signing in...' : 'Sign in'}
           </button>
+
+          <p style={{ textAlign: 'center', marginTop: 12, fontSize: 12.5 }}>
+            <Link className="text-link" to="/forgot-password?from=partner">Forgot your password?</Link>
+          </p>
         </div>
 
         <p style={{ marginTop: 14, fontSize: 12, color: 'var(--ink-500)', textAlign: 'center' }}>

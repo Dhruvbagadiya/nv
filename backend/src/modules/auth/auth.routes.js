@@ -10,6 +10,8 @@ import {
   createSubAgentBody,
   updateUserBody,
   idParam,
+  forgotPasswordBody,
+  resetPasswordBody,
 } from './auth.schemas.js';
 import {
   loginHandler,
@@ -28,6 +30,8 @@ import {
   setUserActiveHandler,
   revokeUserSessionsHandler,
   adminResetPasswordHandler,
+  forgotPasswordHandler,
+  resetPasswordHandler,
 } from './auth.controller.js';
 
 const router = Router();
@@ -41,6 +45,12 @@ router.post('/login', validate(loginSchema), asyncHandler(loginHandler));
 router.post('/register', validate(registerSchema), asyncHandler(registerHandler));
 // Student self-registration — same fields, role hard-coded to STUDENT.
 router.post('/register/student', validate(registerSchema), asyncHandler(registerStudentHandler));
+
+// Self-service password reset. Both are public by necessity — the user cannot
+// authenticate, that being the problem. app.js rate-limits /login and /register;
+// these two are added to that list there for the same reason.
+router.post('/forgot-password', validate(forgotPasswordBody), asyncHandler(forgotPasswordHandler));
+router.post('/reset-password',  validate(resetPasswordBody),  asyncHandler(resetPasswordHandler));
 
 // Authenticated by the httpOnly cookie rather than the (expired) access token,
 // which is the whole point — this is what the client calls when the access token

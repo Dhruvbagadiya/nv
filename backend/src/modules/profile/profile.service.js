@@ -1,10 +1,10 @@
-import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { prisma } from '../../utils/prisma.js';
+import { fileURLToPath } from 'node:url';
 import { UnauthorizedError, BadRequestError } from '../../utils/httpErrors.js';
-import { config } from '../../config.js';
+import { putObject, IMAGE_TYPES, AVATAR_MAX_BYTES } from '../../utils/storage.js';
 
 // Fields returned in every profile response
 const PROFILE_SELECT = {
@@ -54,46 +54,31 @@ export async function changePassword(userId, { currentPassword, newPassword }) {
 }
 
 // ── Avatar upload ────────────────────────────────────────────────────────────
-const AVATAR_UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'avatars');
-
-function ensureAvatarDir() {
-  fs.mkdirSync(AVATAR_UPLOAD_DIR, { recursive: true });
-}
+// Resolved from this module, not process.cwd(): cleanup of a previous local
+// avatar silently targeted the wrong path when the process was started from
+// anywhere other than backend/.
+const LOCAL_UPLOADS = path.join(
+  path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'uploads'
+);
 
 export async function saveAvatar(userId, file) {
   if (!file) throw new BadRequestError('No image file provided.');
 
-  const ext     = file.mimetype === 'image/png' ? '.png'
-                : file.mimetype === 'image/webp' ? '.webp'
-                : '.jpg';
-  const filename = `${crypto.randomUUID()}${ext}`;
-
-  let avatarUrl;
-
-  if (config.storage.enabled) {
-    const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
-    const s3 = new S3Client({
-      region: config.storage.region,
-      ...(config.storage.endpoint && { endpoint: config.storage.endpoint }),
-      credentials: { accessKeyId: config.storage.accessKeyId, secretAccessKey: config.storage.secretAccessKey },
-      ...(config.storage.endpoint && { forcePathStyle: true }),
-    });
-    const key = `avatars/${filename}`;
-    await s3.send(new PutObjectCommand({
-      Bucket: config.storage.bucket, Key: key,
-      Body: file.buffer, ContentType: file.mimetype,
-    }));
-    avatarUrl = `${config.storage.publicBaseUrl}/${key}`;
-  } else {
-    ensureAvatarDir();
-    fs.writeFileSync(path.join(AVATAR_UPLOAD_DIR, filename), file.buffer);
-    avatarUrl = `/uploads/avatars/${filename}`;
-  }
+  // Was a third copy of the S3-or-disk branch, and the only one that built a
+  // fresh S3Client on every single upload rather than caching it. putObject
+  // owns that now.
+  const { fileUrl: avatarUrl } = await putObject(file.buffer, {
+    filename:    file.originalname,
+    contentType: file.mimetype,
+    category:    'avatars',
+    allowed:     IMAGE_TYPES,
+    maxBytes:    AVATAR_MAX_BYTES,
+  });
 
   // Delete the old avatar file from local disk if it was a local upload
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { avatarUrl: true } });
   if (user?.avatarUrl?.startsWith('/uploads/avatars/')) {
-    const old = path.join(process.cwd(), user.avatarUrl.slice(1));
+    const old = path.join(LOCAL_UPLOADS, user.avatarUrl.replace('/uploads/', ''));
     try { fs.unlinkSync(old); } catch { /* best-effort */ }
   }
 

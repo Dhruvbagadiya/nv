@@ -31,3 +31,15 @@ export async function fetchMe() {
   const { data } = await api.get('/auth/me');
   return data.user;
 }
+
+// Password reset. Both use authClient for the same reason login does: a 401 or
+// 400 here is a real answer, not a stale access token to refresh and retry.
+export async function forgotPassword(email) {
+  const { data } = await authClient.post('/auth/forgot-password', { email });
+  return data;
+}
+
+export async function resetPassword(token, newPassword) {
+  const { data } = await authClient.post('/auth/reset-password', { token, newPassword });
+  return data;
+}

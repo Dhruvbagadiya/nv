@@ -13,6 +13,7 @@ import { config } from './config.js';
 import { prisma } from './utils/prisma.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { NotFoundError } from './utils/httpErrors.js';
+import { createRateLimitStore } from './utils/rateLimitStore.js';
 
 import authRoutes from './modules/auth/auth.routes.js';
 import countryRoutes from './modules/countries/countries.routes.js';
@@ -66,12 +67,19 @@ app.use(morgan(config.isProduction ? 'combined' : 'dev'));
 // router it also counted /refresh, /me and the SUPER_ADMIN /users screen, so a
 // couple of minutes of ordinary admin browsing spent the budget and then locked
 // the user out of their own session — /refresh was throttled along with it.
+//
+// Top-level await: the store must exist before the limiter is constructed, and
+// server.js imports this module before listening, so resolving it here means the
+// API never serves a request with the wrong store attached.
+const rateLimitStore = await createRateLimitStore();
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: 'Too many attempts. Try again in a few minutes.' },
+  ...(rateLimitStore ? { store: rateLimitStore } : {}),
 });
 
 // Liveness AND readiness: reporting "ok" while Postgres is unreachable is worse
@@ -90,6 +98,11 @@ app.get('/api/health', async (req, res) => {
 // /register/student, since app.use matches on path prefix.
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+// Reset endpoints are unauthenticated and touch credentials: without a limit,
+// /forgot-password is a free email cannon at any address and /reset-password is
+// a token oracle to brute-force.
+app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/auth/reset-password', authLimiter);
 app.use('/api/auth', authRoutes);
 // The endpoint whose absence left every country dropdown in the app empty.
 app.use('/api/countries', countryRoutes);

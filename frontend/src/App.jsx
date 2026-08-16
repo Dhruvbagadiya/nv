@@ -22,6 +22,8 @@ import ProfilePage    from './features/profile/ProfilePage.jsx';
 
 // ── Admin panel ────────────────────────────────────────────────────────
 import AdminLoginPage from './features/auth/AdminLoginPage.jsx';
+import ForgotPasswordPage from './features/auth/ForgotPasswordPage.jsx';
+import ResetPasswordPage from './features/auth/ResetPasswordPage.jsx';
 import AdminDashboard from './features/admin/AdminDashboard.jsx';
 import AdminCountries from './features/admin/AdminCountries.jsx';
 import AdminInstitutions from './features/admin/AdminInstitutions.jsx';
@@ -80,6 +82,10 @@ export default function App() {
 
       {/* ── Student portal ────────────────────────────── */}
       <Route path="/login"    element={<StudentLoginPage />} />
+      {/* Portal-agnostic: a reset link works for any role, so these sit at the
+          root rather than being duplicated under /partner and /admin. */}
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
       {/* Public student routes (no auth needed to browse) */}
       <Route path="/programs" element={

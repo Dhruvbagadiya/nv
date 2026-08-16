@@ -292,18 +292,49 @@ async function main() {
   console.log(`  countries: ${Object.keys(countries).length}`);
 
   // ---- users ----
-  const passwordHash = await bcrypt.hash('password123', 12);
-  const mkUser = (email, name, role, parentAgentId = null) =>
-    prisma.user.upsert({
-      where: { email },
-      update: { name, role, parentAgentId },
-      create: { id: stableId('user', email), email, name, passwordHash, role, parentAgentId },
-    });
-  const superAdmin = await mkUser('super@example.com',    'Super Admin',    'SUPER_ADMIN');
-  await mkUser('admin@example.com',    'Admin User',     'ADMIN');
-  const agent    = await mkUser('agent@example.com',    'Darshan Limbani', 'AGENT');
-  const subAgent = await mkUser('subagent@example.com', 'Priya Nair',      'AGENT', agent.id);
-  console.log('  users: 4');
+  //
+  // These are DEMO accounts with a published password. Creating them against a
+  // production database would hand anyone who has read the README a SUPER_ADMIN
+  // login — and SUPER_ADMIN can reset any user's password and read every record.
+  // So they are refused in production unless someone opts in explicitly AND
+  // supplies a real password.
+  //
+  //   Development:  npm run prisma:seed              -> demo users, password123
+  //   Production:   npm run prisma:seed              -> reference data only
+  //   Bootstrapping a real admin on a fresh production database:
+  //     SEED_USERS=true SEED_ADMIN_PASSWORD='<strong>' npm run prisma:seed
+  const isProduction = process.env.NODE_ENV === 'production';
+  const seedUsers = isProduction ? process.env.SEED_USERS === 'true' : true;
+  const seedPassword = process.env.SEED_ADMIN_PASSWORD ?? 'password123';
+
+  if (isProduction && seedUsers && seedPassword === 'password123') {
+    throw new Error(
+      'Refusing to seed production users with the default password. ' +
+        'Set SEED_ADMIN_PASSWORD to a strong value.'
+    );
+  }
+
+  let superAdmin = null;
+  let agent = null;
+  let subAgent = null;
+  if (!seedUsers) {
+    console.log('  users: skipped (production — set SEED_USERS=true to create them)');
+  } else {
+    const passwordHash = await bcrypt.hash(seedPassword, 12);
+    const mkUser = (email, name, role, parentAgentId = null) =>
+      prisma.user.upsert({
+        where: { email },
+        // passwordHash is deliberately NOT in `update`: re-running the seed must
+        // never reset a password someone has since changed.
+        update: { name, role, parentAgentId },
+        create: { id: stableId('user', email), email, name, passwordHash, role, parentAgentId },
+      });
+    superAdmin = await mkUser('super@example.com',    'Super Admin',    'SUPER_ADMIN');
+    await mkUser('admin@example.com',    'Admin User',     'ADMIN');
+    agent    = await mkUser('agent@example.com',    'Darshan Limbani', 'AGENT');
+    subAgent = await mkUser('subagent@example.com', 'Priya Nair',      'AGENT', agent.id);
+    console.log('  users: 4');
+  }
 
   // ---- institutions — now includes slug, city, province ----
   const institutions = {};
@@ -529,6 +560,16 @@ async function main() {
   console.log(`  useful information: ${useful.length}`);
 
   // ---- applications: one per stage so Report tiles are all non-zero ----
+  //
+  // Every row below belongs to a demo agent, so this whole section is demo data
+  // and is skipped along with the users. A production database gets reference
+  // data (countries, institutions, courses, documents) and nothing else.
+  if (!agent) {
+    console.log('  applications / inquiries / notifications: skipped (no demo users)');
+    console.log('\nSeed complete — reference data only.');
+    return;
+  }
+
   const students = [
     'Aarav Sharma','Isha Patel','Rahul Nair','Meera Krishnan','Kabir Singh',
     'Ananya Rao','Vivaan Gupta','Diya Menon','Arjun Reddy','Saanvi Joshi','Dev Malhotra',
@@ -602,7 +643,7 @@ async function main() {
   }
   console.log(`  notifications: ${apps.length} (2 unread)`);
 
-  console.log('\nSeed complete. Logins (all password123):');
+  console.log(`\nSeed complete. Logins (all ${seedPassword === 'password123' ? 'password123' : 'SEED_ADMIN_PASSWORD'}):`);
   console.log('  agent@example.com     AGENT');
   console.log('  subagent@example.com  AGENT  (child of agent@example.com)');
   console.log('  admin@example.com     ADMIN');

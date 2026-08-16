@@ -57,3 +57,22 @@ export const createSubAgentBody = z
     password: z.string().min(10, 'Password must be at least 10 characters').max(200),
   })
   .strict();
+
+// Password reset. The request side takes only an email — deliberately no hint
+// about which portal the user belongs to, since the reset link works for any
+// role and asking would leak account shape.
+export const forgotPasswordBody = z
+  .object({ email: z.string().trim().toLowerCase().email() })
+  .strict();
+
+export const resetPasswordBody = z
+  .object({
+    token: z.string().min(1),
+    // Same floor as registration, so a reset cannot be used to set a weaker
+    // password than signup would have allowed.
+    newPassword: z
+      .string()
+      .min(10, 'Password must be at least 10 characters')
+      .max(200, 'Password must be at most 200 characters'),
+  })
+  .strict();

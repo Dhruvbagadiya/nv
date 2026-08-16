@@ -50,6 +50,23 @@ const schema = z.object({
   // to. For R2 this is the public bucket or custom domain.
   S3_PUBLIC_BASE_URL: z.string().url().optional(),
   S3_PRESIGN_TTL_SECONDS: z.coerce.number().int().positive().max(3600).default(300),
+
+  // ---- Password reset email ----
+  // Where reset links point. The first CORS origin is the sensible default: it
+  // is already the frontend's address in every deployment that works at all.
+  APP_URL: z.string().url().optional(),
+  // Transactional email over HTTPS, so no SMTP library is needed. Unset means
+  // reset links are logged instead of sent — usable in development, and a
+  // deliberate no-op rather than a silent failure in production.
+  MAIL_PROVIDER: z.enum(['resend', 'sendgrid']).optional(),
+  MAIL_API_KEY: z.string().optional(),
+  MAIL_FROM: z.string().optional(),
+
+  // ---- Rate limiting ----
+  // Unset means the in-memory store, which is correct for a single instance.
+  // Behind more than one instance each process keeps its own counters, so the
+  // effective limit multiplies by the instance count and a restart clears it.
+  REDIS_URL: z.string().url().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -111,4 +128,17 @@ export const config = {
         : undefined),
     presignTtlSeconds: env.S3_PRESIGN_TTL_SECONDS,
   },
+
+  redisUrl: env.REDIS_URL,
+
+  mail: {
+    // Same "half-configured is worse than none" rule as storage: a provider
+    // without a key would fail at the moment someone needs a reset link.
+    enabled: Boolean(env.MAIL_PROVIDER && env.MAIL_API_KEY && env.MAIL_FROM),
+    provider: env.MAIL_PROVIDER,
+    apiKey: env.MAIL_API_KEY,
+    from: env.MAIL_FROM,
+  },
+
+  appUrl: env.APP_URL ?? env.CORS_ORIGIN.split(',')[0].trim(),
 };

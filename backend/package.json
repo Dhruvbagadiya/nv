@@ -36,5 +36,9 @@
   "devDependencies": {
     "prisma": "^5.18.0",
     "vitest": "^2.1.9"
+  },
+  "optionalDependencies": {
+    "rate-limit-redis": "^4.2.0",
+    "redis": "^4.7.0"
   }
 }

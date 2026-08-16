@@ -128,3 +128,16 @@ export async function adminResetPasswordHandler(req, res) {
   }
   res.json(await authService.adminResetPassword(req.params.id, newPassword));
 }
+
+// Always 200, and always the same body. Whether the address is registered is
+// exactly the fact this endpoint must not disclose.
+export async function forgotPasswordHandler(req, res) {
+  await authService.requestPasswordReset(req.body.email);
+  res.json({
+    message: 'If that email is registered, a reset link is on its way.',
+  });
+}
+
+export async function resetPasswordHandler(req, res) {
+  res.json(await authService.resetPassword(req.body.token, req.body.newPassword));
+}

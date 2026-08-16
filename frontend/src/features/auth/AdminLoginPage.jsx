@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
 import { login } from '../../api/auth.js';
 import { useAuth } from '../../store/useAuth.js';
 import { homePathFor } from '../../routes/homePath.js';
@@ -97,6 +97,11 @@ export default function AdminLoginPage() {
           <button type="submit" className="admin-login-btn" disabled={mutation.isPending}>
             {mutation.isPending ? 'Signing in…' : 'Sign in'}
           </button>
+          <p style={{ textAlign: 'center', marginTop: 14, fontSize: 12 }}>
+            <Link to="/forgot-password?from=admin" style={{ color: 'rgba(255,255,255,.55)', textDecoration: 'underline' }}>
+              Forgot your password?
+            </Link>
+          </p>
         </form>
 
         <a href="/partner/login" className="admin-login-switch">

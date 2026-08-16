@@ -3,7 +3,14 @@ import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
 import { prisma } from '../../utils/prisma.js';
 import { config } from '../../config.js';
-import { ConflictError, ForbiddenError, UnauthorizedError } from '../../utils/httpErrors.js';
+import {
+  BadRequestError,
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+} from '../../utils/httpErrors.js';
+import { sendMail, passwordResetEmail } from '../../utils/mailer.js';
 
 // parentAgentId is included because the frontend needs it to decide whether to
 // offer sub-agent management — only a top-level agent can have sub-agents.
@@ -275,8 +282,6 @@ async function createUserWithRole({ name, email, password, role }) {
 // User management — ADMIN / SUPER_ADMIN only
 // ============================================================
 
-import { NotFoundError } from '../../utils/httpErrors.js';
-
 /**
  * Full profile + activity breakdown for a single user.
  * Returns everything the admin user-detail panel needs in one call.
@@ -405,6 +410,89 @@ export async function revokeAllUserSessions(id) {
   });
 
   return { revokedCount: count };
+}
+
+// ── Self-service password reset ──────────────────────────────────────────────
+
+const RESET_TTL_MINUTES = 30;
+
+/**
+ * Start a reset. Returns nothing useful on purpose: the controller answers
+ * identically whether or not the address is registered, so this endpoint cannot
+ * be used to discover who has an account.
+ *
+ * Deactivated users are skipped too — sending them a working link would be a way
+ * back in to an account an admin has deliberately switched off.
+ */
+export async function requestPasswordReset(email) {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user || !user.isActive) return;
+
+  const token = crypto.randomBytes(32).toString('base64url');
+  const expiresAt = new Date(Date.now() + RESET_TTL_MINUTES * 60 * 1000);
+
+  await prisma.$transaction(async (tx) => {
+    // Requesting a new link invalidates any earlier outstanding one, so a
+    // forwarded or intercepted older email stops working.
+    await tx.passwordResetToken.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    await tx.passwordResetToken.create({
+      data: { userId: user.id, tokenHash: hashToken(token), expiresAt },
+    });
+  });
+
+  const resetUrl = `${config.appUrl}/reset-password?token=${token}`;
+  const { subject, html } = passwordResetEmail({
+    name: user.name,
+    resetUrl,
+    ttlMinutes: RESET_TTL_MINUTES,
+  });
+
+  await sendMail({ to: user.email, subject, html });
+}
+
+/**
+ * Complete a reset. Consumes the token and revokes every session, on the
+ * assumption that a password reset may well be a response to a compromise —
+ * leaving the attacker's existing session alive would defeat the point.
+ */
+export async function resetPassword(token, newPassword) {
+  const row = await prisma.passwordResetToken.findUnique({
+    where: { tokenHash: hashToken(token) },
+    include: { user: true },
+  });
+
+  // One message for every failure mode — expired, already used, never existed —
+  // so probing cannot distinguish them.
+  if (!row || row.usedAt || row.expiresAt < new Date() || !row.user.isActive) {
+    throw new BadRequestError('That reset link is invalid or has expired. Request a new one.');
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+
+  await prisma.$transaction(async (tx) => {
+    // Compare-and-set, not a plain update: the usedAt check above ran in a
+    // separate query, so two requests carrying the same link can both reach
+    // here. Matching on `usedAt: null` means exactly one of them updates a row —
+    // the loser sees count 0 and is rejected instead of also setting a password.
+    const { count } = await tx.passwordResetToken.updateMany({
+      where: { id: row.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    if (count === 0) {
+      throw new BadRequestError('That reset link is invalid or has expired. Request a new one.');
+    }
+
+    await tx.user.update({ where: { id: row.userId }, data: { passwordHash } });
+    await tx.refreshToken.updateMany({
+      where: { userId: row.userId, revokedAt: null },
+      data: { revokedAt: new Date(), revokedReason: 'LOGOUT' },
+    });
+  });
+
+  return { message: 'Password updated. You can now sign in with your new password.' };
 }
 
 /** Admin resets a user's password. Also revokes all active sessions. */

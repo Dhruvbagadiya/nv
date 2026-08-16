@@ -1,6 +1,18 @@
 node_modules/
+# Every env file EXCEPT the checked-in examples. `.env` and `.env.local` alone
+# left .env.production — the one that holds real production secrets — tracked.
 .env
-.env.local
+.env.*
+!.env.example
+!.env.production.example
+
+# Uploaded avatars, logos and documents when storage is on local disk. User
+# content, not source.
+uploads/
+backend/uploads/
+
+# Let's Encrypt material created on the server by deploy/issue-cert.sh.
+deploy/certbot/
 dist/
 build/
 .DS_Store

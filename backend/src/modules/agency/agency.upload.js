@@ -14,16 +14,12 @@
  *   - Max 2 MB
  *   - File is renamed to a UUID so paths are unguessable and never collide
  */
-import crypto from 'node:crypto';
-import path from 'node:path';
-import fs from 'node:fs';
 import multer from 'multer';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { config } from '../../config.js';
-import { BadRequestError, HttpError } from '../../utils/httpErrors.js';
+import { putObject, IMAGE_TYPES, LOGO_MAX_BYTES } from '../../utils/storage.js';
+import { BadRequestError } from '../../utils/httpErrors.js';
 
-const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/webp'];
-const MAX_BYTES     = 2 * 1024 * 1024; // 2 MB — logos don't need to be large
+const ALLOWED_MIME = Object.keys(IMAGE_TYPES);
+const MAX_BYTES    = LOGO_MAX_BYTES; // 2 MB — logos don't need to be large
 
 // ── multer ──────────────────────────────────────────────────────────────────
 // Always buffer in memory first — small images (< 2 MB) fit easily and we need
@@ -37,52 +33,23 @@ export const logoUpload = multer({
   },
 });
 
-// Ensure local uploads directory exists (created lazily, no boot-time side-effect).
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'logos');
-function ensureDir() {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-// ── S3 client (lazy singleton) ───────────────────────────────────────────────
-let _s3;
-function getS3() {
-  _s3 ??= new S3Client({
-    region: config.storage.region,
-    ...(config.storage.endpoint && { endpoint: config.storage.endpoint }),
-    credentials: {
-      accessKeyId:     config.storage.accessKeyId,
-      secretAccessKey: config.storage.secretAccessKey,
-    },
-    ...(config.storage.endpoint && { forcePathStyle: true }),
-  });
-  return _s3;
-}
-
 // ── Main upload function ────────────────────────────────────────────────────
+// The S3-or-disk branch, its client, and the local directory handling all used
+// to live here in a near-copy of the same logic in profile.service.js and
+// storage.js. One implementation now, so a fix to any of it lands everywhere —
+// and the local path is resolved relative to the module rather than
+// process.cwd(), which quietly wrote to the wrong place when the process was
+// started from a directory other than backend/.
 export async function saveLogo(file) {
   if (!file) throw new BadRequestError('No image file provided.');
 
-  const ext      = file.mimetype === 'image/png'  ? '.png'
-                 : file.mimetype === 'image/webp' ? '.webp'
-                 : '.jpg';
-  const filename = `${crypto.randomUUID()}${ext}`;
+  const { fileUrl } = await putObject(file.buffer, {
+    filename:    file.originalname,
+    contentType: file.mimetype,
+    category:    'logos',
+    allowed:     IMAGE_TYPES,
+    maxBytes:    MAX_BYTES,
+  });
 
-  // ── S3 / R2 ──────────────────────────────────────────────────────────────
-  if (config.storage.enabled) {
-    const key = `logos/${filename}`;
-    await getS3().send(new PutObjectCommand({
-      Bucket:      config.storage.bucket,
-      Key:         key,
-      Body:        file.buffer,
-      ContentType: file.mimetype,
-    }));
-    return `${config.storage.publicBaseUrl}/${key}`;
-  }
-
-  // ── Local disk fallback ───────────────────────────────────────────────────
-  ensureDir();
-  const dest = path.join(UPLOAD_DIR, filename);
-  fs.writeFileSync(dest, file.buffer);
-  // Served by Express static middleware mounted in app.js at /uploads
-  return `/uploads/logos/${filename}`;
+  return fileUrl;
 }

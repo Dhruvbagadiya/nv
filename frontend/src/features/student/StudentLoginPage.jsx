@@ -146,6 +146,11 @@ export default function StudentLoginPage() {
 
         <p className="student-auth-switch-link">
           Are you a partner agent?{' '}
+          {mode === 'login' && (
+            <Link className="text-link" to="/forgot-password" style={{ marginRight: 12 }}>
+              Forgot password?
+            </Link>
+          )}
           <Link to="/partner/login">Partner portal →</Link>
         </p>
       </div>
