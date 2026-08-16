@@ -446,114 +446,154 @@
    heaviest thing on the page and the only part that will affect load time. */
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   HERO FLIGHT — the looping departure scene in the hero.
+   INTRO OVERLAY — the full-screen boarding sequence.
 
-   One 14s cycle shared by every actor, so the beats stay in step; each element
-   picks its slice of that cycle out with percentage keyframes rather than its
-   own duration and delay, which is what keeps them from drifting apart over
-   repeats.
+   One 9s clock. Every actor takes its slice with percentage keyframes off that
+   same duration rather than its own delay, which is what keeps six elements in
+   step instead of drifting apart.
 
-     0–14%   plane glides in from the right and settles
-     10–30%  the traveller walks on, 30–36% he boards
-     34–54%  the couple walk on, 54–60% they board
-     62–92%  take off, one loop, and away to the right
-     92–100% empty sky, then it all begins again
+     0–14%   plane flies in from off-screen right and settles
+     12–30%  traveller walks on from the left
+     30–36%  he boards — fades out on the apron, fades in at seat 1
+     36–56%  couple walk on
+     56–62%  they board — seat 2
+     64–72%  a beat with all three visible aboard
+     72–96%  plane accelerates right and climbs out of frame
+     96–100% curtain lifts
+
+   Positions are in vw/vh so the scene composes the same at any viewport; the
+   figures are sized off the plane so the three stay in proportion.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-.hf { width: 100%; max-width: 560px; margin-inline: auto; }
-.hf-stage { width: 100%; height: auto; display: block; overflow: visible; }
-
-.hf-ground { stroke: rgba(90,100,114,.2); stroke-width: 2; stroke-dasharray: 7 11; }
-.hf-trail {
-  stroke: rgba(90,100,114,.34); stroke-width: 2.2; stroke-linecap: round;
-  stroke-dasharray: 2 13;
-  animation: hf-trail 14s linear infinite;
+.io {
+  position: fixed; inset: 0; z-index: 200; overflow: hidden;
+  background: linear-gradient(180deg, #DCEBFB 0%, #EFF6FD 55%, #FFFFFF 100%);
+  animation: io-curtain .7s ease 8.3s forwards;
 }
-@keyframes hf-trail {
-  0%, 60%  { opacity: 0; }
-  66%      { opacity: .85; }
-  90%      { opacity: .85; }
-  100%     { opacity: 0; }
+@keyframes io-curtain { to { opacity: 0; visibility: hidden; } }
+
+.io-skip {
+  position: absolute; top: 22px; right: 24px; z-index: 3;
+  background: rgba(255,255,255,.86); border: 1px solid rgba(90,100,114,.16);
+  border-radius: 999px; padding: 10px 20px;
+  font-family: var(--font-sans); font-size: 13.5px; font-weight: 700;
+  color: #5A6472; cursor: pointer; backdrop-filter: blur(6px);
+  transition: background .2s, color .2s, transform .2s;
+}
+.io-skip:hover { background: #fff; color: var(--accent-800); transform: translateY(-1px); }
+
+/* ── Sky ───────────────────────────────────────────────────────────────── */
+.io-sky { position: absolute; inset: 0; }
+.io-cloud {
+  position: absolute; display: block; border-radius: 999px;
+  background: #fff; filter: blur(.4px); opacity: .92;
+  box-shadow: 40px 8px 0 -6px #fff, -34px 10px 0 -8px #fff;
+}
+.io-cloud-1 { width: 150px; height: 54px; top: 16%; animation: io-drift 17s linear infinite; }
+.io-cloud-2 { width: 108px; height: 40px; top: 34%; animation: io-drift 23s linear infinite 2s; opacity: .75; }
+.io-cloud-3 { width: 128px; height: 46px; top: 58%; animation: io-drift 29s linear infinite 5s; opacity: .6; }
+@keyframes io-drift {
+  from { transform: translateX(108vw); }
+  to   { transform: translateX(-30vw); }
+}
+
+/* ── Stage ─────────────────────────────────────────────────────────────── */
+.io-scene { position: absolute; inset: 0; }
+.io-ground {
+  position: absolute; left: 0; right: 0; bottom: 22vh; height: 0;
+  border-top: 2px dashed rgba(90,100,114,.2);
 }
 
 /* ── Plane ─────────────────────────────────────────────────────────────── */
-.hf-plane {
-  offset-path: path("M 640 150 C 520 150, 470 190, 380 214 C 300 236, 250 244, 236 246 C 150 258, 96 208, 118 156 C 136 114, 208 106, 232 150 C 258 198, 214 250, 268 282 C 344 326, 470 250, 640 120");
-  offset-rotate: auto;
-  animation: hf-fly 14s cubic-bezier(.5,0,.4,1) infinite;
+/* Sized in vw with a floor and ceiling so it is neither a stamp on a wide
+   monitor nor wider than a phone. */
+.io-plane {
+  position: absolute; bottom: 22vh; left: 0;
+  width: clamp(320px, 46vw, 720px);
+  transform: translateX(120vw);
+  animation: io-fly 9s cubic-bezier(.42,0,.3,1) forwards;
 }
-@keyframes hf-fly {
-  0%   { offset-distance: 0%; }
-  14%  { offset-distance: 20%; }   /* parked, nose to the left */
-  62%  { offset-distance: 22%; }   /* holds through all the boarding */
-  92%  { offset-distance: 100%; }  /* climb, loop, and away */
-  100% { offset-distance: 100%; opacity: 0; }
-}
-/* A slow idle rock while parked. Separate element so it composes with the
-   path's own rotation instead of overwriting it. */
-.hf-plane-art { animation: hf-idle 3.4s ease-in-out infinite; }
-@keyframes hf-idle {
-  0%,100% { transform: translateY(0)    rotate(0); }
-  50%     { transform: translateY(-4px) rotate(-1.6deg); }
+.io-plane-img { width: 100%; height: auto; display: block; }
+
+@keyframes io-fly {
+  0%   { transform: translate(120vw, 0) rotate(0deg); }
+  14%  { transform: translate(28vw, 0)  rotate(0deg); }   /* parked */
+  72%  { transform: translate(28vw, 0)  rotate(0deg); }   /* waits through boarding */
+  80%  { transform: translate(52vw, -4vh) rotate(-4deg); }
+  96%  { transform: translate(135vw, -46vh) rotate(-12deg); }
+  100% { transform: translate(135vw, -46vh) rotate(-12deg); }
 }
 
-/* ── Figures ───────────────────────────────────────────────────────────── */
-/* Both walk the same route to the same door, 24% of the cycle apart. */
-.hf-figure { opacity: 0; }
-.hf-pagdi  { animation: hf-walk-pagdi  14s linear infinite; }
-.hf-couple { animation: hf-walk-couple 14s linear infinite; }
+/* Seats. Children of the plane, so once it moves they travel with it and there
+   is no second animation to keep in sync. Percentages are of the plane's own
+   width, which keeps the passengers seated at any viewport size. */
+.io-seat {
+  position: absolute; width: 17%; height: auto;
+  opacity: 0; transform: translateY(6px);
+}
+.io-seat-1 { left: 30%; bottom: 46%; animation: io-seat 9s steps(1,end) forwards; }
+.io-seat-2 { left: 50%; bottom: 46%; width: 26%; animation: io-seat-late 9s steps(1,end) forwards; }
+@keyframes io-seat      { 0%,35% { opacity: 0; } 36%,100% { opacity: 1; transform: none; } }
+@keyframes io-seat-late { 0%,61% { opacity: 0; } 62%,100% { opacity: 1; transform: none; } }
 
-@keyframes hf-walk-pagdi {
-  0%,  9%  { opacity: 0; transform: translate(-70px, 392px) scale(.8); }
-  11%      { opacity: 1; transform: translate(-40px, 392px) scale(.8); }
-  30%      { opacity: 1; transform: translate(170px, 392px) scale(.8); }
-  34%      { opacity: 1; transform: translate(214px, 330px) scale(.52); }
-  37%,100% { opacity: 0; transform: translate(236px, 286px) scale(.2); }
+/* ── Walking figures ───────────────────────────────────────────────────── */
+.io-walker {
+  position: absolute; bottom: 22vh; left: 0;
+  height: clamp(90px, 13vh, 180px); width: auto;
+  opacity: 0;
 }
-@keyframes hf-walk-couple {
-  0%, 33%  { opacity: 0; transform: translate(-90px, 392px) scale(.78); }
-  35%      { opacity: 1; transform: translate(-56px, 392px) scale(.78); }
-  54%      { opacity: 1; transform: translate(158px, 392px) scale(.78); }
-  58%      { opacity: 1; transform: translate(210px, 330px) scale(.5); }
-  61%,100% { opacity: 0; transform: translate(236px, 286px) scale(.2); }
+.io-walk-traveller { animation: io-walk-a 9s linear forwards, io-bob .5s ease-in-out infinite; }
+.io-walk-couple    { animation: io-walk-b 9s linear forwards, io-bob .5s ease-in-out infinite; }
+
+/* Position and bob are two animations on one element rather than one combined
+   keyframe set: the walk spans the whole 9s while the bob repeats every 0.5s,
+   and CSS composes them without either having to know about the other. */
+@keyframes io-walk-a {
+  0%, 11% { opacity: 0; transform: translateX(-22vw); }
+  13%     { opacity: 1; transform: translateX(-12vw); }
+  30%     { opacity: 1; transform: translateX(26vw); }
+  35%     { opacity: 1; transform: translateX(33vw); }
+  36%,100%{ opacity: 0; transform: translateX(34vw); }
+}
+@keyframes io-walk-b {
+  0%, 36% { opacity: 0; transform: translateX(-26vw); }
+  38%     { opacity: 1; transform: translateX(-14vw); }
+  56%     { opacity: 1; transform: translateX(28vw); }
+  61%     { opacity: 1; transform: translateX(35vw); }
+  62%,100%{ opacity: 0; transform: translateX(36vw); }
+}
+/* A whole-body bob reads as walking at this speed; it does not need articulated
+   limbs, which the supplied artwork will not have. */
+@keyframes io-bob { 0%,100% { translate: 0 0; } 50% { translate: 0 -5px; } }
+
+/* ── Caption ───────────────────────────────────────────────────────────── */
+.io-caption {
+  position: absolute; left: 50%; bottom: 11%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 13px; white-space: nowrap;
+  font-family: var(--font-sans); font-size: clamp(18px, 2.6vw, 28px); font-weight: 800;
+  letter-spacing: -.01em; color: #2F3437;
+  opacity: 0; animation: io-caption 4.4s ease 3.4s forwards;
+}
+.io-caption-mark {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--accent-700); color: var(--accent-contrast);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800;
+}
+@keyframes io-caption {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(14px); }
+  18%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  76%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
 }
 
-/* Walk cycle. transform-box: fill-box is the load-bearing part — without it an
-   SVG child rotates about the origin of the whole canvas and the limb swings
-   off across the picture, which is exactly how the first version came apart. */
-.hf-leg-a, .hf-leg-b, .hf-arm-a, .hf-arm-b {
-  transform-box: fill-box;
-  transform-origin: 50% 8%;
-}
-.hf-bob   { animation: hf-bob   .46s ease-in-out infinite; }
-.hf-leg-a { animation: hf-swing-a .46s ease-in-out infinite; }
-.hf-leg-b { animation: hf-swing-b .46s ease-in-out infinite; }
-.hf-arm-a { animation: hf-swing-b .46s ease-in-out infinite; }
-.hf-arm-b { animation: hf-swing-a .46s ease-in-out infinite; }
-.hf-case  { animation: hf-case  .46s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 0; }
-
-@keyframes hf-bob     { 0%,100% { transform: translateY(0); }        50% { transform: translateY(-3.5px); } }
-@keyframes hf-swing-a { 0%,100% { transform: rotate(19deg); }        50% { transform: rotate(-19deg); } }
-@keyframes hf-swing-b { 0%,100% { transform: rotate(-19deg); }       50% { transform: rotate(19deg); } }
-@keyframes hf-case    { 0%,100% { transform: rotate(-5deg); }        50% { transform: rotate(5deg); } }
-
-/* ── Clouds ────────────────────────────────────────────────────────────── */
-.hf-cloud-1 { animation: hf-drift-1 26s linear infinite; }
-.hf-cloud-2 { animation: hf-drift-2 38s linear infinite; }
-@keyframes hf-drift-1 {
-  0%   { transform: translate(600px, 96px); }
-  100% { transform: translate(-90px, 96px); }
-}
-@keyframes hf-drift-2 {
-  0%   { transform: translate(620px, 190px); }
-  100% { transform: translate(-70px, 190px); }
+@media (max-width: 620px) {
+  .io-skip { top: 14px; right: 14px; padding: 8px 15px; }
+  .io-plane { bottom: 26vh; }
+  .io-walker, .io-ground { bottom: 26vh; }
+  .io-caption { bottom: 15%; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hf-stage *, .hf-stage { animation: none !important; }
-  /* Without motion the scene should still read: everyone at the gate. */
-  .hf-figure { opacity: 1; }
-  .hf-pagdi  { transform: translate(150px, 392px) scale(.8); }
-  .hf-couple { transform: translate(-10px, 392px) scale(.78); }
-  .hf-plane  { offset-distance: 21%; }
-}
+/* The component returns null under reduced motion, so this is belt and braces
+   for a preference that flips mid-session. */
+@media (prefers-reduced-motion: reduce) { .io { display: none; } }
