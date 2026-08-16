@@ -515,13 +515,17 @@
 }
 .io-plane-img { width: 100%; height: auto; display: block; }
 
+/* It departs LEFT, the way it arrived. The plane faces left throughout — it
+   flies in from the right travelling leftward — so sending it off to the right
+   would have it leaving backwards, nose-first into its own tail. Taxi in, load,
+   take off in the same direction, exactly as an aircraft actually does. */
 @keyframes io-fly {
-  0%   { transform: translate(120vw, 0) rotate(0deg); }
-  14%  { transform: translate(28vw, 0)  rotate(0deg); }   /* parked */
-  72%  { transform: translate(28vw, 0)  rotate(0deg); }   /* waits through boarding */
-  80%  { transform: translate(52vw, -4vh) rotate(-4deg); }
-  96%  { transform: translate(135vw, -46vh) rotate(-12deg); }
-  100% { transform: translate(135vw, -46vh) rotate(-12deg); }
+  0%   { transform: translate(120vw, 0)     rotate(0deg); }
+  14%  { transform: translate(34vw, 0)      rotate(0deg); }   /* parked */
+  72%  { transform: translate(34vw, 0)      rotate(0deg); }   /* waits through boarding */
+  80%  { transform: translate(6vw, -5vh)    rotate(6deg); }   /* rotate, nose up */
+  96%  { transform: translate(-95vw, -48vh) rotate(13deg); }
+  100% { transform: translate(-95vw, -48vh) rotate(13deg); }
 }
 
 /* Seats. Children of the plane, so once it moves they travel with it and there
@@ -551,16 +555,16 @@
 @keyframes io-walk-a {
   0%, 11% { opacity: 0; transform: translateX(-22vw); }
   13%     { opacity: 1; transform: translateX(-12vw); }
-  30%     { opacity: 1; transform: translateX(26vw); }
-  35%     { opacity: 1; transform: translateX(33vw); }
-  36%,100%{ opacity: 0; transform: translateX(34vw); }
+  30%     { opacity: 1; transform: translateX(32vw); }
+  35%     { opacity: 1; transform: translateX(39vw); }
+  36%,100%{ opacity: 0; transform: translateX(40vw); }
 }
 @keyframes io-walk-b {
   0%, 36% { opacity: 0; transform: translateX(-26vw); }
   38%     { opacity: 1; transform: translateX(-14vw); }
-  56%     { opacity: 1; transform: translateX(28vw); }
-  61%     { opacity: 1; transform: translateX(35vw); }
-  62%,100%{ opacity: 0; transform: translateX(36vw); }
+  56%     { opacity: 1; transform: translateX(34vw); }
+  61%     { opacity: 1; transform: translateX(41vw); }
+  62%,100%{ opacity: 0; transform: translateX(42vw); }
 }
 /* A whole-body bob reads as walking at this speed; it does not need articulated
    limbs, which the supplied artwork will not have. */
