@@ -18,6 +18,12 @@ ENV NODE_ENV=production
 FROM base AS build
 # Dev dependencies are needed here: the prisma CLI that runs `generate` is one.
 ENV NODE_ENV=development
+# puppeteer is a devDependency (a local scraping script uses it, the API never
+# does), but `npm ci` still runs its postinstall, which downloads ~150MB of
+# Chromium and then fails because this image has no unzip. Nothing in the build
+# needs a browser, so skip it rather than installing unzip for a binary that
+# gets pruned two layers later.
+ENV PUPPETEER_SKIP_DOWNLOAD=1
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY prisma ./prisma
