@@ -7,20 +7,23 @@
  *
  * Color scale algorithm:
  *   Given a base hex H (the "700" slot):
- *   - 800  → darken by 18%   (hover states, admin login bg)
- *   - 700  → base            (buttons, active nav, links)
- *   - 600  → same as 700     (gradients that previously used 600)
- *   - 500  → same as 700     (focus rings, outlines)
- *   - 100  → mix 12% with white  (light backgrounds, chips)
- *   - 50   → mix  6% with white  (very light hover tints)
+ *   - 800  → darken by 12%      (hover states, admin login bg)
+ *   - 700  → base               (buttons, active nav, links)
+ *   - 600  → same as 700        (gradients that previously used 600)
+ *   - 500  → same as 700        (focus rings, outlines)
+ *   - 100  → hue at 94% lightness  (light backgrounds, chips)
+ *   - 50   → hue at 97% lightness  (very light hover tints)
+ *
+ * Plus two foregrounds, --accent-contrast and --accent-contrast-800, chosen by
+ * WCAG contrast against the fill they sit on rather than assumed to be white.
  *
  * All math is done in HSL so lightness adjustments feel perceptually uniform.
  *
- * The NV Immigration default orange (#C96E0E) is the fallback when no agency
+ * The NV Immigration default orange (#E78518) is the fallback when no agency
  * color is set.
  */
 
-export const NV_DEFAULT_ACCENT = '#C96E0E';
+export const NV_DEFAULT_ACCENT = '#E78518';
 
 // ── Colour math helpers ──────────────────────────────────────────────────────
 
@@ -144,6 +147,15 @@ export function buildAccentScale(hex) {
     return rgbToHex(hslToRgb(adjusted));
   };
 
+  // The two pale tints target an ABSOLUTE lightness rather than adding to the
+  // base. Additive deltas worked for a dark accent but collapsed for a mid or
+  // light one: +52 and +58 both clamped at l=98, so --accent-100 and
+  // --accent-50 came out as the same near-grey, losing the accent's hue
+  // entirely. The static tokens they replace (#FFF3E3 / #FFF8F0) are ~94% and
+  // ~97% lightness at full saturation, which is the character to preserve.
+  const tint = (lightness) =>
+    rgbToHex(hslToRgb({ h: base.h, s: Math.min(100, base.s + 10), l: lightness }));
+
   const accent800 = slot(-12, +4);   // darker — hover on primary button
   const accent700 = slot(0);          // base
 
@@ -152,8 +164,8 @@ export function buildAccentScale(hex) {
     '--accent-700': accent700,
     '--accent-600': accent700,        // same (used in gradients alongside 700)
     '--accent-500': accent700,        // same (focus ring)
-    '--accent-100': slot(+52, -60),  // very light tint for chip backgrounds
-    '--accent-50':  slot(+58, -68),  // lightest tint for hover fills
+    '--accent-100': tint(94),        // very light tint for chip backgrounds
+    '--accent-50':  tint(97),        // lightest tint for hover fills
 
     // Foregrounds. 600/500 are identical to 700, so one token covers all three;
     // 800 is a different fill and gets its own, since a mid-light accent can
