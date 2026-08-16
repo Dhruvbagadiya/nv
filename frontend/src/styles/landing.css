@@ -162,11 +162,13 @@
      diameter. One transform chain, no per-item JS. */
   transform: rotate(calc(var(--i) * (360deg / var(--n)))) translateY(calc(-50% - 230px));
 }
+.lp-orbit-flag img { width: 30px; height: auto; border-radius: 3px; display: block; }
 .lp-orbit-flag {
   position: absolute; translate: -50% -50%;
   width: 54px; height: 54px; border-radius: 50%; background: #fff;
   box-shadow: 0 6px 18px rgba(16,24,40,.14);
-  display: flex; align-items: center; justify-content: center; font-size: 26px;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
   /* Counter-rotate so flags stay upright as the ring turns. */
   animation: lp-spin-rev 34s linear infinite;
 }
@@ -177,8 +179,16 @@
     linear-gradient(150deg, var(--accent-600), var(--accent-800));
   box-shadow: inset 0 -30px 60px rgba(0,0,0,.18);
 }
-@keyframes lp-spin     { to { transform: rotate(360deg); } }
-@keyframes lp-spin-rev { to { transform: rotate(-360deg); } }
+@keyframes lp-spin { to { transform: rotate(360deg); } }
+/* The counter-rotation has to undo TWO rotations, not one: the ring's spin, and
+   the static angle each item was placed at. Undoing only the spin left every
+   flag frozen at its own tilt — the ones at the bottom of the ring upside
+   down. Starting the keyframe at the item's negated placement angle cancels
+   both. */
+@keyframes lp-spin-rev {
+  from { transform: rotate(calc(var(--i) * (-360deg / var(--n)))); }
+  to   { transform: rotate(calc(var(--i) * (-360deg / var(--n)) - 360deg)); }
+}
 
 /* ── Marquee ───────────────────────────────────────────────────────────── */
 .lp-marquee { background: var(--accent-700); color: var(--accent-contrast); overflow: hidden; padding: 16px 0; }
