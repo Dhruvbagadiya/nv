@@ -1,5 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 
+// ── Public marketing site ──────────────────────────────────────────────
+import LandingPage from './features/landing/LandingPage.jsx';
+
 // ── Partner portal ─────────────────────────────────────────────────────
 import Header from './components/layout/Header.jsx';
 import Sidebar from './components/layout/Sidebar.jsx';
@@ -77,8 +80,10 @@ function PartnerShell({ children }) {
 export default function App() {
   return (
     <Routes>
-      {/* ── Root redirect ─────────────────────────────── */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      {/* ── Public marketing home ─────────────────────── */}
+      {/* Was a redirect to /login, which meant anyone arriving at the bare
+          domain was asked to sign in before being told what the company does. */}
+      <Route path="/" element={<LandingPage />} />
 
       {/* ── Student portal ────────────────────────────── */}
       <Route path="/login"    element={<StudentLoginPage />} />
