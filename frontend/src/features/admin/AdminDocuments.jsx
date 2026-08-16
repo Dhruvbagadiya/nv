@@ -261,7 +261,7 @@ export default function AdminDocuments() {
       key: 'fileUrl',
       header: 'File',
       render: (d) => (
-        <a href={d.fileUrl} target="_blank" rel="noopener noreferrer">
+        <a className="text-link" href={d.fileUrl} target="_blank" rel="noopener noreferrer">
           Open
         </a>
       ),

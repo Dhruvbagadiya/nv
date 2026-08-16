@@ -36,6 +36,12 @@
     --accent-100:#FFF3E3;
     --accent-50:#FFF8F0;
 
+    /* Readable foreground on an accent fill. Static defaults for the NV orange;
+       useTheme recomputes both from the agency's own colour at runtime, so a
+       light accent flips these to dark text instead of vanishing into white. */
+    --accent-contrast:#ffffff;
+    --accent-contrast-800:#ffffff;
+
     --success-700:#0B6B4E;
     --success-600:#0F7A5C;
     --success-100:#E1F3EC;
@@ -84,7 +90,12 @@
     font-size: 13.5px;
     line-height: 1.45;
   }
-  a { color: inherit; }
+  /* Almost every <a> in this app is a link-as-UI — a sidebar item, a card, a
+     button — where a browser underline is noise. That was being switched off in
+     ~15 individual component rules, so anything not covered (.btn, .sidebar-item)
+     kept the default underline: primary buttons and every nav item rendered
+     underlined. Reset once here; links-as-text opt back in via .text-link. */
+  a { color: inherit; text-decoration: none; }
   ::selection { background: var(--accent-100); color: var(--accent-800); }
   :focus-visible { outline: 2px solid var(--accent-500); outline-offset: 2px; border-radius: 4px; }
   @media (prefers-reduced-motion: reduce) {

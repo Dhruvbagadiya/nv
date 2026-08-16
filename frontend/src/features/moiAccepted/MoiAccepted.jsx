@@ -32,7 +32,7 @@ const COLUMNS = [
     header: 'Document',
     render: (m) =>
       m.documentUrl ? (
-        <a href={m.documentUrl} target="_blank" rel="noopener noreferrer">
+        <a className="text-link" href={m.documentUrl} target="_blank" rel="noopener noreferrer">
           View
         </a>
       ) : (

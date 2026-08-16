@@ -78,7 +78,7 @@ export default function StudentApplications() {
                 fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)',
                 border: '1px solid',
                 ...(stage === f.value
-                  ? { background: 'var(--accent-700)', color: '#fff', borderColor: 'var(--accent-700)' }
+                  ? { background: 'var(--accent-700)', color: 'var(--accent-contrast)', borderColor: 'var(--accent-700)' }
                   : { background: 'var(--surface)', color: 'var(--ink-600)', borderColor: 'var(--border)' }),
               }}
             >

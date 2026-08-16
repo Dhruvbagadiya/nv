@@ -11,7 +11,7 @@
     white-space: nowrap;
   }
   .btn:active { transform: translateY(1px); }
-  .btn-primary { background: var(--accent-700); color: #fff; box-shadow: var(--shadow-xs); }
+  .btn-primary { background: var(--accent-700); color: var(--accent-contrast); box-shadow: var(--shadow-xs); }
   .btn-primary:hover { background: var(--accent-800); }
   .btn-outline { background: var(--surface); border-color: var(--border-strong); color: var(--ink-700); }
   .btn-outline:hover { background: var(--canvas); border-color: var(--ink-300); }
@@ -40,7 +40,7 @@
     transition: all .12s;
   }
   .chip:hover { border-color: var(--ink-300); }
-  .chip.chip-active { border-color: var(--accent-700); color: #fff; background: var(--accent-700); }
+  .chip.chip-active { border-color: var(--accent-700); color: var(--accent-contrast); background: var(--accent-700); }
 
   .result-count { font-size: 12px; color: var(--ink-500); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .result-count b { color: var(--ink-950); font-weight: 700; }
@@ -112,7 +112,7 @@
   .pagination { display:flex; gap:4px; flex-wrap:wrap; }
   .page-btn { min-width:28px; height:28px; border:1px solid var(--border); border-radius:var(--radius-sm); background:#fff; color:var(--ink-700); cursor:pointer; font-size:11.5px; font-family: var(--font-mono); font-weight: 600; }
   .page-btn:hover:not(:disabled) { border-color: var(--ink-300); }
-  .page-btn.active { background:var(--accent-700); color:#fff; border-color:var(--accent-700); }
+  .page-btn.active { background:var(--accent-700); color: var(--accent-contrast); border-color:var(--accent-700); }
   .page-btn:disabled { opacity:.4; cursor:not-allowed; }
 
   /* ===================== FORM CARD (inquiry / new application) ===================== */
@@ -171,7 +171,7 @@
     padding: 6px 8px; border-radius: var(--radius-sm); cursor: pointer;
     font-size: 12.5px; font-family: inherit; color: var(--ink-900); text-align: left;
   }
-  .choice-option.active { background: var(--accent-700); color: #fff; }
+  .choice-option.active { background: var(--accent-700); color: var(--accent-contrast); }
   .choice-option.selected { font-weight: 700; }
   .choice-option.selected:not(.active) { background: var(--accent-50); }
   .choice-icon { display: inline-flex; flex-shrink: 0; }
@@ -210,7 +210,13 @@
     background: var(--accent-50); color: var(--accent-700); cursor: pointer;
     display: flex; align-items: center; justify-content: center; transition: background .13s, color .13s;
   }
-  .action-icon-btn:hover { background: var(--accent-700); color: #fff; }
+  .action-icon-btn:hover { background: var(--accent-700); color: var(--accent-contrast); }
+
+  /* Links-as-text: the "Open" / "View" cells in tables. These carry no button or
+     card styling, so with the global underline reset the underline is the only
+     thing marking them clickable — they opt back in. */
+  .text-link { color: var(--info-700); text-decoration: underline; font-weight: 600; }
+  .text-link:hover { color: var(--accent-700); }
 
   .empty-state { padding: 32px 18px; text-align: center; }
   .empty-state .e-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--canvas); color: var(--ink-400); display: flex; align-items: center; justify-content: center; font-size: 18px; margin: 0 auto 10px; }
@@ -309,8 +315,15 @@
     color: var(--ink-700); cursor: pointer; display: flex; align-items: center; gap: 8px;
     transition: background .1s;
   }
-  .choice-option:hover, .choice-option.active { background: var(--canvas); }
-  .choice-option.selected { background: var(--accent-50); color: var(--accent-700); font-weight: 600; }
+  /* These two rules also exist earlier in this file, where .active is an accent
+     fill with white text. This block wins on source order, so it was overriding
+     only the background — leaving white text on the near-white --canvas, which
+     is why the keyboard-highlighted row read as blank. Both halves of the pair
+     are set together here so the fill and its foreground can never drift apart. */
+  .choice-option:hover, .choice-option.active { background: var(--canvas); color: var(--ink-900); }
+  .choice-option.selected { background: var(--accent-50); color: var(--accent-800); font-weight: 600; }
+  /* Selected AND highlighted: the accent fill, with a foreground derived from it. */
+  .choice-option.selected.active { background: var(--accent-700); color: var(--accent-contrast); }
   .choice-icon { display: inline-flex; align-items: center; flex-shrink: 0; }
 
   /* ===================== LOGO CROPPER ===================== */

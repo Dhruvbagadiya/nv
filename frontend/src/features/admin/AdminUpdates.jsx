@@ -53,7 +53,7 @@ export default function AdminUpdates() {
         header: 'Attachment',
         render: (u) =>
           u.attachmentUrl ? (
-            <a href={u.attachmentUrl} target="_blank" rel="noopener noreferrer">
+            <a className="text-link" href={u.attachmentUrl} target="_blank" rel="noopener noreferrer">
               View
             </a>
           ) : (

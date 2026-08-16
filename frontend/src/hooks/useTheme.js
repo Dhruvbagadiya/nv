@@ -94,9 +94,39 @@ function clampForButton(hsl) {
   return { ...hsl, l, s };
 }
 
+// Text drawn on top of an accent fill. `#fff` was hardcoded at every such call
+// site, which is only correct while the accent stays dark: an agent picking
+// yellow, lime or cyan got white-on-light and the label vanished. Nothing in the
+// palette can be assumed readable when the agent chooses it, so the foreground
+// is derived from the background instead of assumed.
+const DARK_INK = '#0B0E14'; // --ink-950
+
+/** WCAG relative luminance of an { r, g, b }. */
+function relativeLuminance({ r, g, b }) {
+  const channel = (v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+/** WCAG contrast ratio between two relative luminances. */
+function contrastRatio(a, b) {
+  const [hi, lo] = a > b ? [a, b] : [b, a];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/** Whichever of white / near-black is more readable on `hex`. */
+function readableOn(hex) {
+  const bg = relativeLuminance(hexToRgb(hex));
+  const onWhite = contrastRatio(bg, 1);                                // #fff
+  const onDark = contrastRatio(bg, relativeLuminance(hexToRgb(DARK_INK)));
+  return onWhite >= onDark ? '#ffffff' : DARK_INK;
+}
+
 /**
  * Given a base hex (the "700" slot), build the full accent scale:
- * { 800, 700, 600, 500, 100, 50 }
+ * { 800, 700, 600, 500, 100, 50, contrast, contrast-800 }
  */
 export function buildAccentScale(hex) {
   if (!hex || !/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(hex)) {
@@ -114,13 +144,22 @@ export function buildAccentScale(hex) {
     return rgbToHex(hslToRgb(adjusted));
   };
 
+  const accent800 = slot(-12, +4);   // darker — hover on primary button
+  const accent700 = slot(0);          // base
+
   return {
-    '--accent-800': slot(-12, +4),   // darker — hover on primary button
-    '--accent-700': slot(0),          // base
-    '--accent-600': slot(0),          // same (used in gradients alongside 700)
-    '--accent-500': slot(0),          // same (focus ring)
+    '--accent-800': accent800,
+    '--accent-700': accent700,
+    '--accent-600': accent700,        // same (used in gradients alongside 700)
+    '--accent-500': accent700,        // same (focus ring)
     '--accent-100': slot(+52, -60),  // very light tint for chip backgrounds
     '--accent-50':  slot(+58, -68),  // lightest tint for hover fills
+
+    // Foregrounds. 600/500 are identical to 700, so one token covers all three;
+    // 800 is a different fill and gets its own, since a mid-light accent can
+    // want dark text at 700 and still need white once darkened.
+    '--accent-contrast':     readableOn(accent700),
+    '--accent-contrast-800': readableOn(accent800),
   };
 }
 
@@ -138,7 +177,10 @@ export function applyTheme(accentColor) {
 
 /** Remove all overrides — revert to the stylesheet defaults. */
 export function resetTheme() {
-  const props = ['--accent-800','--accent-700','--accent-600','--accent-500','--accent-100','--accent-50'];
+  const props = [
+    '--accent-800','--accent-700','--accent-600','--accent-500','--accent-100','--accent-50',
+    '--accent-contrast','--accent-contrast-800',
+  ];
   for (const prop of props) {
     ROOT().style.removeProperty(prop);
   }
