@@ -1,0 +1,17 @@
+# The portal routes are private or personalised — no value in an index, and
+# crawling them wastes budget that should go on the marketing page.
+User-agent: *
+Allow: /$
+Allow: /programs
+Disallow: /admin
+Disallow: /partner
+Disallow: /login
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /my-applications
+Disallow: /profile
+Disallow: /apply
+Disallow: /api/
+Disallow: /uploads/
+
+Sitemap: https://nvimmigrationpvtltd.com/sitemap.xml

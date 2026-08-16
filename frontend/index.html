@@ -3,10 +3,138 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NV Immigration — Partner Portal</title>
+
+<!-- Primary. The title leads with the brand because that is the term people
+     search, and carries the service + cities because those are the terms that
+     win local intent ("immigration consultant surat"). -->
+<title>NV Immigration — Visa & Immigration Consultants | Surat, Dehradun, Kotdwara</title>
+<meta name="description" content="NV Immigration provides trusted visa consultation and travel support — student, tourist, business and work visas for Canada, USA, UK, Germany, Australia and more. Offices in Surat, Dehradun and Kotdwara.">
+<link rel="canonical" href="https://nvimmigrationpvtltd.com/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#E78518">
+
+<!-- Open Graph / Twitter — what WhatsApp, Facebook and LinkedIn show when the
+     link is shared. For this audience WhatsApp sharing matters more than
+     either search engine. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NV Immigration">
+<meta property="og:title" content="NV Immigration — Visa & Immigration Consultants">
+<meta property="og:description" content="Student, tourist, business and work visas. Complete documentation guidance and travel support. Offices in Surat, Dehradun and Kotdwara.">
+<meta property="og:url" content="https://nvimmigrationpvtltd.com/">
+<meta property="og:locale" content="en_IN">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NV Immigration — Visa & Immigration Consultants">
+<meta name="twitter:description" content="Student, tourist, business and work visas. Offices in Surat, Dehradun and Kotdwara.">
+
+<!-- Structured data. This is what produces the business panel with address,
+     phone and hours in Google results, and it is the highest-leverage markup
+     for a multi-branch local business. Each branch is its own LocalBusiness so
+     they can rank for their own city. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://nvimmigrationpvtltd.com/#org",
+      "name": "NV Immigration",
+      "url": "https://nvimmigrationpvtltd.com/",
+      "description": "Visa consultation and travel support for students, tourists, business travellers and workers.",
+      "email": "nvimmigrationuttarakhand@gmail.com",
+      "telephone": "+91-7037831101",
+      "areaServed": "IN",
+      "knowsAbout": ["Student Visa", "Tourist Visa", "Business Visa", "Work Visa", "Immigration Consulting"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://nvimmigrationpvtltd.com/#website",
+      "url": "https://nvimmigrationpvtltd.com/",
+      "name": "NV Immigration",
+      "publisher": { "@id": "https://nvimmigrationpvtltd.com/#org" },
+      "inLanguage": "en-IN"
+    },
+    {
+      "@type": ["LocalBusiness", "ProfessionalService"],
+      "@id": "https://nvimmigrationpvtltd.com/#surat",
+      "name": "NV Immigration — Surat",
+      "parentOrganization": { "@id": "https://nvimmigrationpvtltd.com/#org" },
+      "telephone": "+91-9925913764",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "213, Silver Stone Arcade, Singanpore Causeway Road, Katargam",
+        "addressLocality": "Surat",
+        "addressRegion": "Gujarat",
+        "postalCode": "395004",
+        "addressCountry": "IN"
+      },
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+        "opens": "09:00",
+        "closes": "18:00"
+      }
+    },
+    {
+      "@type": ["LocalBusiness", "ProfessionalService"],
+      "@id": "https://nvimmigrationpvtltd.com/#dehradun",
+      "name": "NV Immigration — Dehradun",
+      "parentOrganization": { "@id": "https://nvimmigrationpvtltd.com/#org" },
+      "telephone": "+91-8439991102",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Opp. St. Jude's School, N.C.R Residency, Office No-1, G.M.S Road",
+        "addressLocality": "Dehradun",
+        "addressRegion": "Uttarakhand",
+        "addressCountry": "IN"
+      },
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+        "opens": "09:00",
+        "closes": "18:00"
+      }
+    },
+    {
+      "@type": ["LocalBusiness", "ProfessionalService"],
+      "@id": "https://nvimmigrationpvtltd.com/#kotdwara",
+      "name": "NV Immigration — Kotdwara",
+      "parentOrganization": { "@id": "https://nvimmigrationpvtltd.com/#org" },
+      "telephone": "+91-7037831101",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "2-3, N.V Immigration, Shrishti Honda Complex, Near Devi Mandir",
+        "addressLocality": "Kotdwar",
+        "addressRegion": "Uttarakhand",
+        "postalCode": "246149",
+        "addressCountry": "IN"
+      },
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+        "opens": "09:00",
+        "closes": "18:00"
+      }
+    }
+  ]
+}
+</script>
+
+<!-- flagcdn serves the country flags on the landing page. Warming the
+     connection here saves a DNS + TLS round trip when they come into view. -->
+<link rel="preconnect" href="https://flagcdn.com" crossorigin>
 </head>
 <body>
 <div id="root"></div>
+<noscript>
+  <!-- Crawlers execute JavaScript, but this page is also the fallback for
+       anything that does not, and it states the business facts in plain HTML. -->
+  <h1>NV Immigration — Visa &amp; Immigration Consultants</h1>
+  <p>Trusted visa consultation and travel support: student, tourist, business
+     and work visas for Canada, USA, UK, Germany, Australia and more.</p>
+  <p>Offices in Surat (Gujarat), Dehradun and Kotdwara (Uttarakhand).
+     Call <a href="tel:+917037831101">+91 7037831101</a> or email
+     <a href="mailto:nvimmigrationuttarakhand@gmail.com">nvimmigrationuttarakhand@gmail.com</a>.</p>
+</noscript>
 <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
