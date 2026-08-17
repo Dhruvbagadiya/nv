@@ -1,5 +1,12 @@
 /*
- * Tunable geometry — adjust these once you can see the real artwork.
+ * Tunable geometry.
+ *
+ * The plane is now the vector (plane.svg, viewBox 1440x800, aspect 1.8). It has
+ * no background rectangle, so it is genuinely transparent — unlike the PNG,
+ * where the generator painted the transparency checkerboard as opaque pixels.
+ * Its three seat groups are named, so the offsets below are measured rather
+ * than estimated: seat centres fall at 37.15%, 49.31% and 61.46% of the
+ * artwork's width, with the cushion spanning y 345-425 of 800 (43-53%).
  *
  * --plane-w        rendered plane width (clamped for 380px..desktop).
  * --person-w       rendered width of BOTH person canvases (traveller.png
@@ -18,15 +25,13 @@
  *                  along.
  * --plane-top      vertical anchor (% of the overlay) the plane parks at.
  *
- * Seat left offsets (39% / 55.5%) come straight from the brief: seat backs
- * centred at 39% / 50% / 61% of the plane's own width. Seat 1 uses 39%;
- * seats 2+3 share one element (couple.png has both people in it) centred
- * at the midpoint of 50% and 61%.
+ * Seat 1 sits at 37.15%. Seats 2+3 share one element, since couple.png holds
+ * both people, centred on the midpoint of 49.31% and 61.46% — 55.4%.
  */
 
 .boarding-overlay {
   --plane-w: clamp(220px, 46vw, 620px);
-  --plane-h: calc(var(--plane-w) / 1.8333);
+  --plane-h: calc(var(--plane-w) / 1.8);
   --person-w: calc(var(--plane-w) * 0.44);
   --person-h: calc(var(--person-w) / 1.8333);
   --seat-clip: 0.46;
@@ -101,7 +106,9 @@
 
 .boarding-seat {
   position: absolute;
-  top: 50%; /* the seat-back line: canvas cushion height per the brief */
+  /* 53% is the bottom of the cushion in the vector (y 425 of 800), so the
+     passenger's hips land on the seat rather than hovering over it. */
+  top: 53%;
   width: var(--person-w);
   height: calc(var(--person-h) * var(--seat-clip));
   margin-left: calc(var(--person-w) / -2);
@@ -111,12 +118,12 @@
 }
 
 .boarding-seat--1 {
-  left: 39%;
+  left: 37.15%;
   animation: boarding-seat-1 var(--dur) linear forwards;
 }
 
 .boarding-seat--23 {
-  left: 55.5%;
+  left: 55.4%;
   animation: boarding-seat-23 var(--dur) linear forwards;
 }
 

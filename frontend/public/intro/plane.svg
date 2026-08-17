@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 800" width="1440" height="800">
+  <defs>
+    <style>
+      .outline { stroke: #6f2d42; stroke-width: 14; stroke-linecap: round; stroke-linejoin: round; }
+      .outline-thin { stroke: #6f2d42; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; }
+      .body-pink { fill: #f7aab7; }
+      .nose-pink { fill: #e57e93; }
+      .seat-grey { fill: #5c717f; }
+      .seat-dark { fill: #485864; }
+      .wheel-pink { fill: #ba687b; }
+      .engine-dark { fill: #a84f64; }
+      .glass-fill { fill: rgba(255, 255, 255, 0.15); stroke: #6f2d42; stroke-width: 12; stroke-linecap: round; }
+      .highlight { fill: #ffffff; opacity: 0.65; }
+    </style>
+  </defs>
+
+  <!-- Group containing the complete vector graphic -->
+  <g id="pink-plane" transform="translate(10, 10)">
+
+    <!-- Rear Wing / Horizontal Stabilizer (Behind Body) -->
+    <path class="body-pink outline" d="M 1100 365 C 1130 330, 1260 360, 1335 410 C 1330 435, 1220 455, 1125 425 Z" />
+
+    <!-- Landing Wheel & Strut (Behind Main Body) -->
+    <g id="landing-gear">
+      <!-- Strut -->
+      <path class="body-pink outline-thin" d="M 370 595 L 370 660 L 400 660 L 400 600" />
+      <!-- Wheel Base -->
+      <path class="wheel-pink outline" d="M 345 660 C 320 660, 310 705, 335 730 C 360 755, 415 755, 425 715 C 435 675, 385 660, 345 660 Z" />
+      <!-- Inner Wheel Center -->
+      <path class="engine-dark outline-thin" d="M 360 685 C 348 685, 345 705, 360 710 C 375 715, 382 695, 370 685 Z" />
+    </g>
+
+    <!-- Jet Engine (Under Main Body/Wing) -->
+    <g id="engine">
+      <!-- Engine Body -->
+      <path class="body-pink outline" d="M 660 575 L 750 595 C 765 640, 755 685, 715 700 L 650 675 Z" />
+      <!-- Engine Front Intake -->
+      <ellipse cx="650" cy="625" rx="30" ry="50" class="nose-pink outline" />
+      <ellipse cx="650" cy="625" rx="14" ry="28" class="engine-dark outline-thin" />
+    </g>
+
+    <!-- Three Cockpit Seats -->
+    <!-- Seat 1 (Front) -->
+    <g id="seat-1">
+      <path class="seat-grey outline" d="M 470 385 C 470 330, 520 310, 545 320 C 565 330, 555 380, 550 420 C 510 425, 460 410, 470 385 Z" />
+      <path class="seat-grey outline" d="M 465 415 C 500 405, 545 405, 580 415 C 585 435, 540 450, 475 440 Z" />
+      <path class="seat-dark" d="M 505 335 C 520 325, 540 330, 535 380 C 510 385, 495 365, 505 335 Z" opacity="0.4" />
+    </g>
+
+    <!-- Seat 2 (Middle) -->
+    <g id="seat-2">
+      <path class="seat-grey outline" d="M 645 385 C 645 330, 695 310, 720 320 C 740 330, 730 380, 725 420 C 685 425, 635 410, 645 385 Z" />
+      <path class="seat-grey outline" d="M 640 415 C 675 405, 720 405, 755 415 C 760 435, 715 450, 650 440 Z" />
+      <path class="seat-dark" d="M 680 335 C 695 325, 715 330, 710 380 C 685 385, 670 365, 680 335 Z" opacity="0.4" />
+    </g>
+
+    <!-- Seat 3 (Rear) -->
+    <g id="seat-3">
+      <path class="seat-grey outline" d="M 820 385 C 820 330, 870 310, 895 320 C 915 330, 905 380, 900 420 C 860 425, 810 410, 820 385 Z" />
+      <path class="seat-grey outline" d="M 815 415 C 850 405, 895 405, 930 415 C 935 435, 890 450, 825 440 Z" />
+      <path class="seat-dark" d="M 855 335 C 870 325, 890 330, 885 380 C 860 385, 845 365, 855 335 Z" opacity="0.4" />
+    </g>
+
+    <!-- Main Airplane Body Silhouette & Cockpit Cavity -->
+    <!-- Inner Deep Cockpit Backing (Darker Pink Wall) -->
+    <path class="nose-pink" d="M 420 385 C 440 350, 480 340, 520 355 C 570 365, 700 365, 820 355 C 900 345, 960 320, 990 270 C 1000 330, 970 410, 920 425 C 780 440, 540 440, 420 385 Z" />
+
+    <!-- Main Outer Body Shell -->
+    <path class="body-pink outline" d="
+      M 260 325 
+      C 300 300, 380 300, 415 360
+      C 440 360, 500 360, 580 370
+      C 670 375, 780 375, 880 365
+      C 950 350, 985 310, 1000 250
+      C 1070 180, 1160 80, 1225 75
+      C 1275 70, 1285 130, 1270 200
+      C 1255 270, 1220 310, 1200 335
+      C 1230 380, 1310 420, 1320 450
+      C 1320 480, 1270 515, 1180 500
+      C 1100 550, 1000 575, 900 590
+      C 700 620, 400 610, 260 550
+      C 160 505, 120 440, 140 385
+      C 165 330, 210 320, 260 325 Z" />
+
+    <!-- Fuselage Separation Line (Lower Body Curve) -->
+    <path class="outline-thin" d="M 235 520 C 370 550, 600 575, 840 560 C 1010 550, 1140 480, 1200 425" fill="none" />
+
+    <!-- Nose Cap (Front Darker Pink Section) -->
+    <path class="nose-pink outline" d="M 140 385 C 120 440, 160 505, 260 550 C 235 520, 230 380, 260 325 C 210 320, 165 330, 140 385 Z" />
+
+    <!-- Windshield Loop (Transparent Glass Front) -->
+    <path class="glass-fill" d="M 265 335 C 240 210, 390 190, 420 380 Z" />
+
+    <!-- Foreground Main Wing -->
+    <g id="main-wing">
+      <path class="body-pink outline" d="M 570 455 C 670 435, 930 520, 1040 590 C 1055 650, 980 705, 880 690 C 720 660, 600 610, 560 560 C 540 520, 545 470, 570 455 Z" />
+      <!-- Wing Flap Panel Detail -->
+      <path class="outline-thin" d="M 810 500 L 920 545 C 930 580, 890 600, 860 590 L 780 540 Z" fill="none" opacity="0.7" />
+    </g>
+
+    <!-- Tail Fin Accent Panel -->
+    <path class="nose-pink outline-thin" d="M 1210 135 C 1245 130, 1255 160, 1245 220 C 1215 220, 1200 190, 1210 135 Z" />
+
+    <!-- Highlights (White Curved Glare Lines) -->
+    <!-- Nose Highlight -->
+    <path class="highlight" d="M 160 385 C 170 365, 200 365, 210 380 C 180 410, 165 410, 160 385 Z" />
+    <!-- Tail Fin Highlight -->
+    <path class="highlight" d="M 1180 115 C 1200 95, 1220 90, 1220 105 C 1200 140, 1180 170, 1170 200 C 1165 180, 1170 140, 1180 115 Z" />
+    <!-- Rear Wing Highlight -->
+    <path class="highlight" d="M 1240 375 C 1270 385, 1300 400, 1305 408 C 1280 410, 1250 400, 1235 390 Z" />
+
+  </g>
+</svg>

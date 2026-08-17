@@ -11,12 +11,12 @@ import './BoardingAnimation.css';
  *   0%  - 22%   Plane flies in from off-screen RIGHT, nose left, parks
  *               centre-screen.
  *  18%  - 39%   Traveller walks on from off-screen LEFT, reaches the plane.
- *        40%    Traveller vanishes from the ground; seat 1 (39% width)
+ *        40%    Traveller vanishes from the ground; seat 1 (37.15% width)
  *               fades in — a child of the plane, so it now travels with it.
  *  40%  - 44%   Plane waits (nothing moves).
  *  44%  - 61%   Couple walk on from off-screen LEFT, reach the plane.
  *        62%    Couple vanish from the ground; seats 2+3 (couple art spans
- *               both, centred ~55.5% width) fade in.
+ *               both, centred 55.4% width) fade in.
  *  62%  - 74%   Plane waits, fully boarded, all three visible.
  *  74%  - 100%  Plane accelerates LEFT (same direction it arrived from —
  *               nose already points left, so it's always moving nose-first,
@@ -32,7 +32,7 @@ import './BoardingAnimation.css';
  */
 
 const SOURCES = {
-  plane: '/intro/plane.png',
+  plane: '/intro/plane.svg',
   traveller: '/intro/traveller.png',
   couple: '/intro/couple.png',
 };
