@@ -1,0 +1,197 @@
+/*
+ * Tunable geometry — adjust these once you can see the real artwork.
+ *
+ * --plane-w        rendered plane width (clamped for 380px..desktop).
+ * --person-w       rendered width of BOTH person canvases (traveller.png
+ *                  and couple.png). They intentionally share one variable:
+ *                  both source canvases are the same 1408x768 size, so
+ *                  rendering both at the same CSS width makes their actual
+ *                  body pixels come out at the correct relative scale
+ *                  automatically (couple's 46%-of-canvas body vs.
+ *                  traveller's 28%-of-canvas body) with zero extra math,
+ *                  and guarantees nobody changes size when boarding —
+ *                  the seated crop is the exact same image at the exact
+ *                  same width, just viewed through a shorter window.
+ * --seat-clip      fraction of the person canvas height shown when seated
+ *                  (from the top), i.e. how much is "above the seat back".
+ * --ground-top     vertical anchor (% of the overlay) the walkers travel
+ *                  along.
+ * --plane-top      vertical anchor (% of the overlay) the plane parks at.
+ *
+ * Seat left offsets (39% / 55.5%) come straight from the brief: seat backs
+ * centred at 39% / 50% / 61% of the plane's own width. Seat 1 uses 39%;
+ * seats 2+3 share one element (couple.png has both people in it) centred
+ * at the midpoint of 50% and 61%.
+ */
+
+.boarding-overlay {
+  --plane-w: clamp(220px, 46vw, 620px);
+  --plane-h: calc(var(--plane-w) / 1.8333);
+  --person-w: calc(var(--plane-w) * 0.44);
+  --person-h: calc(var(--person-w) / 1.8333);
+  --seat-clip: 0.46;
+  --ground-top: 64%;
+  --plane-top: 46%;
+
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 1;
+  transition: opacity var(--fade-dur) ease;
+}
+
+.boarding-overlay--fading {
+  opacity: 0;
+}
+
+.boarding-skip {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1;
+  pointer-events: auto;
+  border: none;
+  border-radius: 999px;
+  padding: 0.5em 1.25em;
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent-contrast);
+  background: var(--accent-700);
+  cursor: pointer;
+}
+
+.boarding-skip:hover,
+.boarding-skip:focus-visible {
+  background: var(--accent-800);
+}
+
+/* ---- plane ------------------------------------------------------- */
+
+.boarding-plane {
+  position: absolute;
+  left: 50%;
+  top: var(--plane-top);
+  width: var(--plane-w);
+  height: var(--plane-h);
+  margin-left: calc(var(--plane-w) / -2);
+  margin-top: calc(var(--plane-h) / -2);
+  animation: boarding-plane-move var(--dur) linear forwards;
+}
+
+.boarding-plane__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 0-22% fly in from the right and park · 22-74% wait while everyone
+   boards · 74-100% accelerate left, nose up, climb off-screen. All
+   translate/rotate values are relative to the plane's own box. */
+@keyframes boarding-plane-move {
+  0%   { transform: translateX(170%); }
+  22%  { transform: translateX(0%); }
+  74%  { transform: translateX(0%); }
+  86%  { transform: translateX(-70%) translateY(-10%) rotate(-5deg); }
+  100% { transform: translateX(-190%) translateY(-45%) rotate(-11deg); }
+}
+
+/* ---- seated passengers (children of .boarding-plane) -------------- */
+
+.boarding-seat {
+  position: absolute;
+  top: 50%; /* the seat-back line: canvas cushion height per the brief */
+  width: var(--person-w);
+  height: calc(var(--person-h) * var(--seat-clip));
+  margin-left: calc(var(--person-w) / -2);
+  margin-top: calc(var(--person-h) * var(--seat-clip) * -1);
+  overflow: hidden; /* clips to head + torso, above the seat back */
+  opacity: 0;
+}
+
+.boarding-seat--1 {
+  left: 39%;
+  animation: boarding-seat-1 var(--dur) linear forwards;
+}
+
+.boarding-seat--23 {
+  left: 55.5%;
+  animation: boarding-seat-23 var(--dur) linear forwards;
+}
+
+.boarding-seat__img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--person-w);
+  height: var(--person-h);
+  display: block;
+}
+
+/* fades in the instant the traveller vanishes from the ground (40%) */
+@keyframes boarding-seat-1 {
+  0%   { opacity: 0; }
+  39%  { opacity: 0; }
+  40%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+/* fades in the instant the couple vanish from the ground (62%) */
+@keyframes boarding-seat-23 {
+  0%   { opacity: 0; }
+  61%  { opacity: 0; }
+  62%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+/* ---- walkers -------------------------------------------------------
+   Both traveller.png and couple.png already face right, matching the
+   direction they walk, so no mirroring is needed. */
+
+.boarding-walker {
+  position: absolute;
+  left: 50%;
+  top: var(--ground-top);
+  width: var(--person-w);
+  height: var(--person-h);
+  margin-left: calc(var(--person-w) / -2);
+  margin-top: calc(var(--person-h) / -2);
+  display: block;
+  opacity: 0;
+}
+
+.boarding-walker--traveller {
+  animation: boarding-walk-traveller var(--dur) linear forwards;
+}
+
+.boarding-walker--couple {
+  animation: boarding-walk-couple var(--dur) linear forwards;
+}
+
+/* 18-39% walk in from off-screen left and reach the plane · 40% cut to
+   "boarded" (opacity 0, seat 1 takes over at the same beat). */
+@keyframes boarding-walk-traveller {
+  0%   { transform: translateX(-640%); opacity: 1; }
+  18%  { transform: translateX(-640%); opacity: 1; }
+  39%  { transform: translateX(-58%);  opacity: 1; }
+  40%  { transform: translateX(-58%);  opacity: 0; }
+  100% { transform: translateX(-58%);  opacity: 0; }
+}
+
+/* hidden until 44% (after the plane's brief post-boarding-1 wait) ·
+   44-61% walk in · 62% cut to "boarded". */
+@keyframes boarding-walk-couple {
+  0%   { transform: translateX(-640%); opacity: 0; }
+  40%  { transform: translateX(-640%); opacity: 0; }
+  44%  { transform: translateX(-640%); opacity: 1; }
+  61%  { transform: translateX(-60%);  opacity: 1; }
+  62%  { transform: translateX(-60%);  opacity: 0; }
+  100% { transform: translateX(-60%);  opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boarding-overlay {
+    display: none;
+  }
+}
