@@ -1,15 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useReveal, useCountUp } from './useReveal.js';
 import BoardingAnimation from './BoardingAnimation.jsx';
+import Icon from './Icons.jsx';
+import { RouteMapScene, StampScene, BoardingPassScene, GlobeScene, SealRing } from './Scenes.jsx';
 
 // Public marketing home page. Everything else in this app is behind a login or
 // is portal chrome; this is the one screen a stranger sees, so it owns its own
 // header and footer rather than borrowing the portal's.
 //
 // Content is data-driven from the constants below so copy edits never mean
-// touching JSX. Images are intentionally CSS gradients with a documented swap
-// path — see IMAGE SLOTS at the bottom of landing.css.
+// touching JSX. Iconography is the inline set in Icons.jsx and imagery is the
+// inline SVG in Scenes.jsx — this page ships zero raster assets of its own, so
+// it renders identically on every OS and stays sharp on any display.
 
 // Surat is the head office and the number every CTA on this page dials.
 // The other branches still appear in the footer with their own numbers.
@@ -17,22 +20,26 @@ const WHATSAPP = '919925913764';
 const PHONE_DISPLAY = '+91 9925913764';
 const EMAIL = 'nvimmigrationsurat@gmail.com';
 
+const TEL = `tel:${PHONE_DISPLAY.replace(/\s/g, '')}`;
+const waLink = (msg) => `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`;
+
 const NAV = [
-  { label: 'Home', href: '#top' },
-  { label: 'About Us', href: '#about' },
-  { label: 'Services', href: '#services' },
-  { label: 'Countries', href: '#countries' },
-  { label: 'Contact Us', href: '#contact' },
+  { label: 'Home', href: '#top', id: 'top' },
+  { label: 'About Us', href: '#about', id: 'about' },
+  { label: 'Services', href: '#services', id: 'services' },
+  { label: 'Countries', href: '#countries', id: 'countries' },
+  { label: 'FAQ', href: '#faq', id: 'faq' },
+  { label: 'Contact Us', href: '#contact', id: 'contact' },
 ];
 
 const SERVICES = [
-  { icon: '🎓', title: 'Student Visa',     body: 'Professional guidance for students planning to study abroad.' },
-  { icon: '🧳', title: 'Tourist Visa',     body: 'Visa assistance for international travel and tourism.' },
-  { icon: '💼', title: 'Business Visa',    body: 'Support for professionals travelling for business purposes.' },
-  { icon: '🛠️', title: 'Working Visa',     body: 'Help with work permit and employment visa applications.' },
-  { icon: '✈️', title: 'Air Ticket Booking', body: 'Affordable international flight booking with the best routes and fares.' },
-  { icon: '🗺️', title: 'Tours & Travels',  body: 'Complete travel planning including tour packages and hotel bookings.' },
-  { icon: '💱', title: 'Money Exchange',   body: 'Secure foreign currency exchange for international travellers.' },
+  { icon: 'student',  title: 'Student Visa',      body: 'Professional guidance for students planning to study abroad.' },
+  { icon: 'tourist',  title: 'Tourist Visa',      body: 'Visa assistance for international travel and tourism.' },
+  { icon: 'business', title: 'Business Visa',     body: 'Support for professionals travelling for business purposes.' },
+  { icon: 'working',  title: 'Working Visa',      body: 'Help with work permit and employment visa applications.' },
+  { icon: 'ticket',   title: 'Air Ticket Booking', body: 'Affordable international flight booking with the best routes and fares.' },
+  { icon: 'tours',    title: 'Tours & Travels',   body: 'Complete travel planning including tour packages and hotel bookings.' },
+  { icon: 'exchange', title: 'Money Exchange',    body: 'Secure foreign currency exchange for international travellers.' },
 ];
 
 const COUNTRIES = [
@@ -68,15 +75,52 @@ const STATS = [
 ];
 
 const REASONS = [
-  { icon: '🌐', title: 'Legal Immigration Success', body: 'Since 2021 our success rate stands at 99 percent.' },
-  { icon: '📄', title: 'Required Documents Support', body: 'We tell you exactly which documents are needed, and check them before submission.' },
-  { icon: '⏱️', title: 'Faster Turnaround',          body: 'Applications assessed and submitted without the usual back-and-forth.' },
+  { icon: 'globe',    title: 'Legal Immigration Success',  body: 'Since 2021 our success rate stands at 99 percent.' },
+  { icon: 'document', title: 'Required Documents Support', body: 'We tell you exactly which documents are needed, and check them before submission.' },
+  { icon: 'clock',    title: 'Faster Turnaround',          body: 'Applications assessed and submitted without the usual back-and-forth.' },
+];
+
+const TRUST = [
+  { icon: 'shield', text: 'Registered consultants' },
+  { icon: 'chat',   text: 'Same-day WhatsApp replies' },
+  { icon: 'pin',    text: 'Surat · Dehradun · Kotdwara' },
+  { icon: 'star',   text: '978+ clients served' },
 ];
 
 const TESTIMONIALS = [
-  { name: 'Riya Patel',   text: 'Their team’s expertise and commitment to quality helped us improve efficiency across the board.' },
-  { name: 'Aarav Sharma', text: 'We’ve seen measurable improvements in productivity and couldn’t be happier with the results.' },
-  { name: 'Karan Singh',  text: 'Clear guidance at every step. The documentation checklist alone saved us weeks of guesswork.' },
+  { name: 'Riya Patel',   route: 'Canada · Study permit', text: 'Their team’s expertise and commitment to quality helped us improve efficiency across the board.' },
+  { name: 'Aarav Sharma', route: 'Australia · Work visa',  text: 'We’ve seen measurable improvements in productivity and couldn’t be happier with the results.' },
+  { name: 'Karan Singh',  route: 'UK · Tourist visa',      text: 'Clear guidance at every step. The documentation checklist alone saved us weeks of guesswork.' },
+];
+
+// Answers to the questions that actually arrive on WhatsApp. Also the section
+// search engines quote directly — the matching FAQPage JSON-LD is in index.html,
+// so these strings and that block must stay in step.
+const FAQS = [
+  {
+    q: 'How long does a visa application take?',
+    a: 'It depends on the country and visa type. Tourist visas are often decided in 2–4 weeks, student visas in 4–12 weeks. We tell you the current processing time for your specific case at the free assessment, before you commit to anything.',
+  },
+  {
+    q: 'What documents will I need?',
+    a: 'Every case is different, so we build you a checklist rather than handing you a generic list. Typically it covers your passport, financial proof, purpose-of-travel evidence and, for student visas, academic records and an offer letter. We verify each document before submission.',
+  },
+  {
+    q: 'Do you charge for the first consultation?',
+    a: 'No. The eligibility assessment is free. We only quote a fee once we have looked at your profile and can tell you honestly whether the application is worth filing.',
+  },
+  {
+    q: 'What happens if my visa is refused?',
+    a: 'We review the refusal letter with you, explain exactly which ground it was refused on, and advise whether to reapply, appeal, or change route. Our approval rate is 99 percent precisely because we do not file applications we expect to fail.',
+  },
+  {
+    q: 'Can you help with flights and accommodation too?',
+    a: 'Yes. We book international tickets, arrange tour packages and hotels, and handle foreign currency exchange — so the trip after the approval is covered as well.',
+  },
+  {
+    q: 'Where are your offices?',
+    a: 'Our head office is in Katargam, Surat, with branches in Kotdwara and Dehradun. Most of the process runs on WhatsApp and email, so you can work with us from anywhere in India.',
+  },
 ];
 
 const BRANCHES = [
@@ -100,13 +144,14 @@ const BRANCHES = [
 // ── Small building blocks ────────────────────────────────────────────────────
 
 /** Wraps children in a scroll-reveal. `delay` staggers siblings in a grid. */
-function Reveal({ children, delay = 0, className = '', as: Tag = 'div' }) {
+function Reveal({ children, delay = 0, className = '', as: Tag = 'div', ...rest }) {
   const [ref, shown] = useReveal();
   return (
     <Tag
       ref={ref}
       className={`lp-reveal ${shown ? 'is-shown' : ''} ${className}`}
       style={{ transitionDelay: `${delay}ms` }}
+      {...rest}
     >
       {children}
     </Tag>
@@ -133,22 +178,105 @@ function Stat({ value, suffix, label }) {
   );
 }
 
+/** Service/testimonial cards track the cursor so the hover highlight follows
+ *  the pointer instead of washing the whole card at once. Writing to a CSS
+ *  variable keeps this off the React render path — the handler never calls
+ *  setState, so moving the mouse costs nothing but a style write. */
+function useSpotlight() {
+  return useCallback((e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`);
+    e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`);
+  }, []);
+}
+
+function Faq({ q, a, open, onToggle, id }) {
+  return (
+    <div className={`lp-faq ${open ? 'is-open' : ''}`}>
+      <h3 className="lp-faq-q">
+        <button
+          type="button"
+          id={`faq-btn-${id}`}
+          aria-expanded={open}
+          aria-controls={`faq-panel-${id}`}
+          onClick={onToggle}
+        >
+          <span>{q}</span>
+          <Icon name="plus" size={20} className="lp-faq-sign" />
+        </button>
+      </h3>
+      {/* The panel stays mounted and is collapsed with a grid-rows transition:
+          grid-template-rows 0fr→1fr is the only way to animate to a content-
+          driven height without measuring it in JS. Keeping it mounted also
+          means the text is in the DOM for crawlers even while collapsed. */}
+      <div
+        className="lp-faq-panel"
+        id={`faq-panel-${id}`}
+        role="region"
+        aria-labelledby={`faq-btn-${id}`}
+      >
+        <div><p className="lp-faq-a">{a}</p></div>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [group, setGroup] = useState('All');
+  const [active, setActive] = useState('top');
+  const [openFaq, setOpenFaq] = useState(0);
+  const spotlight = useSpotlight();
 
-  // The header condenses after the hero. passive:true because this listener
-  // never calls preventDefault, and saying so lets the browser scroll without
-  // waiting on it.
+  // The header condenses after the hero and drives the reading-progress bar.
+  // passive:true because this listener never calls preventDefault, and saying
+  // so lets the browser scroll without waiting on it.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 40);
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(max > 0 ? Math.min(1, y / max) : 0);
+    };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  // Scroll spy for the nav. rootMargin pulls the detection line down past the
+  // sticky header and up from the bottom, so the highlighted link is the
+  // section actually filling the viewport rather than the one grazing its edge.
+  useEffect(() => {
+    const els = NAV.map((n) => document.getElementById(n.id)).filter(Boolean);
+    if (!els.length) return undefined;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const hit = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (hit) setActive(hit.target.id);
+      },
+      { rootMargin: '-45% 0px -50% 0px' },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+
+  // An open mobile menu is a modal surface: Escape closes it, and the page
+  // behind it must not scroll away underneath.
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false); };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
 
   const shown = group === 'All' ? COUNTRIES : COUNTRIES.filter((c) => c.group === group);
 
@@ -156,12 +284,21 @@ export default function LandingPage() {
     <div className="lp" id="top">
       <BoardingAnimation />
 
+      {/* Reading progress. scaleX on a fixed bar — no layout, no repaint. */}
+      <div className="lp-progress" aria-hidden="true">
+        <div className="lp-progress-bar" style={{ transform: `scaleX(${progress})` }} />
+      </div>
+
       {/* ── Utility bar ─────────────────────────────────────────────── */}
       <div className="lp-utility">
         <div className="lp-wrap lp-utility-inner">
-          <span><strong>Working Hours:</strong> Monday to Saturday, 9 am – 6 pm</span>
+          <span className="lp-utility-hours">
+            <Icon name="clock" size={14} />
+            Monday to Saturday, 9 am – 6 pm
+          </span>
           <a className="lp-utility-mail" href={`mailto:${EMAIL}`}>
-            <strong>Email:</strong> {EMAIL}
+            <Icon name="mail" size={14} />
+            {EMAIL}
           </a>
         </div>
       </div>
@@ -177,17 +314,25 @@ export default function LandingPage() {
             </span>
           </a>
 
-          <nav className={`lp-nav ${menuOpen ? 'is-open' : ''}`}>
+          <nav className={`lp-nav ${menuOpen ? 'is-open' : ''}`} aria-label="Primary">
             {NAV.map((n) => (
-              <a key={n.label} href={n.href} onClick={() => setMenuOpen(false)}>{n.label}</a>
+              <a
+                key={n.label}
+                href={n.href}
+                className={active === n.id ? 'is-active' : ''}
+                aria-current={active === n.id ? 'page' : undefined}
+                onClick={() => setMenuOpen(false)}
+              >
+                {n.label}
+              </a>
             ))}
             <Link className="lp-nav-portal" to="/login" onClick={() => setMenuOpen(false)}>
               Client Portal
             </Link>
           </nav>
 
-          <a className="lp-call" href={`tel:${PHONE_DISPLAY.replace(/\s/g, '')}`}>
-            <span className="lp-call-icon" aria-hidden="true">📞</span>
+          <a className="lp-call" href={TEL}>
+            <span className="lp-call-icon" aria-hidden="true"><Icon name="phone" size={19} /></span>
             <span className="lp-call-text">
               <small>Call us now</small>
               <strong>{PHONE_DISPLAY}</strong>
@@ -195,8 +340,8 @@ export default function LandingPage() {
           </a>
 
           <button
-            className="lp-burger"
-            aria-label="Menu"
+            className={`lp-burger ${menuOpen ? 'is-open' : ''}`}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((v) => !v)}
           >
@@ -205,11 +350,20 @@ export default function LandingPage() {
         </div>
       </header>
 
+      {/* Backdrop for the mobile nav — tapping outside is how people expect to
+          dismiss a drop-down, and without this the only exit is the burger. */}
+      {menuOpen && <div className="lp-nav-scrim" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
+
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <section className="lp-hero">
         <div className="lp-wrap lp-hero-inner">
           <div className="lp-hero-copy">
-            <Reveal><Eyebrow>Trusted Immigration Partner</Eyebrow></Reveal>
+            <Reveal>
+              <div className="lp-eyebrow lp-eyebrow-live">
+                <span className="lp-live-dot" aria-hidden="true" />
+                Trusted Immigration Partner · Surat
+              </div>
+            </Reveal>
             <Reveal delay={80}>
               <h1 className="lp-h1">
                 Our simple approach to <span className="lp-h1-accent">immigration</span> process
@@ -231,15 +385,22 @@ export default function LandingPage() {
             </Reveal>
             <Reveal delay={280}>
               <div className="lp-cta-row">
-                <a className="lp-btn lp-btn-primary" href="#services">Discover Services</a>
                 <a
-                  className="lp-btn lp-btn-ghost"
-                  href={`https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Hi NV Immigration, I would like a free consultation.')}`}
+                  className="lp-btn lp-btn-primary"
+                  href={waLink('Hi NV Immigration, I would like a free consultation.')}
                   target="_blank" rel="noopener noreferrer"
                 >
                   Book Free Consultation
+                  <Icon name="arrow" size={18} />
                 </a>
+                <a className="lp-btn lp-btn-ghost" href="#services">Discover Services</a>
               </div>
+            </Reveal>
+            <Reveal delay={340}>
+              <p className="lp-hero-note">
+                <Icon name="check" size={15} />
+                Free eligibility assessment · No obligation · Reply usually within minutes
+              </p>
             </Reveal>
           </div>
 
@@ -261,19 +422,19 @@ export default function LandingPage() {
                   </span>
                 ))}
               </div>
-              <div className="lp-hero-photo" role="img" aria-label="Traveller holding passports and boarding passes" />
+              <div className="lp-hero-globe"><GlobeScene /></div>
 
               {/* Concrete outcomes beside an abstract graphic — what makes a
                   hero feel like a product rather than a poster. */}
               <div className="lp-float lp-float-1">
-                <span className="lp-float-icon" style={{ background: 'var(--success-100)', color: 'var(--success-700)' }}>✓</span>
+                <span className="lp-float-icon lp-float-icon--ok"><Icon name="check" size={17} /></span>
                 <span>
                   <span className="lp-float-t">Visa approved</span>
                   <span className="lp-float-s">Canada · Study permit</span>
                 </span>
               </div>
               <div className="lp-float lp-float-2">
-                <span className="lp-float-icon" style={{ background: 'var(--accent-50)', color: 'var(--accent-700)' }}>✈</span>
+                <span className="lp-float-icon lp-float-icon--accent"><Icon name="plane" size={17} /></span>
                 <span>
                   <span className="lp-float-t">50+ countries</span>
                   <span className="lp-float-s">Student · Work · Tourist</span>
@@ -289,10 +450,11 @@ export default function LandingPage() {
         <div className="lp-wrap lp-trust-inner">
           <span className="lp-trust-label">Why families choose us</span>
           <div className="lp-trust-items">
-            <span className="lp-trust-item"><span>🛡️</span> Registered consultants</span>
-            <span className="lp-trust-item"><span>💬</span> Same-day WhatsApp replies</span>
-            <span className="lp-trust-item"><span>📍</span> Surat · Dehradun · Kotdwara</span>
-            <span className="lp-trust-item"><span>⭐</span> 978+ clients served</span>
+            {TRUST.map((t) => (
+              <span className="lp-trust-item" key={t.text}>
+                <Icon name={t.icon} size={18} />{t.text}
+              </span>
+            ))}
           </div>
         </div>
       </div>
@@ -304,7 +466,7 @@ export default function LandingPage() {
             <div className="lp-marquee-group" key={dup}>
               {COUNTRIES.map((c) => (
                 <span key={c.name} className="lp-marquee-item">
-                  <span className="lp-marquee-star">✳</span>{c.name}
+                  <Icon name="sparkle" size={17} className="lp-marquee-star" />{c.name}
                 </span>
               ))}
             </div>
@@ -316,8 +478,12 @@ export default function LandingPage() {
       <section className="lp-section" id="about">
         <div className="lp-wrap lp-about">
           <Reveal className="lp-about-media">
-            <div className="lp-photo lp-photo-a" role="img" aria-label="Traveller in Paris" />
-            <div className="lp-photo lp-photo-b" role="img" aria-label="Couple travelling" />
+            <div className="lp-scene lp-scene-a" role="img" aria-label="Flight routes from Surat to destinations worldwide">
+              <RouteMapScene />
+            </div>
+            <div className="lp-scene lp-scene-b" role="img" aria-label="An approved visa stamp">
+              <StampScene />
+            </div>
             <div className="lp-badge-round">
               <strong>100%</strong>
               <span>successful visa rate</span>
@@ -336,9 +502,9 @@ export default function LandingPage() {
             </Reveal>
             <Reveal delay={200}>
               <ul className="lp-ticks">
-                <li>Experienced visa consultants</li>
-                <li>Complete documentation guidance</li>
-                <li>Trusted travel support services</li>
+                <li><Icon name="check" size={14} />Experienced visa consultants</li>
+                <li><Icon name="check" size={14} />Complete documentation guidance</li>
+                <li><Icon name="check" size={14} />Trusted travel support services</li>
               </ul>
             </Reveal>
             <Reveal delay={260}>
@@ -346,6 +512,11 @@ export default function LandingPage() {
                 From <strong>student visas to tourist and work visas</strong>, we guide you through
                 every step to ensure a smooth and efficient process.
               </p>
+            </Reveal>
+            <Reveal delay={310}>
+              <a className="lp-textlink" href="#contact">
+                Talk to a consultant <Icon name="arrow" size={17} />
+              </a>
             </Reveal>
           </div>
         </div>
@@ -369,15 +540,34 @@ export default function LandingPage() {
 
           <div className="lp-grid lp-grid-4">
             {SERVICES.map((s, i) => (
-              <Reveal key={s.title} delay={i * 70} className="lp-card">
-                <div className="lp-card-icon" aria-hidden="true">{s.icon}</div>
+              <Reveal key={s.title} delay={i * 70} className="lp-card" onMouseMove={spotlight}>
+                <div className="lp-card-icon"><Icon name={s.icon} size={26} /></div>
                 <h3 className="lp-card-title">{s.title}</h3>
                 <p className="lp-card-body">{s.body}</p>
                 <a className="lp-card-link" href="#contact">
-                  Read More <span aria-hidden="true">→</span>
+                  Read More <Icon name="arrow" size={16} />
                 </a>
               </Reveal>
             ))}
+
+            {/* The grid runs 7 services across a 4-column layout, leaving a
+                hole. Filling it with the CTA turns a ragged row into a
+                deliberate one — and puts an ask exactly where attention
+                already stopped. */}
+            <Reveal delay={SERVICES.length * 70} className="lp-card lp-card-cta">
+              <div className="lp-card-icon"><Icon name="sparkle" size={26} /></div>
+              <h3 className="lp-card-title">Not sure which visa?</h3>
+              <p className="lp-card-body">
+                Tell us where you want to go. We check your eligibility free, before you spend anything.
+              </p>
+              <a
+                className="lp-card-link"
+                href={waLink('Hi NV Immigration, I am not sure which visa suits me. Can you check my eligibility?')}
+                target="_blank" rel="noopener noreferrer"
+              >
+                Ask on WhatsApp <Icon name="arrow" size={16} />
+              </a>
+            </Reveal>
           </div>
         </div>
       </section>
@@ -431,7 +621,7 @@ export default function LandingPage() {
             <div className="lp-reasons">
               {REASONS.map((r, i) => (
                 <Reveal key={r.title} delay={200 + i * 80} className="lp-reason">
-                  <span className="lp-reason-icon" aria-hidden="true">{r.icon}</span>
+                  <span className="lp-reason-icon"><Icon name={r.icon} size={21} /></span>
                   <div>
                     <h3 className="lp-reason-title">{r.title}</h3>
                     <p className="lp-reason-body">{r.body}</p>
@@ -442,9 +632,11 @@ export default function LandingPage() {
           </div>
 
           <Reveal delay={120} className="lp-why-media">
-            <div className="lp-photo lp-photo-c" role="img" aria-label="Consultation in progress" />
+            <div className="lp-scene lp-scene-c" role="img" aria-label="A boarding pass from Surat to Toronto">
+              <BoardingPassScene />
+            </div>
             <div className="lp-seal" aria-hidden="true">
-              <span className="lp-seal-text">★ Apply Now ★ Apply Now </span>
+              <SealRing />
               <span className="lp-seal-core">NV</span>
             </div>
             <div className="lp-years">
@@ -465,10 +657,12 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <Reveal className="lp-tabs" as="div">
+          <Reveal className="lp-tabs" as="div" role="tablist">
             {GROUPS.map((g) => (
               <button
                 key={g}
+                role="tab"
+                aria-selected={group === g}
                 className={`lp-tab ${group === g ? 'is-active' : ''}`}
                 onClick={() => setGroup(g)}
               >
@@ -487,7 +681,8 @@ export default function LandingPage() {
                   loading="lazy"
                   width="40" height="27"
                 />
-                <span>{c.name}</span>
+                <span className="lp-country-name">{c.name}</span>
+                <Icon name="arrow" size={17} className="lp-country-arrow" />
               </Reveal>
             ))}
           </div>
@@ -505,13 +700,64 @@ export default function LandingPage() {
           </div>
           <div className="lp-grid lp-grid-3">
             {TESTIMONIALS.map((t, i) => (
-              <Reveal key={t.name} delay={i * 90} className="lp-quote">
-                <div className="lp-stars" aria-label="5 out of 5">★★★★★</div>
+              <Reveal key={t.name} delay={i * 90} className="lp-quote" onMouseMove={spotlight}>
+                <div className="lp-stars" aria-label="5 out of 5">
+                  {[0, 1, 2, 3, 4].map((s) => <Icon key={s} name="star" size={16} />)}
+                </div>
                 <p className="lp-quote-text">{t.text}</p>
-                <div className="lp-quote-name">{t.name}</div>
+                <div className="lp-quote-by">
+                  {/* Initials, not a stock headshot — a fake face on a real
+                      business's testimonial is a lie; initials are not. */}
+                  <span className="lp-avatar" aria-hidden="true">
+                    {t.name.split(' ').map((w) => w[0]).join('')}
+                  </span>
+                  <span>
+                    <span className="lp-quote-name">{t.name}</span>
+                    <span className="lp-quote-route">{t.route}</span>
+                  </span>
+                </div>
               </Reveal>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ─────────────────────────────────────────────────────── */}
+      <section className="lp-section lp-section-tint" id="faq">
+        <div className="lp-wrap lp-faqs">
+          <div className="lp-faqs-copy">
+            <Reveal><Eyebrow>Common questions</Eyebrow></Reveal>
+            <Reveal delay={80}><h2 className="lp-h2">Answers before you ask</h2></Reveal>
+            <Reveal delay={140}>
+              <p className="lp-body">
+                The six questions we field most often on WhatsApp. If yours is not here, send it over —
+                we answer every message.
+              </p>
+            </Reveal>
+            <Reveal delay={200}>
+              <a
+                className="lp-btn lp-btn-ghost"
+                href={waLink('Hi NV Immigration, I have a question that is not on your FAQ.')}
+                target="_blank" rel="noopener noreferrer"
+              >
+                <Icon name="whatsapp" size={18} />
+                Ask your question
+              </a>
+            </Reveal>
+          </div>
+
+          <Reveal delay={120} className="lp-faq-list">
+            {FAQS.map((f, i) => (
+              <Faq
+                key={f.q}
+                id={i}
+                q={f.q}
+                a={f.a}
+                open={openFaq === i}
+                onToggle={() => setOpenFaq(openFaq === i ? -1 : i)}
+              />
+            ))}
+          </Reveal>
         </div>
       </section>
 
@@ -530,9 +776,10 @@ export default function LandingPage() {
               <div className="lp-cta-row">
                 <a
                   className="lp-btn lp-btn-onaccent"
-                  href={`https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Hi NV Immigration, I have a question about a visa application.')}`}
+                  href={waLink('Hi NV Immigration, I have a question about a visa application.')}
                   target="_blank" rel="noopener noreferrer"
                 >
+                  <Icon name="whatsapp" size={18} />
                   Chat on WhatsApp
                 </a>
                 <Link className="lp-btn lp-btn-outline-onaccent" to="/programs">
@@ -549,16 +796,19 @@ export default function LandingPage() {
             </p>
             <div className="lp-contact-methods">
               <a className="lp-method" href={`https://wa.me/${WHATSAPP}`} target="_blank" rel="noopener noreferrer">
-                <span className="lp-method-icon" aria-hidden="true">💬</span>
+                <span className="lp-method-icon lp-method-icon--wa"><Icon name="whatsapp" size={20} /></span>
                 <span><strong>WhatsApp</strong><small>Fastest reply, usually minutes</small></span>
+                <Icon name="arrow" size={17} className="lp-method-arrow" />
               </a>
-              <a className="lp-method" href={`tel:${PHONE_DISPLAY.replace(/\s/g, '')}`}>
-                <span className="lp-method-icon" aria-hidden="true">📞</span>
+              <a className="lp-method" href={TEL}>
+                <span className="lp-method-icon"><Icon name="phone" size={19} /></span>
                 <span><strong>{PHONE_DISPLAY}</strong><small>Mon–Sat, 9 am – 6 pm</small></span>
+                <Icon name="arrow" size={17} className="lp-method-arrow" />
               </a>
               <a className="lp-method" href={`mailto:${EMAIL}`}>
-                <span className="lp-method-icon" aria-hidden="true">✉️</span>
+                <span className="lp-method-icon"><Icon name="mail" size={19} /></span>
                 <span><strong>Email us</strong><small>{EMAIL}</small></span>
+                <Icon name="arrow" size={17} className="lp-method-arrow" />
               </a>
             </div>
             <Link className="lp-btn lp-btn-primary lp-btn-block" to="/login">
@@ -592,7 +842,9 @@ export default function LandingPage() {
 
           {BRANCHES.map((b) => (
             <div key={b.city}>
-              <h4 className="lp-footer-head">{b.city}{b.city === 'Surat' ? ' (Head Office)' : ''}</h4>
+              <h4 className="lp-footer-head">
+                {b.city}{b.city === 'Surat' ? ' (Head Office)' : ''}
+              </h4>
               <ul className="lp-footer-links">
                 {b.phones.map((p) => (
                   <li key={p}><a href={`tel:${p.replace(/\s/g, '')}`}>{p}</a></li>
@@ -604,22 +856,35 @@ export default function LandingPage() {
         </div>
         <div className="lp-wrap lp-footer-base">
           <span>© {new Date().getFullYear()} NV Immigration. All rights reserved.</span>
-          <Link to="/login">Client Portal →</Link>
+          <Link to="/login">Client Portal <Icon name="arrow" size={15} /></Link>
         </div>
       </footer>
 
-      {/* Floating WhatsApp — the primary contact channel for this audience. */}
+      {/* Floating WhatsApp — the primary contact channel for this audience.
+          Hidden below 620px, where the sticky action bar takes over. */}
       <a
         className="lp-whatsapp"
         href={`https://wa.me/${WHATSAPP}`}
         target="_blank" rel="noopener noreferrer"
         aria-label="Chat with us on WhatsApp"
       >
-        <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" aria-hidden="true">
-          <path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.65.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.48-1.75-1.65-2.05-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.01-1.04 2.47s1.07 2.87 1.22 3.07c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.75-.72 2-1.41.25-.7.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/>
-          <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.87 9.87 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 18.13h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.19 8.19 0 0 1-1.26-4.36c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.83 2.42a8.19 8.19 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24z"/>
-        </svg>
+        <Icon name="whatsapp" size={28} />
       </a>
+
+      {/* Phone-only action bar. On mobile the two things anyone wants are one
+          tap away and always on screen, rather than a scroll back to the hero. */}
+      <div className="lp-actionbar">
+        <a className="lp-actionbar-btn lp-actionbar-call" href={TEL}>
+          <Icon name="phone" size={19} />Call now
+        </a>
+        <a
+          className="lp-actionbar-btn lp-actionbar-wa"
+          href={waLink('Hi NV Immigration, I would like a free consultation.')}
+          target="_blank" rel="noopener noreferrer"
+        >
+          <Icon name="whatsapp" size={19} />WhatsApp
+        </a>
+      </div>
     </div>
   );
 }

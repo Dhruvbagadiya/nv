@@ -9,6 +9,10 @@
  * element is wrong but because six slightly-different shadows and nine
  * arbitrary font sizes accumulate — consistency reads as craft.
  *
+ * Iconography is the inline stroke set in Icons.jsx and imagery is the inline
+ * SVG in Scenes.jsx. The page ships no raster assets of its own, so it renders
+ * identically on every OS and stays sharp at any pixel density.
+ *
  * Motion is transform/opacity only, and every animation is disabled under
  * prefers-reduced-motion at the foot of this file.
  */
@@ -46,6 +50,9 @@
 
   --max: 1180px;
   --ease: cubic-bezier(.22,.61,.36,1);
+  /* Height the sticky header occupies, used for anchor offsets. One number, so
+     the header and every scroll target can never disagree. */
+  --head-h: 74px;
 
   color: var(--ink-2);
   font-family: var(--font-sans);
@@ -55,6 +62,30 @@
 }
 
 .lp-wrap { max-width: var(--max); margin: 0 auto; padding: 0 var(--s-3); }
+
+/* Anchor nav lands sections BELOW the sticky header. Without this every
+   "#services" jump parks the section heading underneath the header — the most
+   common and most overlooked bug on a one-page site. */
+.lp [id] { scroll-margin-top: calc(var(--head-h) + var(--s-2)); }
+
+/* One visible focus treatment for every interactive thing on the page. */
+.lp a:focus-visible,
+.lp button:focus-visible {
+  outline: 2px solid var(--accent-700);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* SVG icons are laid out inline with text everywhere; this keeps them on the
+   baseline and stops them shrinking inside flex rows. */
+.lp svg { flex-shrink: 0; }
+
+/* ── Reading progress ──────────────────────────────────────────────────── */
+.lp-progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 70; pointer-events: none; }
+.lp-progress-bar {
+  height: 100%; transform-origin: left; transform: scaleX(0);
+  background: linear-gradient(90deg, var(--accent-600), var(--accent-800));
+}
 
 /* ── Reveal ────────────────────────────────────────────────────────────── */
 .lp-reveal {
@@ -74,6 +105,22 @@
   background: var(--accent-700); color: var(--accent-contrast);
   display: grid; place-items: center; font-size: 9.5px; font-weight: 800; letter-spacing: 0;
 }
+/* Hero variant: a pill with a live dot. Reads as "open for business right now"
+   rather than as a label. */
+.lp-eyebrow-live {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-pill); padding: 7px 16px 7px 13px;
+  box-shadow: var(--e-1); letter-spacing: .08em;
+}
+.lp-live-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--success-600);
+  position: relative;
+}
+.lp-live-dot::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: var(--success-600); animation: lp-ping 2.2s ease-out infinite;
+}
+
 .lp-h1 {
   font-size: var(--t-display); line-height: 1.02; font-weight: 800;
   /* Negative tracking on display type is the single highest-leverage
@@ -104,6 +151,13 @@
 .lp-body { font-size: var(--t-body); line-height: 1.72; color: var(--ink-3); margin: 0 0 var(--s-2); }
 .lp-body-onaccent { color: rgba(255,255,255,.92); }
 
+.lp-textlink {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: var(--s-2);
+  font-size: var(--t-body); font-weight: 800; color: var(--accent-800);
+  transition: gap .24s var(--ease);
+}
+.lp-textlink:hover { gap: 14px; }
+
 .lp-section { padding: var(--s-7) 0; position: relative; }
 .lp-section-tint { background: var(--tint); }
 .lp-section-head { display: grid; grid-template-columns: 1.15fr .85fr; gap: var(--s-5); align-items: end; margin-bottom: var(--s-5); }
@@ -111,6 +165,7 @@
 /* ── Utility bar ───────────────────────────────────────────────────────── */
 .lp-utility { background: var(--accent-800); color: var(--accent-contrast-800); font-size: var(--t-small); }
 .lp-utility-inner { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); height: 40px; flex-wrap: wrap; }
+.lp-utility-hours, .lp-utility-mail { display: inline-flex; align-items: center; gap: 8px; }
 .lp-utility-mail { color: inherit; opacity: .92; }
 .lp-utility-mail:hover { opacity: 1; text-decoration: underline; }
 
@@ -123,7 +178,7 @@
   transition: box-shadow .3s var(--ease), border-color .3s, background .3s;
 }
 .lp-header.is-scrolled { background: rgba(255,255,255,.9); box-shadow: var(--e-2); border-bottom-color: var(--line); }
-.lp-header-inner { display: flex; align-items: center; gap: var(--s-3); height: 74px; }
+.lp-header-inner { display: flex; align-items: center; gap: var(--s-3); height: var(--head-h); }
 
 .lp-brand { display: flex; align-items: center; gap: 11px; margin-right: auto; }
 .lp-brand-mark {
@@ -136,23 +191,35 @@
 .lp-brand-text strong { font-size: 16px; font-weight: 800; color: var(--ink); letter-spacing: -.015em; }
 .lp-brand-text small { font-size: 11px; color: var(--ink-3); }
 
-.lp-nav { display: flex; align-items: center; gap: var(--s-3); }
+.lp-nav { display: flex; align-items: center; gap: 2px; }
 .lp-nav a {
+  position: relative; white-space: nowrap;
   font-size: var(--t-body); font-weight: 600; color: var(--ink-2);
   padding: 8px 12px; border-radius: var(--radius-sm); transition: color .2s, background .2s;
 }
 .lp-nav a:hover { color: var(--accent-800); background: var(--accent-50); }
+/* The scroll-spy marker. An underline that grows from the centre reads as
+   "you are here" without the weight of a filled pill. */
+.lp-nav a::after {
+  content: ''; position: absolute; left: 12px; right: 12px; bottom: 2px; height: 2px;
+  background: var(--accent-700); border-radius: 2px;
+  transform: scaleX(0); transition: transform .3s var(--ease);
+}
+.lp-nav a.is-active { color: var(--accent-800); }
+.lp-nav a.is-active::after { transform: scaleX(1); }
 .lp-nav-portal {
+  margin-left: 10px;
   border: 1.5px solid var(--accent-700); border-radius: var(--radius-pill);
   color: var(--accent-800) !important; padding: 9px 18px !important;
 }
+.lp-nav-portal::after { display: none; }
 .lp-nav-portal:hover { background: var(--accent-700) !important; color: var(--accent-contrast) !important; }
 
 .lp-call { display: flex; align-items: center; gap: 11px; }
 .lp-call-icon {
   width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
   background: var(--accent-700); color: var(--accent-contrast);
-  display: grid; place-items: center; font-size: 17px;
+  display: grid; place-items: center;
   box-shadow: var(--e-accent); transition: transform .25s var(--ease);
 }
 .lp-call:hover .lp-call-icon { transform: scale(1.08) rotate(-10deg); }
@@ -161,11 +228,21 @@
 .lp-call-text strong { font-size: 15px; font-weight: 800; color: var(--ink); letter-spacing: -.01em; }
 
 .lp-burger { display: none; background: none; border: 0; cursor: pointer; padding: 8px; }
-.lp-burger span { display: block; width: 22px; height: 2px; background: var(--ink); margin: 4.5px 0; border-radius: 2px; }
+.lp-burger span {
+  display: block; width: 22px; height: 2px; background: var(--ink); margin: 4.5px 0; border-radius: 2px;
+  transition: transform .28s var(--ease), opacity .2s;
+}
+/* Burger morphs into the close control it becomes. Two thirds of users tap the
+   same spot to dismiss, so it has to look like an X while open. */
+.lp-burger.is-open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+.lp-burger.is-open span:nth-child(2) { opacity: 0; }
+.lp-burger.is-open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+.lp-nav-scrim { position: fixed; inset: 0; z-index: 40; background: rgba(20,24,31,.35); backdrop-filter: blur(2px); }
 
 /* ── Buttons ───────────────────────────────────────────────────────────── */
 .lp-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
   height: 52px; padding: 0 28px; border-radius: var(--radius-pill);
   font-size: var(--t-body); font-weight: 700; letter-spacing: -.01em;
   cursor: pointer; border: 1.5px solid transparent; position: relative; overflow: hidden;
@@ -202,6 +279,17 @@
     radial-gradient(40% 50% at 8% 78%, rgba(76,110,168,.11) 0%, transparent 70%),
     linear-gradient(180deg, var(--tint) 0%, var(--surface) 78%);
 }
+/* Faint grid, masked to fade out before it reaches the copy. Structure under a
+   gradient is the difference between "designed" and "a coloured rectangle". */
+.lp-hero::after {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(102,112,133,.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(102,112,133,.075) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(70% 60% at 72% 40%, #000 0%, transparent 72%);
+          mask-image: radial-gradient(70% 60% at 72% 40%, #000 0%, transparent 72%);
+}
 .lp-hero-inner { position: relative; z-index: 1; display: grid; grid-template-columns: 1.06fr .94fr; gap: var(--s-6); align-items: center; }
 
 .lp-hero-badges { display: flex; gap: var(--s-1); flex-wrap: wrap; margin-bottom: var(--s-4); }
@@ -212,6 +300,11 @@
   font-size: var(--t-small); font-weight: 600; color: var(--ink-2); box-shadow: var(--e-1);
 }
 .lp-chip b { color: var(--accent-700); font-weight: 800; }
+.lp-hero-note {
+  display: flex; align-items: center; gap: 8px; margin: var(--s-3) 0 0;
+  font-size: var(--t-small); color: var(--ink-3);
+}
+.lp-hero-note svg { color: var(--success-600); }
 
 .lp-orbit { position: relative; aspect-ratio: 1; max-width: 440px; margin-inline: auto; width: 100%; }
 .lp-orbit-ring { position: absolute; inset: 0; border-radius: 50%; border: 1.5px dashed rgba(102,112,133,.3); }
@@ -231,13 +324,12 @@
   box-shadow: var(--e-2); display: grid; place-items: center; overflow: hidden;
   animation: lp-spin-rev 40s linear infinite;
 }
-.lp-hero-photo {
-  position: absolute; inset: 14%; border-radius: 50%;
-  background:
-    radial-gradient(120% 120% at 30% 18%, color-mix(in srgb, var(--accent-100) 90%, #fff) 0%, transparent 58%),
-    linear-gradient(150deg, var(--accent-600), var(--accent-800));
-  box-shadow: inset 0 -34px 70px rgba(0,0,0,.2), var(--e-4);
-}
+/* The globe replaced a flat gradient circle. A wireframe sphere with a
+   graticule reads as "worldwide" instantly; a filled circle read as a
+   placeholder. */
+.lp-hero-globe { position: absolute; inset: 11%; filter: drop-shadow(0 24px 48px rgba(16,24,40,.22)); }
+.lp-globe-svg { width: 100%; height: 100%; display: block; }
+.lp-globe-orbit { transform-origin: 150px 150px; animation: lp-spin 22s linear infinite; }
 @keyframes lp-spin { to { transform: rotate(360deg); } }
 /* The counter-rotation undoes TWO rotations: the ring's spin and each item's
    static placement angle. Cancelling only the spin froze every flag at its own
@@ -255,9 +347,11 @@
   border: 1px solid var(--line); border-radius: var(--radius);
   padding: 11px 15px; box-shadow: var(--e-3); white-space: nowrap;
 }
-.lp-float-icon { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; font-size: 15px; flex-shrink: 0; }
-.lp-float-t { font-size: 13.5px; font-weight: 800; color: var(--ink); line-height: 1.2; }
-.lp-float-s { font-size: 11.5px; color: var(--ink-3); }
+.lp-float-icon { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0; }
+.lp-float-icon--ok { background: var(--success-100); color: var(--success-700); }
+.lp-float-icon--accent { background: var(--accent-50); color: var(--accent-700); }
+.lp-float-t { display: block; font-size: 13.5px; font-weight: 800; color: var(--ink); line-height: 1.2; }
+.lp-float-s { display: block; font-size: 11.5px; color: var(--ink-3); }
 .lp-float-1 { top: 8%;  left: -4%;  animation: lp-float 6s ease-in-out infinite; }
 .lp-float-2 { bottom: 12%; right: -6%; animation: lp-float 6s ease-in-out 2s infinite; }
 @keyframes lp-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-11px); } }
@@ -268,23 +362,30 @@
 .lp-trust-label { font-size: var(--t-small); font-weight: 700; color: var(--ink-3); letter-spacing: .04em; text-transform: uppercase; }
 .lp-trust-items { display: flex; gap: var(--s-5); flex-wrap: wrap; }
 .lp-trust-item { display: flex; align-items: center; gap: 9px; font-size: var(--t-body); font-weight: 700; color: var(--ink-2); }
-.lp-trust-item span:first-child { font-size: 18px; }
+.lp-trust-item svg { color: var(--accent-700); }
 
 /* ── Marquee ───────────────────────────────────────────────────────────── */
 .lp-marquee { background: var(--accent-700); color: var(--accent-contrast); overflow: hidden; padding: 15px 0; }
 .lp-marquee-track { display: flex; width: max-content; animation: lp-marquee 34s linear infinite; }
 .lp-marquee-group { display: flex; gap: 42px; padding-right: 42px; }
 .lp-marquee-item { display: inline-flex; align-items: center; gap: 42px; font-size: 25px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; }
-.lp-marquee-star { opacity: .55; font-size: 16px; }
+.lp-marquee-star { opacity: .55; }
 @keyframes lp-marquee { to { transform: translateX(-50%); } }
 .lp-marquee:hover .lp-marquee-track { animation-play-state: paused; }
 
 /* ── About ─────────────────────────────────────────────────────────────── */
 .lp-about { display: grid; grid-template-columns: .95fr 1.05fr; gap: var(--s-6); align-items: center; }
 .lp-about-media { position: relative; min-height: 480px; }
-.lp-photo { border-radius: var(--radius-lg); background-size: cover; background-position: center; box-shadow: var(--e-4); }
-.lp-photo-a { position: absolute; inset: 0 22% 18% 0; background-image: linear-gradient(160deg,#bcd8ea,#7ba5c2); }
-.lp-photo-b { position: absolute; right: 0; bottom: 0; width: 62%; height: 52%; background-image: linear-gradient(160deg,#f3cda6,#c9905e); border: 7px solid var(--surface); }
+
+/* Illustrated panels. They stand in for photography and are treated exactly
+   as a photo would be — same radius, same elevation, same overlap — so the
+   composition doesn't change if real photography lands later. */
+.lp-scene { border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--e-4); }
+.lp-scene-svg { width: 100%; height: 100%; display: block; }
+.lp-scene-a { position: absolute; inset: 0 22% 18% 0; }
+.lp-scene-b { position: absolute; right: 0; bottom: 0; width: 62%; height: 52%; border: 7px solid var(--surface); }
+.lp-scene-c { position: absolute; inset: 0 0 14% 16%; }
+
 .lp-badge-round {
   position: absolute; left: -12px; bottom: 6%; width: 146px; height: 146px; border-radius: 50%;
   background: var(--accent-700); color: var(--accent-contrast);
@@ -295,12 +396,10 @@
 .lp-badge-round span { font-size: 11px; font-weight: 700; margin-top: 5px; max-width: 96px; }
 
 .lp-ticks { list-style: none; margin: 0 0 var(--s-3); padding: 0; display: flex; flex-direction: column; gap: 13px; }
-.lp-ticks li { position: relative; padding-left: 34px; font-size: var(--t-body); font-weight: 600; color: var(--ink-2); }
-.lp-ticks li::before {
-  content: '✓'; position: absolute; left: 0; top: -1px;
-  width: 23px; height: 23px; border-radius: 50%;
+.lp-ticks li { display: flex; align-items: center; gap: 11px; font-size: var(--t-body); font-weight: 600; color: var(--ink-2); }
+.lp-ticks svg {
+  width: 23px; height: 23px; padding: 4px; border-radius: 50%;
   background: var(--accent-700); color: var(--accent-contrast);
-  display: grid; place-items: center; font-size: 12px; font-weight: 800;
 }
 
 /* ── Cards ─────────────────────────────────────────────────────────────── */
@@ -314,26 +413,45 @@
   box-shadow: var(--e-1);
   transition: transform .34s var(--ease), box-shadow .34s var(--ease), border-color .34s;
 }
-.lp-card::before {
-  content: ''; position: absolute; inset: 0; background: var(--accent-700);
-  transform: translateY(101%); transition: transform .42s var(--ease); z-index: 0;
+/* Cursor-tracked highlight. The earlier version flooded the whole card with
+   accent on hover, which turned a grid of eight into a strobe; a soft radial
+   that follows the pointer says "interactive" far more quietly. --mx/--my are
+   written by a mousemove handler that never touches React state. */
+.lp-card::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%),
+              color-mix(in srgb, var(--accent-700) 13%, transparent), transparent 68%);
+  transition: opacity .3s var(--ease);
 }
+.lp-card:hover::after { opacity: 1; }
 .lp-card > * { position: relative; z-index: 1; }
-.lp-card:hover { transform: translateY(-9px); box-shadow: var(--e-4); border-color: transparent; }
-.lp-card:hover::before { transform: translateY(0); }
-.lp-card:hover .lp-card-title, .lp-card:hover .lp-card-body, .lp-card:hover .lp-card-link { color: var(--accent-contrast); }
-.lp-card:hover .lp-card-icon { background: rgba(255,255,255,.2); color: var(--accent-contrast); transform: rotate(-8deg) scale(1.08); }
+.lp-card:hover { transform: translateY(-8px); box-shadow: var(--e-4); border-color: color-mix(in srgb, var(--accent-700) 40%, var(--line)); }
+.lp-card:hover .lp-card-icon { background: var(--accent-700); color: var(--accent-contrast); transform: rotate(-6deg) scale(1.06); }
 
 .lp-card-icon {
   width: 56px; height: 56px; border-radius: 16px; margin-bottom: var(--s-2);
   background: var(--accent-50); color: var(--accent-700);
-  display: grid; place-items: center; font-size: 24px;
+  display: grid; place-items: center;
   transition: transform .36s var(--ease), background .36s, color .36s;
 }
-.lp-card-title { font-size: var(--t-h3); font-weight: 800; letter-spacing: -.02em; color: var(--ink); margin: 0 0 7px; transition: color .34s; }
-.lp-card-body { font-size: var(--t-small); line-height: 1.65; color: var(--ink-3); margin: 0 0 var(--s-2); transition: color .34s; }
-.lp-card-link { font-size: var(--t-small); font-weight: 800; color: var(--accent-800); display: inline-flex; gap: 7px; transition: color .34s, gap .24s; }
+.lp-card-title { font-size: var(--t-h3); font-weight: 800; letter-spacing: -.02em; color: var(--ink); margin: 0 0 7px; }
+.lp-card-body { font-size: var(--t-small); line-height: 1.65; color: var(--ink-3); margin: 0 0 var(--s-2); }
+.lp-card-link { font-size: var(--t-small); font-weight: 800; color: var(--accent-800); display: inline-flex; align-items: center; gap: 7px; transition: gap .24s var(--ease); }
 .lp-card:hover .lp-card-link { gap: 14px; }
+
+/* The 7 services leave one hole in a 4-column grid. Filling it with the ask
+   turns a ragged row into a deliberate one. */
+.lp-card-cta {
+  background: linear-gradient(150deg, var(--accent-700), var(--accent-800));
+  border-color: transparent; box-shadow: var(--e-accent);
+}
+.lp-card-cta::after { display: none; }
+.lp-card-cta .lp-card-icon { background: rgba(255,255,255,.18); color: #fff; }
+.lp-card-cta:hover .lp-card-icon { background: #fff; color: var(--accent-800); }
+.lp-card-cta .lp-card-title { color: #fff; }
+.lp-card-cta .lp-card-body { color: rgba(255,255,255,.86); }
+.lp-card-cta .lp-card-link { color: #fff; }
+.lp-card-cta:hover { border-color: transparent; box-shadow: 0 14px 40px color-mix(in srgb, var(--accent-700) 40%, transparent); }
 
 /* ── Process ───────────────────────────────────────────────────────────── */
 .lp-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-3); position: relative; }
@@ -374,18 +492,17 @@
   transition: background .25s, border-color .25s, transform .25s var(--ease);
 }
 .lp-reason:hover { background: var(--surface); border-color: var(--line); box-shadow: var(--e-2); transform: translateX(5px); }
-.lp-reason-icon { width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0; background: var(--accent-50); color: var(--accent-800); display: grid; place-items: center; font-size: 20px; }
+.lp-reason-icon { width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0; background: var(--accent-50); color: var(--accent-800); display: grid; place-items: center; }
 .lp-reason-title { font-size: var(--t-h3); font-weight: 800; color: var(--ink); letter-spacing: -.02em; margin: 0 0 4px; }
 .lp-reason-body { font-size: var(--t-small); line-height: 1.6; color: var(--ink-3); margin: 0; }
 
 .lp-why-media { position: relative; min-height: 440px; }
-.lp-photo-c { position: absolute; inset: 0 0 14% 16%; background-image: linear-gradient(150deg,#515f75,#2c3543); }
 .lp-seal {
   position: absolute; left: 0; top: 8%; width: 128px; height: 128px; border-radius: 50%;
   background: var(--accent-700); color: var(--accent-contrast);
   display: grid; place-items: center; box-shadow: var(--e-accent);
 }
-.lp-seal-text { position: absolute; inset: 0; animation: lp-spin 16s linear infinite; font-size: 9.5px; font-weight: 800; letter-spacing: .2em; display: flex; justify-content: center; padding-top: 8px; }
+.lp-seal-ring { position: absolute; inset: 0; width: 100%; height: 100%; animation: lp-spin 16s linear infinite; }
 .lp-seal-core { font-size: 25px; font-weight: 800; }
 .lp-years {
   position: absolute; right: 0; bottom: 4%; background: var(--surface); padding: 18px 26px;
@@ -413,23 +530,78 @@
 }
 .lp-country:hover { transform: translateY(-5px); box-shadow: var(--e-3); border-color: var(--accent-700); }
 .lp-country-flag { width: 38px; height: auto; border-radius: 3px; box-shadow: var(--e-1); }
+.lp-country-name { margin-right: auto; }
+.lp-country-arrow { color: var(--accent-700); opacity: 0; transform: translateX(-6px); transition: opacity .26s, transform .26s var(--ease); }
+.lp-country:hover .lp-country-arrow { opacity: 1; transform: none; }
 
 /* ── Testimonials ──────────────────────────────────────────────────────── */
 .lp-quote {
   background: var(--surface); border-radius: var(--radius-lg); padding: var(--s-4) var(--s-3);
-  border: 1px solid var(--line); box-shadow: var(--e-1); position: relative;
-  transition: transform .28s var(--ease), box-shadow .28s;
+  border: 1px solid var(--line); box-shadow: var(--e-1); position: relative; overflow: hidden;
+  transition: transform .28s var(--ease), box-shadow .28s, border-color .28s;
 }
-.lp-quote:hover { transform: translateY(-6px); box-shadow: var(--e-3); }
+.lp-quote:hover { transform: translateY(-6px); box-shadow: var(--e-3); border-color: color-mix(in srgb, var(--accent-700) 35%, var(--line)); }
+.lp-quote::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%),
+              color-mix(in srgb, var(--accent-700) 10%, transparent), transparent 68%);
+  transition: opacity .3s var(--ease);
+}
+.lp-quote:hover::after { opacity: 1; }
 /* Oversized quote mark, clipped by the card — a classic device that adds
    character without adding an asset. */
 .lp-quote::before {
   content: '\201C'; position: absolute; top: -18px; right: 18px;
   font-size: 96px; line-height: 1; color: var(--accent-100); font-family: Georgia, serif;
 }
-.lp-stars { color: var(--accent-700); font-size: 15px; letter-spacing: 3px; margin-bottom: var(--s-2); position: relative; }
-.lp-quote-text { font-size: var(--t-body); line-height: 1.7; color: var(--ink-2); margin: 0 0 var(--s-2); position: relative; }
-.lp-quote-name { font-size: var(--t-body); font-weight: 800; color: var(--ink); }
+.lp-stars { display: flex; gap: 3px; color: var(--accent-700); margin-bottom: var(--s-2); position: relative; }
+.lp-stars svg { fill: currentColor; }
+.lp-quote-text { font-size: var(--t-body); line-height: 1.7; color: var(--ink-2); margin: 0 0 var(--s-3); position: relative; }
+.lp-quote-by { display: flex; align-items: center; gap: 12px; position: relative; }
+/* Initials, not a stock headshot — a fake face on a real business's
+   testimonial is a lie; initials are not. */
+.lp-avatar {
+  width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(145deg, var(--accent-600), var(--accent-800));
+  color: var(--accent-contrast); display: grid; place-items: center;
+  font-size: 14px; font-weight: 800; letter-spacing: .02em;
+}
+.lp-quote-name { display: block; font-size: var(--t-body); font-weight: 800; color: var(--ink); }
+.lp-quote-route { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+
+/* ── FAQ ───────────────────────────────────────────────────────────────── */
+.lp-faqs { display: grid; grid-template-columns: .78fr 1.22fr; gap: var(--s-6); align-items: start; }
+/* The intro column sticks while the questions scroll past it — on a section
+   this tall it keeps the "ask us anything" CTA in view for the whole scroll. */
+.lp-faqs-copy { position: sticky; top: calc(var(--head-h) + var(--s-4)); }
+.lp-faq-list { display: flex; flex-direction: column; gap: 10px; }
+
+.lp-faq {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--e-1); transition: border-color .25s, box-shadow .25s;
+}
+.lp-faq.is-open { border-color: color-mix(in srgb, var(--accent-700) 45%, var(--line)); box-shadow: var(--e-2); }
+.lp-faq-q { margin: 0; font-size: inherit; font-weight: inherit; }
+.lp-faq-q button {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+  padding: 19px 21px; background: none; border: 0; cursor: pointer; text-align: left;
+  font-family: var(--font-sans); font-size: var(--t-body); font-weight: 700;
+  color: var(--ink); letter-spacing: -.01em;
+}
+.lp-faq-q button:hover { color: var(--accent-800); }
+.lp-faq-sign {
+  color: var(--accent-700); flex-shrink: 0;
+  transition: transform .3s var(--ease);
+}
+.lp-faq.is-open .lp-faq-sign { transform: rotate(135deg); }
+
+/* grid-template-rows 0fr→1fr is the only way to animate to a content-driven
+   height without measuring it in JS. The panel stays in the DOM while closed,
+   so crawlers still index the answers. */
+.lp-faq-panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .34s var(--ease); }
+.lp-faq.is-open .lp-faq-panel { grid-template-rows: 1fr; }
+.lp-faq-panel > div { overflow: hidden; }
+.lp-faq-a { margin: 0; padding: 0 21px 20px; font-size: var(--t-small); line-height: 1.72; color: var(--ink-3); }
 
 /* ── Contact ───────────────────────────────────────────────────────────── */
 .lp-contact { background: var(--accent-700); padding: var(--s-7) 0; position: relative; overflow: hidden; }
@@ -448,10 +620,13 @@
   transition: border-color .25s, background .25s, transform .25s var(--ease), box-shadow .25s;
 }
 .lp-method:hover { border-color: var(--accent-700); background: var(--accent-50); transform: translateX(5px); box-shadow: var(--e-1); }
-.lp-method-icon { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; background: var(--accent-50); display: grid; place-items: center; font-size: 18px; }
-.lp-method span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.lp-method-icon { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; background: var(--accent-50); color: var(--accent-700); display: grid; place-items: center; }
+.lp-method-icon--wa { background: #E7F9EE; color: #128C4A; }
+.lp-method span:nth-child(2) { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
 .lp-method strong { font-size: var(--t-body); font-weight: 800; color: var(--ink); }
 .lp-method small { font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; }
+.lp-method-arrow { color: var(--accent-700); opacity: 0; transform: translateX(-6px); transition: opacity .25s, transform .25s var(--ease); }
+.lp-method:hover .lp-method-arrow { opacity: 1; transform: none; }
 
 /* ── Footer ────────────────────────────────────────────────────────────── */
 .lp-footer { background: var(--ink); color: rgba(255,255,255,.72); padding: var(--s-7) 0 0; }
@@ -468,7 +643,7 @@
   margin-top: var(--s-5); padding: var(--s-3) var(--s-3) var(--s-4);
   border-top: 1px solid rgba(255,255,255,.12); font-size: 13px;
 }
-.lp-footer-base a { color: var(--accent-700); font-weight: 700; }
+.lp-footer-base a { color: var(--accent-700); font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
 
 /* ── Floating WhatsApp ─────────────────────────────────────────────────── */
 .lp-whatsapp {
@@ -485,12 +660,42 @@
 .lp-whatsapp:hover { transform: scale(1.09); }
 @keyframes lp-ping { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.75); opacity: 0; } }
 
+/* ── Mobile action bar ─────────────────────────────────────────────────── */
+/* Phone-only. On mobile the two things anyone actually wants are one tap away
+   and always on screen, instead of a scroll back up to the hero. */
+.lp-actionbar {
+  display: none;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+  gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(255,255,255,.94); backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line); box-shadow: 0 -6px 24px rgba(16,24,40,.10);
+}
+.lp-actionbar-btn {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  height: 48px; border-radius: var(--radius-pill);
+  font-size: var(--t-body); font-weight: 800; letter-spacing: -.01em;
+}
+.lp-actionbar-call { background: var(--accent-700); color: var(--accent-contrast); box-shadow: var(--e-accent); }
+.lp-actionbar-wa { background: #25D366; color: #fff; box-shadow: 0 6px 18px rgba(37,211,102,.4); }
+
 /* ── Responsive ────────────────────────────────────────────────────────── */
+/* Six nav links, a portal pill, the brand lock-up and the phone block all
+   compete for one row. Rather than let the links wrap into two lines — which
+   is what made the header look broken at laptop widths — shed the phone
+   number's text first and keep the tappable icon. */
+@media (max-width: 1240px) {
+  .lp-header-inner { gap: var(--s-2); }
+  .lp-nav a { padding: 8px 9px; }
+  .lp-nav-portal { padding: 9px 14px !important; }
+  .lp-call-text { display: none; }
+}
 @media (max-width: 1080px) {
   .lp-grid-4 { grid-template-columns: repeat(2, 1fr); }
   .lp-footer-inner { grid-template-columns: repeat(2, 1fr); }
   .lp-steps { grid-template-columns: repeat(2, 1fr); row-gap: var(--s-4); }
   .lp-steps::before { display: none; }
+  .lp-faqs { grid-template-columns: 1fr; gap: var(--s-4); }
+  .lp-faqs-copy { position: static; }
 }
 @media (max-width: 900px) {
   .lp-hero-inner, .lp-about, .lp-why, .lp-contact-inner, .lp-section-head { grid-template-columns: 1fr; }
@@ -511,7 +716,12 @@
   }
   .lp-nav.is-open { display: flex; }
   .lp-nav a { padding: 14px 0; border-bottom: 1px solid var(--line-2); border-radius: 0; }
-  .lp-nav-portal { margin-top: var(--s-2); text-align: center; justify-content: center; }
+  /* The centre-growing underline is a desktop affordance; in the stacked menu
+     a left bar is the readable equivalent. */
+  .lp-nav a::after { left: 0; right: auto; top: 0; bottom: 0; width: 3px; height: auto; border-radius: 0; transform: scaleY(0); }
+  .lp-nav a.is-active::after { transform: scaleY(1); }
+  .lp-nav a.is-active { padding-left: 12px; }
+  .lp-nav-portal { margin: var(--s-2) 0 0; text-align: center; justify-content: center; }
 }
 @media (max-width: 620px) {
   .lp-section { padding: var(--s-6) 0; }
@@ -526,7 +736,7 @@
   .lp-btn { width: 100%; }
   .lp-cta-row { width: 100%; }
   /* The two round badges are absolutely positioned and sized in px, so at this
-     width they start overlapping the photographs they sit beside. */
+     width they start overlapping the artwork they sit beside. */
   .lp-badge-round { width: 112px; height: 112px; left: 0; }
   .lp-badge-round strong { font-size: 25px; }
   .lp-badge-round span { font-size: 10px; max-width: 78px; }
@@ -537,6 +747,13 @@
   .lp-trust-items { gap: var(--s-2) var(--s-3); }
   .lp-tabs { border-radius: var(--radius); }
   .lp-tab { min-width: calc(50% - 4px); }
+
+  /* Action bar takes over from the floating bubble — two fixed circles fighting
+     for the same corner is worse than either alone. The footer gets padding so
+     the bar never covers the last line of it. */
+  .lp-actionbar { display: flex; }
+  .lp-whatsapp { display: none; }
+  .lp-footer { padding-bottom: 76px; }
 }
 
 /* Small phones. Everything above still fits at 360px; these are the few places
@@ -549,7 +766,9 @@
   .lp-stat + .lp-stat { border-left: 0; border-top: 1px solid rgba(255,255,255,.13); padding-top: var(--s-3); }
   .lp-method small { font-size: 11px; }
   .lp-header-inner { height: 64px; }
+  .lp { --head-h: 64px; }
   .lp-brand-mark { width: 36px; height: 36px; border-radius: 10px; }
+  .lp-eyebrow-live { padding: 6px 13px 6px 11px; font-size: .72rem; }
 }
 
 /* ── Reduced motion ────────────────────────────────────────────────────── */
@@ -560,4 +779,12 @@
   }
   .lp-reveal { opacity: 1 !important; transform: none !important; }
   .lp-h1-accent::after { transform: scaleX(1) !important; }
+}
+
+/* ── Hover-capable only ────────────────────────────────────────────────── */
+/* Touch devices fire a synthetic hover on tap that then sticks until the next
+   tap elsewhere, so a card can be left mid-hover. Gating the cursor spotlight
+   on a real pointer avoids that. */
+@media (hover: none) {
+  .lp-card::after, .lp-quote::after { display: none; }
 }

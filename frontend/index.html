@@ -119,6 +119,67 @@
 }
 </script>
 
+<!-- FAQPage. Google renders these as expandable answers directly in the result,
+     which roughly doubles the vertical space the listing occupies. The text
+     must match the FAQ section in LandingPage.jsx word for word — a mismatch is
+     treated as cloaking and the rich result is dropped. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How long does a visa application take?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "It depends on the country and visa type. Tourist visas are often decided in 2–4 weeks, student visas in 4–12 weeks. We tell you the current processing time for your specific case at the free assessment, before you commit to anything."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What documents will I need?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Every case is different, so we build you a checklist rather than handing you a generic list. Typically it covers your passport, financial proof, purpose-of-travel evidence and, for student visas, academic records and an offer letter. We verify each document before submission."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you charge for the first consultation?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. The eligibility assessment is free. We only quote a fee once we have looked at your profile and can tell you honestly whether the application is worth filing."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What happens if my visa is refused?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We review the refusal letter with you, explain exactly which ground it was refused on, and advise whether to reapply, appeal, or change route. Our approval rate is 99 percent precisely because we do not file applications we expect to fail."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can you help with flights and accommodation too?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. We book international tickets, arrange tour packages and hotels, and handle foreign currency exchange — so the trip after the approval is covered as well."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Where are your offices?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Our head office is in Katargam, Surat, with branches in Kotdwara and Dehradun. Most of the process runs on WhatsApp and email, so you can work with us from anywhere in India."
+      }
+    }
+  ]
+}
+</script>
+
 <!-- flagcdn serves the country flags on the landing page. Warming the
      connection here saves a DNS + TLS round trip when they come into view. -->
 <link rel="preconnect" href="https://flagcdn.com" crossorigin>
