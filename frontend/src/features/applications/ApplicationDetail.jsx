@@ -16,6 +16,7 @@ import { useAuth } from '../../store/useAuth.js';
 import { formatDate } from '../../utils/format.js';
 import { formatFee } from '../../utils/format.js';
 import Flag from '../../components/ui/Flag.jsx';
+import Icon from '../../components/ui/Icon.jsx';
 
 const STAGE_COLOR = {
   PROFILE_ASSESSMENT:  { background: 'var(--ink-100)',    color: 'var(--ink-700)' },
@@ -152,7 +153,10 @@ export default function ApplicationDetail({ applicationId, onClose }) {
                       color: isCurrent ? sc.color : isPast ? 'var(--success-700)' : 'var(--ink-400)',
                       marginBottom: 3,
                     }}>
-                      {isPast ? '✓ Done' : isCurrent ? 'Current' : canAdvance ? '→ Advance' : 'Pending'}
+                      {isPast ? <><Icon name="check" size={11} /> Done</>
+                        : isCurrent ? 'Current'
+                        : canAdvance ? <><Icon name="arrow" size={11} /> Advance</>
+                        : 'Pending'}
                     </div>
                     <div style={{ fontSize: 11.5, fontWeight: 600, color: isCurrent ? sc.color : 'var(--ink-700)', lineHeight: 1.2 }}>
                       {label}

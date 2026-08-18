@@ -21,6 +21,8 @@ import {
   updateStudentProfile,
 } from '../../api/students.js';
 import { formatDate } from '../../utils/format.js';
+import Icon from '../../components/ui/Icon.jsx';
+import { toast } from '../../store/useToast.js';
 
 const ROLE_LABEL = {
   SUPER_ADMIN: 'Super Admin',
@@ -102,7 +104,6 @@ function AvatarSection({ profile, onUpdated }) {
 // ── Basic info form ─────────────────────────────────────────────────────────
 function BasicInfoForm({ profile, onUpdated }) {
   const [form, setForm] = useState({ name: '', phone: '', bio: '' });
-  const [saved, setSaved] = useState(false);
   const patchUser = useAuth((s) => s.patchUser);
 
   useEffect(() => {
@@ -121,8 +122,7 @@ function BasicInfoForm({ profile, onUpdated }) {
     onSuccess: (updated) => {
       patchUser({ name: updated.name, phone: updated.phone, bio: updated.bio });
       onUpdated(updated);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      toast.success('Profile updated.');
     },
   });
 
@@ -165,7 +165,6 @@ function BasicInfoForm({ profile, onUpdated }) {
       {mutation.isError && (
         <div className="form-error">{mutation.error?.response?.data?.error ?? 'Save failed.'}</div>
       )}
-      {saved && <div className="profile-saved-msg">✓ Profile updated.</div>}
       <button type="button" className="btn btn-primary"
         onClick={() => mutation.mutate()} disabled={mutation.isPending || !form.name.trim()}>
         {mutation.isPending ? 'Saving…' : 'Save changes'}
@@ -249,8 +248,9 @@ function ChangePasswordForm() {
         </div>
         {localErr && <div className="form-error">{localErr}</div>}
         {done && (
-          <div className="profile-saved-msg">
-            ✓ Password changed. All other devices have been logged out.
+          <div className="profile-saved-msg row gap-1">
+            <Icon name="check" size={15} />
+            Password changed. All other devices have been logged out.
           </div>
         )}
         <button type="submit" className="btn btn-primary"
@@ -267,7 +267,6 @@ function StudentDetailsForm() {
   const queryClient = useQueryClient();
   const { data: sp, isLoading } = useQuery({ queryKey: ['student-profile'], queryFn: fetchStudentProfile });
   const [form, setForm] = useState({ nationality: '', dateOfBirth: '', passportNo: '', address: '' });
-  const [saved, setSaved] = useState(false);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   useEffect(() => {
@@ -289,8 +288,7 @@ function StudentDetailsForm() {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-profile'] });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      toast.success('Student info updated.');
     },
   });
 
@@ -333,7 +331,6 @@ function StudentDetailsForm() {
       {mutation.isError && (
         <div className="form-error">{mutation.error?.response?.data?.error ?? 'Save failed.'}</div>
       )}
-      {saved && <div className="profile-saved-msg">✓ Student info updated.</div>}
       <button type="button" className="btn btn-primary"
         onClick={() => mutation.mutate()} disabled={mutation.isPending}>
         {mutation.isPending ? 'Saving…' : 'Save student info'}

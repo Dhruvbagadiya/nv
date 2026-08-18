@@ -5,12 +5,13 @@
 // renders invisible with no error anywhere.
 //
 // `.page` keeps the fade-up entry animation but never controls visibility.
-export default function Page({ title, subtitle, actions, children }) {
+export default function Page({ title, subtitle, eyebrow, actions, children }) {
   return (
     <div className="page">
       {(title || actions) && (
         <div className="page-head">
           <div>
+            {eyebrow && <div className="page-eyebrow">{eyebrow}</div>}
             {title && <h1>{title}</h1>}
             {subtitle && <p>{subtitle}</p>}
           </div>

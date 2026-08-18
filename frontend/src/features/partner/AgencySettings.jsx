@@ -7,6 +7,8 @@ import { useAuth } from '../../store/useAuth.js';
 import { saveAgencyProfile, deleteAgencyProfile, uploadAgencyLogo } from '../../api/agency.js';
 import { buildAccentScale, applyTheme, resetTheme, NV_DEFAULT_ACCENT } from '../../hooks/useTheme.js';
 import { extractDominantColor } from '../../components/ui/LogoCropper.jsx';
+import Icon from '../../components/ui/Icon.jsx';
+import { toast } from '../../store/useToast.js';
 
 // A curated palette of 12 suggested accent colors.
 const PRESET_COLORS = [
@@ -43,7 +45,6 @@ export default function AgencySettings() {
   const [pendingPreview, setPendingPreview] = useState(null);
   const [showCropper,    setShowCropper]    = useState(false);
 
-  const [saved,  setSaved]  = useState(false);
   const [error,  setError]  = useState(null);
 
   // Native color input ref for the custom hex picker
@@ -74,9 +75,8 @@ export default function AgencySettings() {
       setLogoUrl(profile.logoUrl);
       setPendingBlob(null);
       setPendingPreview(null);
-      setSaved(true);
+      toast.success('Branding saved.');
       queryClient.invalidateQueries({ queryKey: ['agency-profile'] });
-      setTimeout(() => setSaved(false), 3000);
     },
     onError: (e) => setError(e.response?.data?.error ?? 'Could not save. Please try again.'),
   });
@@ -180,8 +180,8 @@ export default function AgencySettings() {
                   width: 72, height: 72, border: '2px dashed var(--border-strong)',
                   borderRadius: 12, display: 'flex', alignItems: 'center',
                   justifyContent: 'center', color: 'var(--ink-300)',
-                  fontSize: 28, background: 'var(--canvas)',
-                }}>🏢</div>
+                  background: 'var(--canvas)',
+                }}><Icon name="building" size={28} /></div>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <button type="button" className="btn btn-outline" onClick={() => setShowCropper(true)}>
@@ -193,7 +193,7 @@ export default function AgencySettings() {
                       title="Auto-detect brand color from logo"
                       onClick={handleAutoDetect}
                       style={{ fontSize: 12 }}>
-                      🎨 Detect color from logo
+                      <Icon name="palette" size={15} /> Detect color from logo
                     </button>
                     <button type="button" className="btn btn-ghost"
                       style={{ fontSize: 11, color: 'var(--danger-700)' }}
@@ -315,7 +315,6 @@ export default function AgencySettings() {
 
           {/* Actions */}
           {error  && <div className="form-error">{error}</div>}
-          {saved  && <div className="profile-saved-msg">✓ Branding saved successfully.</div>}
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button type="button" className="btn btn-primary"

@@ -9,6 +9,13 @@
   ========================================================= */
   :root {
     --ink-950:#0B0E14;
+    /* Was referenced 15 times across components/shell/student/pages and defined
+       nowhere. An undefined var() with no fallback invalidates the whole
+       declaration, so every one of those `color: var(--ink-900)` rules — which
+       is the typed text in every input in the app — silently fell back to the
+       inherited --ink-800. Defined deliberately close to 800 so 15 rules coming
+       alive at once is a correction, not a restyle. */
+    --ink-900:#131926;
     --ink-800:#1C2230;
     --ink-700:#333B4D;
     --ink-600:#4A5468;
@@ -54,6 +61,7 @@
     --warning-100:#FCF0D9;
 
     --danger-700:#A32419;
+    --danger-300:#ff8a7a;   /* error text on the dark admin-login card */
     --danger-100:#FBEAE8;
 
     --purple-700:#6E2C9C;
@@ -62,15 +70,75 @@
     --teal-700:#0A7F6B;
     --teal-100:#E0F5F0;
 
-    --radius-sm:7px;
+    /* Surfaces that were being written as literal hex behind an undefined var,
+       e.g. `var(--page-bg, #F8F8FA)` — the "fallback" was the live value. */
+    --page-bg:#F8F8FA;
+    --admin-login-bg:#1a2340;
+
+    --radius-xs:4px;
+    --radius-sm:8px;
     --radius:12px;
     --radius-lg:16px;
     --radius-pill:999px;
 
-    --shadow-xs: 0 1px 2px rgba(16,22,38,0.05);
-    --shadow-sm: 0 2px 8px rgba(16,22,38,0.06);
-    --shadow-md: 0 8px 24px rgba(16,22,38,0.10);
-    --shadow-lg: 0 16px 40px rgba(16,22,38,0.16);
+    /* One elevation family. Blur AND spread grow together, which is what makes a
+       lifted surface read as lifted rather than outlined — a single-layer shadow
+       reads as a border no matter how much you blur it. Names are unchanged so
+       every existing `var(--shadow-*)` picks this up with no edits. */
+    --shadow-xs: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+    --shadow-sm: 0 2px 4px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.07);
+    --shadow-md: 0 4px 8px rgba(16,24,40,.04), 0 12px 28px rgba(16,24,40,.10);
+    --shadow-lg: 0 8px 16px rgba(16,24,40,.06), 0 24px 56px rgba(16,24,40,.14);
+
+    /* Focus ring. Was repeated verbatim in 9 places. */
+    --ring: 0 0 0 3px var(--accent-100);
+    --ring-danger: 0 0 0 3px var(--danger-100);
+
+    /* ---- Type scale -------------------------------------------------------
+       Nine steps replacing 20 hard-coded sizes (including half-pixel steps like
+       10.5/11.5/12.5 that had accumulated one screen at a time). Values are px,
+       not rem: <html> sits at the browser default 16px while <body> is set
+       below, so a rem scale would silently size against the wrong base.
+       The ratio is tight (~1.10) at the small end, because a dense admin table
+       needs fine steps, and widens to ~1.25 at the display end. */
+    --fs-3xs: 9.5px;    /* status pills, uppercase eyebrows */
+    --fs-2xs: 10.5px;   /* table headers, .cell-mono */
+    --fs-xs:  11.5px;   /* secondary meta, hints */
+    --fs-sm:  12.5px;   /* controls: inputs, buttons, chips, table cells */
+    --fs-md:  14px;     /* base */
+    --fs-lg:  15.5px;   /* card titles, modal headings */
+    --fs-xl:  18px;     /* page titles */
+    --fs-2xl: 22px;     /* stat values */
+    --fs-3xl: 28px;     /* hero numerals */
+
+    --lh-tight: 1.25;
+    --lh-base:  1.45;
+    --lh-prose: 1.6;
+
+    /* ---- Spacing ----------------------------------------------------------
+       4px base, deliberately NOT the landing page's 8px. This is a dense tool:
+       on an 8px-only scale every 6px gap has to round to 8 and every 10px
+       padding to 16, which is the spacious redesign that was explicitly ruled
+       out. The half-steps are what keep table density inside budget. */
+    --sp-1: 4px;   --sp-2: 8px;   --sp-3: 12px;  --sp-4: 16px;
+    --sp-5: 20px;  --sp-6: 24px;  --sp-7: 32px;  --sp-8: 40px;
+
+    /* Control heights drive perceived density more than font size does. */
+    --ctl-sm:   28px;
+    --ctl-md:   34px;
+    --ctl-lg:   40px;
+    --ctl-icon: 30px;
+
+    /* ---- Motion -----------------------------------------------------------
+       One easing family, one budget. Nothing in the portal may loop
+       indefinitely: these are screens staff look at for hours, and an animation
+       that delights once is an irritant by the two-hundredth view. */
+    --ease:      cubic-bezier(.22,.61,.36,1);
+    --ease-out:  cubic-bezier(.16,1,.3,1);
+    --dur-fast:  150ms;   /* hover, focus */
+    --dur-enter: 180ms;   /* page enter */
+    --dur-modal: 220ms;   /* modal, drawer */
+    --stagger:    30ms;   /* per-row delay on first table paint */
 
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
@@ -87,8 +155,11 @@
     font-family: var(--font-sans);
     background: var(--canvas);
     color: var(--ink-800);
-    font-size: 13.5px;
-    line-height: 1.45;
+    /* The density lift: 13.5 -> 14. Line-height deliberately stays at 1.45 —
+       raising it to 1.5 costs about 4% of the rows visible per screen, and this
+       portal is a tool people work in all day. */
+    font-size: var(--fs-md);
+    line-height: var(--lh-base);
   }
   /* Almost every <a> in this app is a link-as-UI — a sidebar item, a card, a
      button — where a browser underline is noise. That was being switched off in
@@ -103,8 +174,22 @@
      html because that is the scrolling element — putting it on a descendant
      does nothing. */
   html { scroll-behavior: smooth; }
+  /* Zeroing the durations is not enough on its own, and the two missing lines
+     are exactly the ones the portal's new motion needs:
+       - animation-delay survives, so a staggered table would still appear one
+         row at a time — instantly, but staggered, which is worse than either
+         extreme.
+       - animation-iteration-count survives, so a shimmer would loop forever at
+         0.001ms.
+     Adding both here means every animation introduced anywhere in the app is
+     covered by construction, with no per-component reduced-motion work. */
   @media (prefers-reduced-motion: reduce) {
-    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+    * {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      animation-delay: 0ms !important;
+      transition-duration: 0.001ms !important;
+    }
     html { scroll-behavior: auto; }
   }
   .icon-svg { width: 1em; height: 1em; display: inline-block; vertical-align: -0.15em; }

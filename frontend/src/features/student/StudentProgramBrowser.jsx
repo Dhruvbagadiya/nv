@@ -4,6 +4,7 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { fetchCourses } from '../../api/courses.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 import Pagination from '../../components/ui/Pagination.jsx';
+import Icon from '../../components/ui/Icon.jsx';
 import { formatFee } from '../../utils/format.js';
 
 // Fixed program level labels — no HTML entities in JSX
@@ -275,7 +276,7 @@ export default function StudentProgramBrowser() {
 
           {isError && (
             <div className="student-empty-state">
-              <div className="student-empty-icon">⚠️</div>
+              <div className="student-empty-icon"><Icon name="alert" size={22} /></div>
               <h3>Couldn't load programs</h3>
               <p>Please check your connection and try again.</p>
             </div>

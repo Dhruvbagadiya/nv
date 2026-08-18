@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { navConfig } from './navConfig.js';
 import { useAuth } from '../../store/useAuth.js';
+import Icon from '../ui/Icon.jsx';
 
 // Structural pattern carried over directly from the HTML mockup:
 // fixed brand header -> scrollable nav middle -> fixed agent footer.
@@ -42,7 +43,7 @@ function NavGroup({ item }) {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={expanded}
       >
-        <span className="icon" dangerouslySetInnerHTML={{ __html: item.iconSvg }} />
+        <Icon name={item.icon} size={16} className="icon icon-svg" />
         <span className="side-text">{item.label}</span>
         <span className="side-text">
           <Chevron />
@@ -129,7 +130,7 @@ export default function Sidebar() {
                     to={item.path}
                     className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}
                   >
-                    <span className="icon" dangerouslySetInnerHTML={{ __html: item.iconSvg }} />
+                    <Icon name={item.icon} size={16} className="icon icon-svg" />
                     <span className="side-text">{item.label}</span>
                   </NavLink>
                 ) : null

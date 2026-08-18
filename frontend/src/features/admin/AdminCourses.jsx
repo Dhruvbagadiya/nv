@@ -4,6 +4,7 @@ import Page from '../../components/ui/Page.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
 import Modal from '../../components/ui/Modal.jsx';
+import Icon from '../../components/ui/Icon.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
 import { fetchCourses, createCourse, updateCourse, archiveCourse, restoreCourse } from '../../api/courses.js';
@@ -44,7 +45,7 @@ function IntakeEditor({ intakes, onChange }) {
           </div>
           <button type="button" className="btn btn-ghost"
             onClick={() => remove(i)} aria-label="Remove intake"
-            style={{ alignSelf: 'flex-end', marginBottom: 12 }}>✕</button>
+            style={{ alignSelf: 'flex-end', marginBottom: 12 }}><Icon name="close" size={14} /></button>
         </div>
       ))}
       <button type="button" className="btn btn-outline" onClick={add}>+ Add intake</button>

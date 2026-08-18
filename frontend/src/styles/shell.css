@@ -86,7 +86,7 @@
 
   .avatar {
     width: 26px; height: 26px; border-radius: 50%;
-    background: linear-gradient(150deg, var(--accent-500), var(--accent-700));
+    background: linear-gradient(150deg, var(--accent-700), var(--accent-800));
     color: #fff; display: flex; align-items: center; justify-content: center;
     font-size: 10.5px; font-weight: 700; cursor: pointer; letter-spacing: .02em;
     box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--border);
@@ -107,8 +107,17 @@
   .notif-panel-head span.count { font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; color: var(--ink-400); }
   .notif-item { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; border-bottom: 1px solid var(--border); }
   .notif-item:last-child { border-bottom: none; }
-  .notif-item .n-icon { flex-shrink: 0; width: 28px; height: 28px; border-radius: 7px; background: var(--warning-100); color: var(--warning-700); display: flex; align-items: center; justify-content: center; }
-  .notif-text { color: var(--ink-700); margin-bottom: 4px; font-size: 12px; line-height: 1.4; }
+  /* Tinted per notification kind. Every kind used to share one amber tile
+     because the emoji carried the meaning; now the icon does, and the tint
+     makes the kind readable at a glance down the list. */
+  .notif-item .n-icon { flex-shrink: 0; width: var(--ctl-icon); height: var(--ctl-icon); border-radius: var(--radius-sm); background: var(--warning-100); color: var(--warning-700); display: flex; align-items: center; justify-content: center; }
+  .notif-item .n-icon--accent  { background: var(--accent-50);   color: var(--accent-700); }
+  .notif-item .n-icon--info    { background: var(--info-100);    color: var(--info-700); }
+  .notif-item .n-icon--teal    { background: var(--teal-100);    color: var(--teal-700); }
+  .notif-item .n-icon--purple  { background: var(--purple-100);  color: var(--purple-700); }
+  .notif-item .n-icon--neutral { background: var(--ink-100);     color: var(--ink-600); }
+  .notif-text { color: var(--ink-700); margin-bottom: var(--sp-1); font-size: var(--fs-sm); line-height: 1.4; }
+  .notif-body { font-size: var(--fs-xs); color: var(--ink-600); margin-top: 2px; }
   .alert-link { color: var(--accent-700); font-weight: 700; cursor: pointer; text-decoration: none; font-size: 11.5px; }
   .alert-link:hover { text-decoration: underline; }
 
@@ -191,12 +200,23 @@
      tab-switching mechanism from the HTML mockup. React Router decides what
      renders now, so visibility is no longer a CSS concern — and a page whose
      class was mistyped no longer silently disappears. The animation stays. */
-  .page { animation: fade-up .16s ease; }
-  @keyframes fade-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  /* Page enter. 8px rather than the old 4px, over 180ms rather than 160ms, on
+     an ease-out curve: the longer travel is what makes it read as the page
+     arriving rather than as a flicker. `both` holds the start frame so the
+     first paint is never the un-animated position. */
+  .page { animation: fade-up var(--dur-enter) var(--ease-out) both; }
+  @keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-  .page-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
-  .page-head h1 { font-size: 17px; font-weight: 800; margin: 0 0 2px; color: var(--ink-950); letter-spacing: -0.015em; }
-  .page-head p { margin: 0; color: var(--ink-500); font-size: 12px; }
+  .page-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--sp-4); flex-wrap: wrap; gap: var(--sp-2); }
+  /* Negative tracking on the title is the single highest-leverage typographic
+     tweak at this size — the default spacing reads loose above ~16px. */
+  .page-head h1 { font-size: var(--fs-xl); font-weight: 800; margin: 0 0 3px; color: var(--ink-950); letter-spacing: -0.02em; line-height: var(--lh-tight); }
+  .page-head p { margin: 0; color: var(--ink-500); font-size: var(--fs-sm); }
+  .page-eyebrow {
+    display: inline-flex; align-items: center; gap: var(--sp-1);
+    font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--accent-800); margin-bottom: var(--sp-1);
+  }
   .head-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 
@@ -233,7 +253,7 @@
   }
   .header-profile-menu-avatar {
     width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
-    background: linear-gradient(150deg, var(--accent-500), var(--accent-700));
+    background: linear-gradient(150deg, var(--accent-700), var(--accent-800));
     color: #fff; display: flex; align-items: center; justify-content: center;
     font-size: 14px; font-weight: 700;
   }

@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchStudentApplication } from '../../api/students.js';
 import { formatDate, } from '../../utils/format.js';
+import Icon from '../../components/ui/Icon.jsx';
 
 const STAGES = [
   'PROFILE_ASSESSMENT', 'APPLICATION', 'CONDITIONAL_OFFER',
@@ -16,7 +17,7 @@ const STAGE_LABELS = {
   FEES_PAYMENT:        'Fees Payment',
   CAS_LETTER:          'CAS Letter',
   VISA_APPLICATION:    'Visa Application',
-  VISA_APPROVAL:       '✓ Visa Approved',
+  VISA_APPROVAL:       'Visa Approved',
 };
 
 export default function StudentApplicationDetail() {
@@ -59,7 +60,7 @@ export default function StudentApplicationDetail() {
         <div className="student-progress-track">
           {STAGES.map((stage, i) => (
             <div key={stage} className={`student-progress-step${i <= currentIdx ? ' done' : ''}${i === currentIdx ? ' current' : ''}`}>
-              <div className="student-progress-dot">{i < currentIdx ? '✓' : i + 1}</div>
+              <div className="student-progress-dot">{i < currentIdx ? <Icon name="check" size={12} /> : i + 1}</div>
               <div className="student-progress-label">{STAGE_LABELS[stage]}</div>
             </div>
           ))}

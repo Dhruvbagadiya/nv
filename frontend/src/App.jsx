@@ -53,6 +53,7 @@ import StudentProfile from './features/student/StudentProfile.jsx';
 
 import ProtectedRoute from './routes/ProtectedRoute.jsx';
 import NotFound from './routes/NotFound.jsx';
+import ToastStack from './components/ui/ToastStack.jsx';
 
 const ADMIN_ROLES       = ['ADMIN', 'SUPER_ADMIN'];
 const SUPER_ADMIN_ROLES = ['SUPER_ADMIN'];
@@ -79,6 +80,8 @@ function PartnerShell({ children }) {
 
 export default function App() {
   return (
+    <>
+    <ToastStack />
     <Routes>
       {/* ── Public marketing home ─────────────────────── */}
       {/* Was a redirect to /login, which meant anyone arriving at the bare
@@ -193,5 +196,6 @@ export default function App() {
       {/* ── Catch-all ─────────────────────────────────── */}
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </>
   );
 }

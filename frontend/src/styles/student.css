@@ -205,7 +205,7 @@
 
 /* ── Profile ──────────────────────────────────────────────────────────── */
 .student-profile-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
-.student-profile-avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(150deg, var(--accent-500), var(--accent-700)); color: var(--accent-contrast); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+.student-profile-avatar { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(150deg, var(--accent-700), var(--accent-800)); color: var(--accent-contrast); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
 .student-profile-name { font-size: 18px; font-weight: 800; color: var(--ink-950); margin: 0 0 2px; }
 .student-profile-email { font-size: 12.5px; color: var(--ink-500); }
 .student-profile-logout { margin-left: auto; background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0 12px; height: 30px; font-size: 12px; font-weight: 600; color: var(--ink-600); cursor: pointer; font-family: var(--font-sans); }

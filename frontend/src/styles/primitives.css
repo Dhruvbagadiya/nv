@@ -1,0 +1,121 @@
+/* primitives.css — the shared utility vocabulary and the new UI primitives.
+ *
+ * IMPORT POSITION IS LOAD-BEARING. This file is imported second-to-last, after
+ * student.css and before landing.css. It must only ever be APPENDED, never
+ * inserted earlier: the four existing duplicate-selector pairs in this codebase
+ * (.choice-*, .flag-img/.flag-fallback, .announcement-stack, .flag-preview) are
+ * resolved purely by source order, so slotting a file in between two sheets
+ * flips the winner in each of them. landing.css stays last because it is
+ * .lp-scoped and cannot collide either way.
+ *
+ * The utility list below is deliberately short — about twenty classes. It exists
+ * to absorb the ~250 inline style={{ }} props scattered through the feature
+ * files, which between them used 13 different hard-coded font sizes. If
+ * something here cannot be expressed in this vocabulary, that is the signal a
+ * real component class is missing, not a reason to add a twenty-first utility.
+ */
+
+/* ── Type ─────────────────────────────────────────────────────────────────
+   Font-size only. Colour and weight are separate axes below, so they compose
+   rather than multiplying into a class per combination. */
+.t-3xs { font-size: var(--fs-3xs); }
+.t-2xs { font-size: var(--fs-2xs); }
+.t-xs  { font-size: var(--fs-xs); }
+.t-sm  { font-size: var(--fs-sm); }
+.t-md  { font-size: var(--fs-md); }
+.t-lg  { font-size: var(--fs-lg); }
+.t-xl  { font-size: var(--fs-xl); }
+.t-2xl { font-size: var(--fs-2xl); }
+
+/* ── Ink ─────────────────────────────────────────────────────────────────── */
+.c-strong  { color: var(--ink-950); }
+.c-body    { color: var(--ink-700); }
+.c-muted   { color: var(--ink-500); }
+.c-dim     { color: var(--ink-400); }
+.c-accent  { color: var(--accent-700); }
+.c-success { color: var(--success-700); }
+.c-danger  { color: var(--danger-700); }
+.c-warning { color: var(--warning-700); }
+
+/* ── Weight ──────────────────────────────────────────────────────────────── */
+.fw-6 { font-weight: 600; }
+.fw-7 { font-weight: 700; }
+.fw-8 { font-weight: 800; }
+
+/* ── Layout ──────────────────────────────────────────────────────────────
+   `.row` carries a default gap because the overwhelming majority of the inline
+   flex rows being replaced used 8px. */
+.row        { display: flex; align-items: center; gap: var(--sp-2); }
+.row-top    { display: flex; align-items: flex-start; gap: var(--sp-2); }
+.row-between{ display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.col        { display: flex; flex-direction: column; }
+.wrap       { flex-wrap: wrap; }
+.gap-1 { gap: var(--sp-1); }
+.gap-2 { gap: var(--sp-2); }
+.gap-3 { gap: var(--sp-3); }
+.gap-4 { gap: var(--sp-4); }
+.grow  { flex: 1; }
+/* Without this a flex child refuses to shrink below its content, which is what
+   makes long names break a table row's layout instead of ellipsing. */
+.min-0 { min-width: 0; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Badge ───────────────────────────────────────────────────────────────
+   Collapses five parallel pill systems that had grown up independently:
+   .status-pill.*, .tag-pill.*, .variant-chip.*, .profile-role-badge and
+   .country-active-tag. Tone is a prop, not a separate class family. */
+.badge {
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  padding: 2px var(--sp-2); border-radius: var(--radius-pill);
+  font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .02em;
+  /* 1.45, not 1.6. A badge is the tallest thing in most table rows, so its
+     line-height sets the row height — at 1.6 it alone pushed rows past the
+     density budget while the text beside it had room to spare. */
+  white-space: nowrap; line-height: var(--lh-base);
+}
+.badge--neutral { background: var(--ink-100);    color: var(--ink-600); }
+.badge--accent  { background: var(--accent-50);  color: var(--accent-800); }
+.badge--success { background: var(--success-100);color: var(--success-700); }
+.badge--info    { background: var(--info-100);   color: var(--info-700); }
+.badge--warning { background: var(--warning-100);color: var(--warning-700); }
+.badge--danger  { background: var(--danger-100); color: var(--danger-700); }
+.badge--purple  { background: var(--purple-100); color: var(--purple-700); }
+.badge--teal    { background: var(--teal-100);   color: var(--teal-700); }
+.badge__dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+/* ── Toast ───────────────────────────────────────────────────────────────
+   Replaces five inline feedback styles. Bottom-right so it never covers the
+   page heading or the primary action, which sit top and centre respectively. */
+.toast-stack {
+  position: fixed; right: var(--sp-5); bottom: var(--sp-5); z-index: 200;
+  display: flex; flex-direction: column; gap: var(--sp-2);
+  pointer-events: none;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to   { opacity: 1; transform: none; }
+}
+.toast {
+  pointer-events: auto;
+  display: flex; align-items: flex-start; gap: var(--sp-2);
+  min-width: 260px; max-width: 380px;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--surface); box-shadow: var(--shadow-md);
+  font-size: var(--fs-sm); color: var(--ink-800);
+  animation: toast-in var(--dur-modal) var(--ease-out) both;
+}
+.toast--success { border-left: 3px solid var(--success-600); }
+.toast--error   { border-left: 3px solid var(--danger-700); }
+.toast--info    { border-left: 3px solid var(--info-600); }
+.toast__icon { flex-shrink: 0; margin-top: 1px; }
+.toast--success .toast__icon { color: var(--success-600); }
+.toast--error   .toast__icon { color: var(--danger-700); }
+.toast--info    .toast__icon { color: var(--info-600); }
+.toast__close {
+  flex-shrink: 0; margin: -2px -6px 0 auto; padding: 2px;
+  border: 0; background: none; cursor: pointer; color: var(--ink-400);
+  border-radius: var(--radius-xs); transition: color var(--dur-fast) var(--ease);
+}
+.toast__close:hover { color: var(--ink-800); }
+.toast__close:focus-visible { outline: none; box-shadow: var(--ring); }

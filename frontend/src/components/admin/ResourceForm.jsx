@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Modal from '../ui/Modal.jsx';
+import Icon from '../ui/Icon.jsx';
 
 // Config-driven form used by every admin editor. Same reasoning as FilterBar: six
 // reference resources need create/edit forms that differ only in their fields, so
@@ -41,7 +42,7 @@ function TierEditor({ value, onChange }) {
             disabled={tiers.length === 1}
             aria-label={`Remove tier ${index + 1}`}
           >
-            ✕
+            <Icon name="close" size={14} />
           </button>
         </div>
       ))}

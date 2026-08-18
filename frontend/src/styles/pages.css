@@ -42,7 +42,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--page-bg, #F8F8FA);
+  background: var(--page-bg);
   padding: 20px;
 }
 .login-card {
@@ -71,31 +71,42 @@
   margin-top: 4px;
 }
 .login-error {
-  color: var(--red, #B3261E);
+  color: var(--danger-700);
   font-size: 13px;
   margin: 8px 0 0;
 }
 
   /* ===================== MODAL =====================
      Used by the Important Updates detail view and the blacklist list. */
+  /* The backdrop fades and the panel rises slightly behind it. Two separate
+     animations rather than one on a wrapper: the backdrop should reach full
+     opacity fast so the page behind stops competing for attention, while the
+     panel keeps travelling for the full duration. */
+  @keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes modal-rise {
+    from { opacity: 0; transform: translateY(-8px) scale(.985); }
+    to   { opacity: 1; transform: none; }
+  }
   .modal-backdrop {
     position: fixed; inset: 0; z-index: 60; background: rgba(11,14,20,0.45);
     display: flex; align-items: flex-start; justify-content: center;
     padding: 6vh 16px 16px; overflow-y: auto;
+    animation: modal-fade var(--dur-fast) var(--ease) both;
   }
   .modal-panel {
     background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
     width: 100%; max-width: 560px; outline: none;
+    animation: modal-rise var(--dur-modal) var(--ease-out) both;
   }
   .modal-wide { max-width: 860px; }
   .modal-head {
     display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
     padding: 14px 16px; border-bottom: 1px solid var(--border);
   }
-  .modal-head h2 { margin: 0 0 2px; font-size: 15px; font-weight: 800; color: var(--ink-950); letter-spacing: -0.01em; }
-  .modal-head p { margin: 0; font-size: 11.5px; color: var(--ink-500); }
-  .modal-body { padding: 16px; }
-  .modal-text { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-700); white-space: pre-wrap; }
+  .modal-head h2 { margin: 0 0 2px; font-size: var(--fs-lg); font-weight: 800; color: var(--ink-950); letter-spacing: -0.015em; }
+  .modal-head p { margin: 0; font-size: var(--fs-xs); color: var(--ink-500); }
+  .modal-body { padding: var(--sp-4); }
+  .modal-text { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-prose); color: var(--ink-700); white-space: pre-wrap; }
   .modal-foot { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 6px; }
 
   /* Table cells that hold long free text (update bodies, entry requirements). */
@@ -416,7 +427,7 @@
   .profile-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .profile-avatar-initials {
     width: 100%; height: 100%;
-    background: linear-gradient(150deg, var(--accent-500), var(--accent-700));
+    background: linear-gradient(150deg, var(--accent-700), var(--accent-800));
     color: #fff; display: flex; align-items: center; justify-content: center;
     font-size: 22px; font-weight: 700; letter-spacing: .02em;
   }

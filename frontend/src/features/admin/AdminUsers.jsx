@@ -11,6 +11,7 @@ import {
 } from '../../api/admin.js';
 import { formatDate } from '../../utils/format.js';
 import { applicationStageLabel, APPLICATION_STAGES } from '../../constants/referenceData.js';
+import { toast } from '../../store/useToast.js';
 
 const FILTER_DEFAULTS = { role: '', search: '', page: 1 };
 
@@ -76,7 +77,6 @@ function UserDetailPanel({ userId, onClose }) {
   const queryClient = useQueryClient();
   const [editForm,    setEditForm]    = useState(null); // { name, role }
   const [editError,   setEditError]   = useState(null);
-  const [actionMsg,   setActionMsg]   = useState(null);
   const [resetForm,   setResetForm]   = useState(false);
   const [newPassword, setNewPassword] = useState('');
 
@@ -99,28 +99,28 @@ function UserDetailPanel({ userId, onClose }) {
 
   const activeMut = useMutation({
     mutationFn: (v) => setUserActive(userId, v),
-    onSuccess: () => { setActionMsg(null); invalidate(); },
-    onError: (e) => setActionMsg(e.response?.data?.error ?? 'Action failed.'),
+    onSuccess: () => { invalidate(); },
+    onError: (e) => toast.error(e.response?.data?.error ?? 'Action failed.'),
   });
 
   const revokeMut = useMutation({
     mutationFn: () => revokeUserSessions(userId),
     onSuccess: (r) => {
-      setActionMsg(`✓ ${r.revokedCount} session${r.revokedCount !== 1 ? 's' : ''} revoked.`);
+      toast.success(`${r.revokedCount} session${r.revokedCount !== 1 ? 's' : ''} revoked.`);
       invalidate();
     },
-    onError: (e) => setActionMsg(e.response?.data?.error ?? 'Action failed.'),
+    onError: (e) => toast.error(e.response?.data?.error ?? 'Action failed.'),
   });
 
   const resetMut = useMutation({
     mutationFn: (pwd) => adminResetPassword(userId, pwd),
     onSuccess: (r) => {
-      setActionMsg(`✓ ${r.message}`);
+      toast.success(r.message);
       setResetForm(false);
       setNewPassword('');
       invalidate();
     },
-    onError: (e) => setActionMsg(e.response?.data?.error ?? 'Reset failed.'),
+    onError: (e) => toast.error(e.response?.data?.error ?? 'Reset failed.'),
   });
 
   if (isLoading) return <Modal title="User" onClose={onClose}><p className="picker-empty">Loading…</p></Modal>;
@@ -223,12 +223,6 @@ function UserDetailPanel({ userId, onClose }) {
             </button>
           )}
         </div>
-
-        {actionMsg && (
-          <p style={{ fontSize: 12.5, color: actionMsg.startsWith('✓') ? 'var(--success-700)' : 'var(--danger-700)', fontWeight: 600, margin: 0 }}>
-            {actionMsg}
-          </p>
-        )}
 
         {/* ── Edit form ───────────────────────────────────────────────── */}
         {editForm ? (

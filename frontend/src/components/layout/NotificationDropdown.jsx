@@ -8,6 +8,24 @@ import {
   markAllNotificationsRead,
 } from '../../api/notifications.js';
 import { formatDate } from '../../utils/format.js';
+import Icon from '../ui/Icon.jsx';
+
+// Notification kinds carried a five-emoji icon set inline. Because this is a
+// shell component it rendered on all 35 portal routes, so it was the single
+// most-seen instance of the problem: emoji render in a different style on every
+// OS and cannot take the agency's accent colour.
+const KIND_ICON = {
+  NEW_APPLICATION: 'clipboard',
+  STAGE_CHANGE: 'refresh',
+  DOCUMENT_QUERY: 'document',
+  INFO_QUERY: 'info',
+};
+const KIND_TONE = {
+  NEW_APPLICATION: 'accent',
+  STAGE_CHANGE: 'info',
+  DOCUMENT_QUERY: 'teal',
+  INFO_QUERY: 'purple',
+};
 
 // This used to render one synthesised item derived from a count of blacklisted
 // institutions — there was no Notification table, so there was no read state and
@@ -130,16 +148,13 @@ export default function NotificationDropdown() {
                 }
               }}
             >
-              <div className="n-icon">
-                {n.kind === 'NEW_APPLICATION' ? '📋' :
-                 n.kind === 'STAGE_CHANGE'    ? '🔄' :
-                 n.kind === 'DOCUMENT_QUERY'  ? '📄' :
-                 n.kind === 'INFO_QUERY'      ? 'ℹ️' : '🔔'}
+              <div className={`n-icon n-icon--${KIND_TONE[n.kind] ?? 'neutral'}`}>
+                <Icon name={KIND_ICON[n.kind] ?? 'bell'} size={16} />
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="grow min-0">
                 <div className="notif-text">
                   <strong>{n.title}</strong>
-                  <div style={{ fontSize: 11.5, color: 'var(--ink-600)', marginTop: 2 }}>{n.body}</div>
+                  <div className="notif-body">{n.body}</div>
                 </div>
                 <div className="alert-link" style={{ cursor: 'default', marginTop: 3 }}>
                   {formatDate(n.createdAt)}

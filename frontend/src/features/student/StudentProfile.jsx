@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchStudentProfile, updateStudentProfile } from '../../api/students.js';
 import { useAuth } from '../../store/useAuth.js';
+import { toast } from '../../store/useToast.js';
 
 const EMPTY_FORM = { nationality: '', dateOfBirth: '', passportNo: '', phone: '', address: '' };
 
@@ -23,7 +24,6 @@ export default function StudentProfile() {
   });
 
   const [form, setForm] = useState(EMPTY_FORM);
-  const [saved, setSaved] = useState(false);
 
   // Seed form from API data once it arrives. useEffect is the correct pattern —
   // the previous "setState during render" approach triggered React's warning and
@@ -53,8 +53,7 @@ export default function StudentProfile() {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-profile'] });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      toast.success('Profile saved.');
     },
   });
 
@@ -131,11 +130,6 @@ export default function StudentProfile() {
               {mutation.isError && (
                 <div className="student-auth-error">
                   {mutation.error?.response?.data?.error ?? 'Save failed.'}
-                </div>
-              )}
-              {saved && (
-                <div style={{ color: 'var(--success-700)', fontWeight: 600, fontSize: 13, marginTop: 8 }}>
-                  ✓ Profile saved successfully.
                 </div>
               )}
 

@@ -4,6 +4,7 @@ import Page from '../../components/ui/Page.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
 import Modal from '../../components/ui/Modal.jsx';
+import Icon from '../../components/ui/Icon.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
 import { fetchDocuments } from '../../api/referenceScreens.js';
@@ -130,7 +131,7 @@ function DocumentForm({ initial, onClose, onSaved, storage }) {
           {uploadError && <p className="form-error">{uploadError}</p>}
           {values.fileUrl && !upload.isPending && (
             <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-              <span style={{ color: 'var(--success-700)', fontWeight: 600 }}>✓ File ready</span>
+              <span className="row gap-1 c-success fw-6"><Icon name="check" size={14} />File ready</span>
               <a href={values.fileUrl} target="_blank" rel="noopener noreferrer" className="alert-link">
                 Preview
               </a>
