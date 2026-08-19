@@ -289,20 +289,6 @@ export default function LandingPage() {
         <div className="lp-progress-bar" style={{ transform: `scaleX(${progress})` }} />
       </div>
 
-      {/* ── Utility bar ─────────────────────────────────────────────── */}
-      <div className="lp-utility">
-        <div className="lp-wrap lp-utility-inner">
-          <span className="lp-utility-hours">
-            <Icon name="clock" size={14} />
-            Monday to Saturday, 9 am – 6 pm
-          </span>
-          <a className="lp-utility-mail" href={`mailto:${EMAIL}`}>
-            <Icon name="mail" size={14} />
-            {EMAIL}
-          </a>
-        </div>
-      </div>
-
       {/* ── Header ──────────────────────────────────────────────────── */}
       <header className={`lp-header ${scrolled ? 'is-scrolled' : ''}`}>
         <div className="lp-wrap lp-header-inner">

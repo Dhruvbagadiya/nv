@@ -1,28 +1,32 @@
 /*
  * Tunable geometry.
  *
- * The plane is now the vector (plane.svg, viewBox 1440x800, aspect 1.8). It has
- * no background rectangle, so it is genuinely transparent — unlike the PNG,
- * where the generator painted the transparency checkerboard as opaque pixels.
- * Its three seat groups are named, so the offsets below are measured rather
- * than estimated: seat centres fall at 37.15%, 49.31% and 61.46% of the
- * artwork's width, with the cushion spanning y 345-425 of 800 (43-53%).
+ * Plane: plane.svg, viewBox 1440x800 (aspect 1.8), no background rectangle, so
+ * genuinely transparent. Nose points LEFT and the tail fin is on the right —
+ * which is why the flight path below enters from the right and exits left: the
+ * plane is always moving nose-first, never backwards. Its three seat groups are
+ * named in the file, so the offsets are measured rather than estimated: seat
+ * centres at 37.15%, 49.31% and 61.46% of the artwork width, cushion spanning
+ * y 345-425 of 800.
+ *
+ * Characters: traveller.png and couple.png, both 600x1000 (aspect 0.6), figures
+ * drawn to the same height and bottom-aligned at y=970. Earlier versions were
+ * 1408x768 landscape and rendered as grey rectangles, because the generator had
+ * painted its transparency checkerboard into the RGB pixels — the files carried
+ * an alpha channel that was 255 everywhere. These are chroma-keyed from a
+ * magenta background and have real alpha.
  *
  * --plane-w        rendered plane width (clamped for 380px..desktop).
- * --person-w       rendered width of BOTH person canvases (traveller.png
- *                  and couple.png). They intentionally share one variable:
- *                  both source canvases are the same 1408x768 size, so
- *                  rendering both at the same CSS width makes their actual
- *                  body pixels come out at the correct relative scale
- *                  automatically (couple's 46%-of-canvas body vs.
- *                  traveller's 28%-of-canvas body) with zero extra math,
- *                  and guarantees nobody changes size when boarding —
- *                  the seated crop is the exact same image at the exact
- *                  same width, just viewed through a shorter window.
- * --seat-clip      fraction of the person canvas height shown when seated
- *                  (from the top), i.e. how much is "above the seat back".
- * --ground-top     vertical anchor (% of the overlay) the walkers travel
- *                  along.
+ * --person-h       rendered height of BOTH character canvases. Characters are
+ *                  sized from the plane's HEIGHT, not its width: what the eye
+ *                  judges is how tall a person stands against the fuselage.
+ *                  Both files share one canvas size and their figures are drawn
+ *                  to the same height, so one variable keeps the traveller and
+ *                  the couple at matching scale with no per-file maths.
+ * --person-w       derived from --person-h and the 0.6 canvas aspect.
+ * --seat-clip      fraction of the character canvas shown when seated (from the
+ *                  top), i.e. how much is visible above the seat back.
+ * --ground-top     vertical anchor (% of the overlay) the walkers travel along.
  * --plane-top      vertical anchor (% of the overlay) the plane parks at.
  *
  * Seat 1 sits at 37.15%. Seats 2+3 share one element, since couple.png holds
@@ -30,13 +34,30 @@
  */
 
 .boarding-overlay {
-  --plane-w: clamp(220px, 46vw, 620px);
+  /* The 150px floor only binds below ~470px wide, where 32vw would otherwise
+     shrink the plane past legibility. At 180px it took 47% of a 390px phone —
+     noticeably heavier than the 32% it occupies everywhere else. */
+  --plane-w: clamp(150px, 32vw, 440px);
   --plane-h: calc(var(--plane-w) / 1.8);
-  --person-w: calc(var(--plane-w) * 0.44);
-  --person-h: calc(var(--person-w) / 1.8333);
-  --seat-clip: 0.46;
+  /* 0.72 of the plane's height. The characters were previously derived from the
+     plane's WIDTH via the old landscape canvas, which after the canvas changed
+     to 600x1000 portrait rendered them at roughly a third of the size they
+     should be — they read as ants beside the aircraft. */
+  --person-h: calc(var(--plane-h) * 0.72);
+  --person-w: calc(var(--person-h) * 0.6);
+  --seat-clip: 0.56;
   --ground-top: 64%;
-  --plane-top: 46%;
+  /* Parked position. The plane used to settle dead centre, which put it on top
+     of the H1 — the headline is the one thing on this page that must stay
+     readable, and a pink aircraft across the word "immigration" read as a
+     mistake rather than a scene. It now parks in the empty band between the
+     copy column and the orbit, clear of both.
+
+     The 34% park offset is written literally into the keyframes below rather
+     than held in a custom property: a var() inside @keyframes is substituted at
+     computed-value time and does not reliably survive interpolation, which left
+     the plane drifting out of its parked position part-way through the hold. */
+  --plane-top: 40%;
 
   position: fixed;
   inset: 0;
@@ -95,10 +116,10 @@
    boards · 74-100% accelerate left, nose up, climb off-screen. All
    translate/rotate values are relative to the plane's own box. */
 @keyframes boarding-plane-move {
-  0%   { transform: translateX(170%); }
-  22%  { transform: translateX(0%); }
-  74%  { transform: translateX(0%); }
-  86%  { transform: translateX(-70%) translateY(-10%) rotate(-5deg); }
+  0%   { transform: translateX(210%); }
+  22%  { transform: translateX(34%); }
+  74%  { transform: translateX(34%); }
+  86%  { transform: translateX(-45%) translateY(-10%) rotate(-5deg); }
   100% { transform: translateX(-190%) translateY(-45%) rotate(-11deg); }
 }
 
@@ -178,23 +199,34 @@
 
 /* 18-39% walk in from off-screen left and reach the plane · 40% cut to
    "boarded" (opacity 0, seat 1 takes over at the same beat). */
+/* The off-screen start is anchored to the VIEWPORT, not to a multiple of the
+   character's own width. The old -640% worked only because the character
+   happened to be 229px wide; once it shrank the same percentage no longer
+   reached past the left edge, and on a 1920px screen the traveller would have
+   been sitting in plain view for the first fifth of the animation before
+   starting to walk. calc(-50vw - 100%) is off-screen at any width by
+   construction: -50vw reaches the left edge from centre, -100% clears the
+   character's own body. */
 @keyframes boarding-walk-traveller {
-  0%   { transform: translateX(-640%); opacity: 1; }
-  18%  { transform: translateX(-640%); opacity: 1; }
-  39%  { transform: translateX(-58%);  opacity: 1; }
-  40%  { transform: translateX(-58%);  opacity: 0; }
-  100% { transform: translateX(-58%);  opacity: 0; }
+  0%   { transform: translateX(calc(-50vw - 100%)); opacity: 1; }
+  18%  { transform: translateX(calc(-50vw - 100%)); opacity: 1; }
+  39%  { transform: translateX(88%);  opacity: 1; }
+  40%  { transform: translateX(88%);  opacity: 0; }
+  100% { transform: translateX(88%);  opacity: 0; }
 }
 
 /* hidden until 44% (after the plane's brief post-boarding-1 wait) ·
    44-61% walk in · 62% cut to "boarded". */
+/* Ends at +22% rather than the traveller's -58%: seats 2+3 sit further right
+   along the fuselage (55.4% of the plane's width against seat 1's 37.15%), so
+   the couple has to walk past seat 1 to reach their own. */
 @keyframes boarding-walk-couple {
-  0%   { transform: translateX(-640%); opacity: 0; }
-  40%  { transform: translateX(-640%); opacity: 0; }
-  44%  { transform: translateX(-640%); opacity: 1; }
-  61%  { transform: translateX(-60%);  opacity: 1; }
-  62%  { transform: translateX(-60%);  opacity: 0; }
-  100% { transform: translateX(-60%);  opacity: 0; }
+  0%   { transform: translateX(calc(-50vw - 100%)); opacity: 0; }
+  40%  { transform: translateX(calc(-50vw - 100%)); opacity: 0; }
+  44%  { transform: translateX(calc(-50vw - 100%)); opacity: 1; }
+  61%  { transform: translateX(164%);  opacity: 1; }
+  62%  { transform: translateX(164%);  opacity: 0; }
+  100% { transform: translateX(164%);  opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
