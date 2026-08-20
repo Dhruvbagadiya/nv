@@ -57,7 +57,7 @@
      than held in a custom property: a var() inside @keyframes is substituted at
      computed-value time and does not reliably survive interpolation, which left
      the plane drifting out of its parked position part-way through the hold. */
-  --plane-top: 40%;
+  --plane-top: 46%;
 
   position: fixed;
   inset: 0;
@@ -110,26 +110,101 @@
   display: block;
   width: 100%;
   height: 100%;
+  /* Mirrored once, statically. Not animated — see the note above: an animated
+     mirror is the flip this design exists to avoid. */
+  transform: scaleX(-1);
 }
 
-/* 0-22% fly in from the right and park · 22-74% wait while everyone
-   boards · 74-100% accelerate left, nose up, climb off-screen. All
-   translate/rotate values are relative to the plane's own box. */
+/* The plane faces RIGHT for the entire animation and never changes direction.
+ *
+ * A side-view drawing can only face one way; making it face the other way is a
+ * MIRROR, and a mirror is a reflection (determinant -1) while every rotation is
+ * +1 — there is no continuous path between them, so a direction change is
+ * ALWAYS an instantaneous snap however it is dressed up. So the aircraft is
+ * mirrored ONCE, statically, and thereafter only ever rotates — and a full
+ * 360deg loop returns to the orientation it began in. It flies in from the LEFT
+ * already facing right, loops, parks, boards and departs right, with no flip.
+ *
+ * THE LOOP IS AT FULL SCALE, never shrunk. A rotated box has a far larger
+ * axis-aligned footprint (242px tall at 45deg against 122px level), so a loop
+ * centred on the parked position would push the plane off the top of the page.
+ * The loop is therefore moved rather than the plane resized: centred 25% of the
+ * plane's height BELOW the parked spot, where there is room, with the plane
+ * climbing into position afterwards. Worst case is 69px clear of the viewport
+ * top and 746px of 760 at the bottom.
+ *
+ * SMOOTHNESS comes from two things:
+ *
+ * 1. SIXTEEN samples around the circle, not eight. Keyframes interpolate in a
+ *    straight line, so N samples trace an N-gon: at 8 the path deviated 10.3px
+ *    from a true circle (7.6% of the radius) and read as a faceted tumble. At 16
+ *    that falls to 2.6px (1.9%), below what the eye resolves at this size.
+ *
+ * 2. PER-SEGMENT easing. With one linear curve across the whole timeline the
+ *    plane slammed from 1307px/s on the approach to 524px/s the instant it hit
+ *    the loop. The glide-in now decelerates so it arrives already travelling at
+ *    loop speed, the loop itself stays linear (constant angular speed is what a
+ *    real loop looks like), the climb to the parked position eases out into a
+ *    stop, and the departure eases in.
+ *
+ * THE CIRCLE IS COMPUTED, NOT EYEBALLED. translateX resolves against the plane's
+ * WIDTH and translateY against its HEIGHT, and the box is 1.8:1, so equal
+ * percentages trace a flat ellipse. Rx=17% / Ry=55.3% corrects for that — a true
+ * 135px radius. Rotation runs NEGATIVE because for a right-facing aircraft an
+ * inside loop is counter-clockwise on screen. */
 @keyframes boarding-plane-move {
-  0%   { transform: translateX(210%); }
-  22%  { transform: translateX(34%); }
-  74%  { transform: translateX(34%); }
-  86%  { transform: translateX(-45%) translateY(-10%) rotate(-5deg); }
-  100% { transform: translateX(-190%) translateY(-45%) rotate(-11deg); }
+  /* glide in from off-screen left, shedding speed so it enters the loop
+     tangentially rather than braking on the spot. The control points are not
+     guessed: a cubic-bezier's end slope is (1-y2)/(1-x2), so with the glide
+     averaging 1307px/s and the loop running at 524px/s, x2/y2 are solved to
+     leave the segment at exactly loop speed. An earlier hand-picked curve
+     decelerated to 49px/s and the plane visibly stalled before the loop. */
+  0%      { transform: translateX(-260%) translateY(80.3%) rotate(0deg); animation-timing-function: cubic-bezier(.2,.5,.7,.88); }
+  11%     { transform: translateX(34.0%) translateY(80.3%) rotate(-0deg); animation-timing-function: linear; }
+  12.125% { transform: translateX(40.5%) translateY(76.1%) rotate(-22.5deg); animation-timing-function: linear; }
+  13.25%  { transform: translateX(46.0%) translateY(64.1%) rotate(-45deg); animation-timing-function: linear; }
+  14.375% { transform: translateX(49.7%) translateY(46.2%) rotate(-67.5deg); animation-timing-function: linear; }
+  15.5%   { transform: translateX(51.0%) translateY(25.0%) rotate(-90deg); animation-timing-function: linear; }
+  16.625% { transform: translateX(49.7%) translateY(3.8%) rotate(-112.5deg); animation-timing-function: linear; }
+  17.75%  { transform: translateX(46.0%) translateY(-14.1%) rotate(-135deg); animation-timing-function: linear; }
+  18.875% { transform: translateX(40.5%) translateY(-26.1%) rotate(-157.5deg); animation-timing-function: linear; }
+  20%     { transform: translateX(34.0%) translateY(-30.3%) rotate(-180deg); animation-timing-function: linear; }
+  21.125% { transform: translateX(27.5%) translateY(-26.1%) rotate(-202.5deg); animation-timing-function: linear; }
+  22.25%  { transform: translateX(22.0%) translateY(-14.1%) rotate(-225deg); animation-timing-function: linear; }
+  23.375% { transform: translateX(18.3%) translateY(3.8%) rotate(-247.5deg); animation-timing-function: linear; }
+  24.5%   { transform: translateX(17.0%) translateY(25.0%) rotate(-270deg); animation-timing-function: linear; }
+  25.625% { transform: translateX(18.3%) translateY(46.2%) rotate(-292.5deg); animation-timing-function: linear; }
+  26.75%  { transform: translateX(22.0%) translateY(64.1%) rotate(-315deg); animation-timing-function: linear; }
+  27.875% { transform: translateX(27.5%) translateY(76.1%) rotate(-337.5deg); animation-timing-function: linear; }
+  29%     { transform: translateX(34.0%) translateY(80.3%) rotate(-360deg); animation-timing-function: cubic-bezier(.35,.42,.6,1); }
+  /* Rise out of the loop, overshoot the parking spot, then SETTLE DOWN onto it.
+     The loop sits below the parked position, so simply interpolating from the
+     loop's bottom to the park made the plane's last movement a 196px climb — it
+     arrived from underneath, which reads as taking off rather than landing.
+     Going slightly above and easing down means the final motion is a descent.
+     Nose rides high through the climb (-366deg) and levels off (-360deg) as the
+     plane comes down, the way an aircraft noses over to touch down.
+
+     Start slope is solved from y1/x1 so the climb begins at the speed the loop
+     ended at, rather than jumping. */
+  31.8%   { transform: translateX(34%) translateY(-14%) rotate(-366deg); animation-timing-function: cubic-bezier(.4,0,.5,1); }
+  34.5%   { transform: translateX(34%) translateY(0) rotate(-360deg); animation-timing-function: linear; }
+  /* hold while everyone boards, then accelerate away to the right, nose up */
+  74%     { transform: translateX(34%) translateY(0) rotate(-360deg); animation-timing-function: cubic-bezier(.6,.02,.86,.4); }
+  86%     { transform: translateX(120%) translateY(-14%) rotate(-366deg); }
+  100%    { transform: translateX(310%) translateY(-46%) rotate(-373deg); }
 }
 
 /* ---- seated passengers (children of .boarding-plane) -------------- */
 
 .boarding-seat {
   position: absolute;
-  /* 53% is the bottom of the cushion in the vector (y 425 of 800), so the
-     passenger's hips land on the seat rather than hovering over it. */
-  top: 53%;
+  /* 47% is the cockpit LIP — the raised pink edge in front of the seats,
+     measured off the artwork with guide lines. At the old 53% the clip fell
+     6% of the plane's height BELOW that lip, so the bottom of every passenger
+     was painted onto the outside of the fuselage and they read as sitting on
+     the plane rather than in it. */
+  top: 47%;
   width: var(--person-w);
   height: calc(var(--person-h) * var(--seat-clip));
   margin-left: calc(var(--person-w) / -2);
@@ -138,13 +213,15 @@
   opacity: 0;
 }
 
+/* Seat x-offsets are mirrored (100% minus the measured value) because the
+   plane artwork is mirrored to face right (a static scaleX(-1) on the image). */
 .boarding-seat--1 {
-  left: 37.15%;
+  left: 62.85%;
   animation: boarding-seat-1 var(--dur) linear forwards;
 }
 
 .boarding-seat--23 {
-  left: 55.4%;
+  left: 44.6%;
   animation: boarding-seat-23 var(--dur) linear forwards;
 }
 
@@ -185,8 +262,35 @@
   height: var(--person-h);
   margin-left: calc(var(--person-w) / -2);
   margin-top: calc(var(--person-h) / -2);
-  display: block;
   opacity: 0;
+}
+
+/* Walk cycle.
+   These are flat single-piece drawings, so there are no limbs to rotate — the
+   figures were simply sliding across the screen, which is why the legs looked
+   frozen. A body bob plus a small counter-rotation is the standard substitute:
+   a walking body rises and falls once per step and rocks very slightly about
+   its hips, and at this size that vertical rhythm is what the eye actually
+   reads as "walking". The transform-origin sits at the feet, so the figure
+   pivots where it touches the ground rather than about its middle.
+
+   This lives on the inner <img> because .boarding-walker already animates
+   `transform` for the path across the screen; both on one element and only the
+   later rule would apply. */
+.boarding-walker__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 96%;
+  animation: boarding-step .52s ease-in-out infinite;
+}
+
+@keyframes boarding-step {
+  0%   { transform: translateY(0)      rotate(0deg); }
+  25%  { transform: translateY(-2.6%)  rotate(-1.1deg); }
+  50%  { transform: translateY(0)      rotate(0deg); }
+  75%  { transform: translateY(-2.6%)  rotate(1.1deg); }
+  100% { transform: translateY(0)      rotate(0deg); }
 }
 
 .boarding-walker--traveller {
@@ -209,7 +313,7 @@
    character's own body. */
 @keyframes boarding-walk-traveller {
   0%   { transform: translateX(calc(-50vw - 100%)); opacity: 1; }
-  18%  { transform: translateX(calc(-50vw - 100%)); opacity: 1; }
+  18%  { transform: translateX(calc(-50vw - 100%)); opacity: 1; animation-timing-function: cubic-bezier(.32,.06,.4,1); }
   39%  { transform: translateX(88%);  opacity: 1; }
   40%  { transform: translateX(88%);  opacity: 0; }
   100% { transform: translateX(88%);  opacity: 0; }
@@ -223,7 +327,7 @@
 @keyframes boarding-walk-couple {
   0%   { transform: translateX(calc(-50vw - 100%)); opacity: 0; }
   40%  { transform: translateX(calc(-50vw - 100%)); opacity: 0; }
-  44%  { transform: translateX(calc(-50vw - 100%)); opacity: 1; }
+  44%  { transform: translateX(calc(-50vw - 100%)); opacity: 1; animation-timing-function: cubic-bezier(.32,.06,.4,1); }
   61%  { transform: translateX(164%);  opacity: 1; }
   62%  { transform: translateX(164%);  opacity: 0; }
   100% { transform: translateX(164%);  opacity: 0; }

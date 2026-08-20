@@ -138,45 +138,6 @@
   .submit-row { margin-top: 12px; }
   .submit-row .btn-primary { width: 100%; justify-content: center; height: 37px; font-size: 13px; }
 
-  /* ---- ChoiceField: the collapsible searchable rows on the inquiry form ---- */
-  /* Relative so the panel anchors to its own row, and z-indexed while open so an
-     expanded list sits over the rows beneath instead of being clipped by them. */
-  .choice-field { position: relative; }
-  .choice-field.open { z-index: 20; }
-  /* The closed row reuses .field, but as a <button> it needs its own resets. */
-  .choice-head { width: 100%; font-family: inherit; text-align: left; }
-  .choice-head:disabled { opacity: .55; cursor: not-allowed; }
-  .choice-text { display: flex; flex-direction: column; min-width: 0; }
-  .choice-value { color: var(--ink-700); font-size: 11.5px; }
-  .choice-field.open .chevron { transform: rotate(180deg); }
-  .chevron { transition: transform .13s; }
-
-  .choice-panel {
-    position: absolute; left: 0; right: 0; top: calc(100% - 4px);
-    background: var(--surface); border: 1px solid var(--accent-500);
-    border-radius: var(--radius-sm); box-shadow: var(--shadow-md, 0 8px 24px rgba(15,23,42,.12));
-    padding: 6px; text-align: left;
-  }
-  .choice-search {
-    width: 100%; height: 30px; border: 1px solid var(--border); border-radius: var(--radius-sm);
-    padding: 0 8px; font-size: 12.5px; font-family: var(--font-sans);
-    background: var(--canvas); color: var(--ink-900); margin-bottom: 5px;
-  }
-  .choice-search:focus { outline: none; border-color: var(--accent-500); }
-  /* Capped and scrollable: the nationality list is ~110 entries and would
-     otherwise run off the bottom of the page. */
-  .choice-list { list-style: none; margin: 0; padding: 0; max-height: 208px; overflow-y: auto; }
-  .choice-option {
-    display: flex; align-items: center; gap: 7px; width: 100%; border: 0; background: none;
-    padding: 6px 8px; border-radius: var(--radius-sm); cursor: pointer;
-    font-size: 12.5px; font-family: inherit; color: var(--ink-900); text-align: left;
-  }
-  .choice-option.active { background: var(--accent-700); color: var(--accent-contrast); }
-  .choice-option.selected { font-weight: 700; }
-  .choice-option.selected:not(.active) { background: var(--accent-50); }
-  .choice-icon { display: inline-flex; flex-shrink: 0; }
-  .choice-empty { padding: 8px; color: var(--ink-500); font-size: 12px; }
-
   /* ===================== FILTER CARD + TABLES ===================== */
   .filter-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; box-shadow: var(--shadow-xs); }
   .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-bottom: 8px; }
@@ -329,25 +290,45 @@
   /* ===================== ANNOUNCEMENT STACK ===================== */
   /* Wraps the list of banners above every page. Was missing, so the banners
      rendered but stacked with no gap and no separation from the page content. */
-  .announcement-stack { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
 
   /* ===================== FLAGS ===================== */
-  /* Real <img> flag rendered by Flag.jsx */
-  .flag-img  { display: inline-block; border-radius: 2px; vertical-align: middle; flex-shrink: 0; }
+  /* Real <img> flag rendered by Flag.jsx. Single definition — shell.css used to
+     carry a second one, and the widget rendered as a per-property blend of the
+     two. Merged by computed style, so this reproduces exactly what shipped. */
+  .flag-img {
+    display: inline-block; border-radius: 2px; object-fit: cover;
+    box-shadow: 0 0 0 1px var(--border); vertical-align: middle; flex-shrink: 0;
+  }
   /* Text fallback when the image 404s or isoCode is unknown */
   .flag-fallback {
     display: inline-flex; align-items: center; justify-content: center;
     background: var(--canvas); border: 1px solid var(--border);
-    border-radius: 3px; font-size: 9px; font-weight: 700;
+    box-shadow: 0 0 0 1px var(--border);
+    border-radius: 3px; font-size: 9px; font-weight: 700; letter-spacing: -0.02em;
     color: var(--ink-600); line-height: 1; flex-shrink: 0; vertical-align: middle;
   }
-  /* Flag preview inside the AdminCountries form */
-  .flag-preview { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--ink-500); }
 
-  /* ===================== CHOICE FIELD ===================== */
-  /* Collapsible searchable field used on the Course Inquiry form. */
+  /* ===================== CHOICE FIELD =====================
+     This block used to have a twin earlier in the file. Two top-level rule sets
+     for the same selectors cascade PER PROPERTY, not wholesale, so the rendered
+     widget was a blend of both and neither block described it on its own — a
+     comment here previously recorded a bug that had already caused. The twin is
+     now deleted and everything it still contributed is folded in below, so this
+     is the single description of the component.
+
+     Verified by computed style before and after the merge, not by reading: the
+     panel's `padding: 6px` and `text-align: left` and the open field's
+     `z-index: 20` were all LIVE from the old first block, because this one never
+     set those properties. Deleting it blindly would have changed the widget. */
   .choice-field { position: relative; margin-bottom: 6px; }
-  .choice-head { width: 100%; justify-content: space-between !important; cursor: pointer; }
+  /* Raised while open so an expanded list sits over the rows beneath it rather
+     than being clipped by them. */
+  .choice-field.open { z-index: 20; }
+  /* The closed row reuses .field, but as a <button> it needs its own resets. */
+  .choice-head { width: 100%; justify-content: space-between !important; cursor: pointer; font-family: inherit; text-align: left; }
+  .choice-head:disabled { opacity: .55; cursor: not-allowed; }
+  .chevron { transition: transform var(--dur-fast) var(--ease); }
+  .choice-field.open .chevron { transform: rotate(180deg); }
   .choice-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
   .choice-value { font-size: 12.5px; color: var(--ink-950); font-weight: 400; }
 
@@ -355,6 +336,7 @@
     position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius-sm); box-shadow: var(--shadow-md); overflow: hidden;
+    padding: 6px; text-align: left;
   }
   .choice-search {
     width: 100%; height: 34px; border: none; border-bottom: 1px solid var(--border);

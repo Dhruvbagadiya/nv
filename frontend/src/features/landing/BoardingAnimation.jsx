@@ -121,18 +121,12 @@ export default function BoardingAnimation() {
         </div>
       </div>
 
-      <img
-        src={SOURCES.traveller}
-        alt=""
-        className="boarding-walker boarding-walker--traveller"
-        draggable="false"
-      />
-      <img
-        src={SOURCES.couple}
-        alt=""
-        className="boarding-walker boarding-walker--couple"
-        draggable="false"
-      />
+      <div className="boarding-walker boarding-walker--traveller">
+        <img src={SOURCES.traveller} alt="" className="boarding-walker__img" draggable="false" />
+      </div>
+      <div className="boarding-walker boarding-walker--couple">
+        <img src={SOURCES.couple} alt="" className="boarding-walker__img" draggable="false" />
+      </div>
     </div>
   );
 }
