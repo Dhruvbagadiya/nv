@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   // This tree lives on a Windows drive but is also worked on from WSL, so the
   // client has to carry both engines. Generating for one platform only makes
   // every query fail on the other with "could not locate the Query Engine".
@@ -83,18 +83,18 @@ model PasswordResetToken {
 
 enum RefreshRevokeReason {
   ROTATED // superseded by a newer token during a normal refresh
-  LOGOUT  // the user deliberately ended this session
-  REPLAY  // revoked as collateral when a rotated token was replayed
+  LOGOUT // the user deliberately ended this session
+  REPLAY // revoked as collateral when a rotated token was replayed
 }
 
 model RefreshToken {
-  id        String    @id @default(uuid())
-  userId    String
+  id            String               @id @default(uuid())
+  userId        String
   // SHA-256 of the token, never the token itself: a leaked database dump then
   // does not hand over live sessions.
-  tokenHash String    @unique
-  expiresAt DateTime
-  revokedAt DateTime?
+  tokenHash     String               @unique
+  expiresAt     DateTime
+  revokedAt     DateTime?
   // Why it was revoked matters. Only a ROTATED token being presented again
   // implies theft — that token was replaced, so whoever still holds it either
   // raced us or stole it, and revoking every session is the right response.
@@ -134,15 +134,15 @@ model AgencyProfile {
 // Student profile — extra fields that only students have.
 // ============================================================================
 model StudentProfile {
-  id          String   @id @default(uuid())
-  userId      String   @unique
+  id          String    @id @default(uuid())
+  userId      String    @unique
   nationality String?
   dateOfBirth DateTime?
   passportNo  String?
   phone       String?
   address     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -158,55 +158,62 @@ model Country {
 
   // The header strip rendered 15 hardcoded text chips while the database held 4
   // rows and no flags, so 11 of them silently returned nothing.
-  flagEmoji String?
+  flagEmoji    String?
   // ISO 3166-1 alpha-2, e.g. "GB". Explicit rather than reverse-engineered from
   // flagEmoji's Regional Indicator code points, and deliberately separate from
   // `code` — the portal's own shorthand is NOT ISO (we use UK, GR, SP, UAE, IR,
   // NE where ISO says GB, DE, ES, AE, IE, NL). Flags are keyed on this.
-  isoCode   String?
+  isoCode      String?
   // Fees were printed as "$X CAD" for every course regardless of destination;
   // the reference screenshots show GBP for UK institutions. Currency belongs to
   // the country rather than the course — tuition for two courses in the same
   // country is not quoted in different currencies.
-  currencyCode String @default("USD")
-  sortOrder    Int    @default(0)
+  currencyCode String   @default("USD")
+  sortOrder    Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  institutions    Institution[]
-  courseInquiries CourseInquiry[]
+  institutions     Institution[]
+  courseInquiries  CourseInquiry[]
   importantUpdates ImportantUpdate[]
-  documents       Document[]
+  documents        Document[]
 
   @@index([sortOrder])
 }
 
 model Institution {
-  id            String  @id @default(uuid())
+  id            String    @id @default(uuid())
   name          String
   // URL-safe slug used in deep-links and the `school.slug` field in the program
   // response. Derived from the institution name on creation.
-  slug          String  @unique
+  slug          String    @unique
   countryId     String
   // Province / state — shown alongside the city in the school object.
   province      String?
   // City moved here from Course: a campus has one city; courses inherit it.
   city          String?
-  isBlacklisted Boolean @default(false)
+  isBlacklisted Boolean   @default(false)
   logoUrl       String?
+  // Banner / hero image for the school page. Nullable: only ~60% of schools
+  // have one upstream.
+  bannerUrl     String?
+  // ApplyBoard's own school id. Nullable so existing rows stay valid, unique so
+  // an import can upsert on it instead of duplicating on every re-run.
+  externalId    Int?      @unique
   // Drives the "Trending Universities" carousel on the Report screen.
-  isTrending Boolean   @default(false)
-  archivedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  isTrending    Boolean   @default(false)
+  archivedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  country          Country               @relation(fields: [countryId], references: [id])
-  courses          Course[]
-  moiAcceptances   MoiAcceptance[]
-  commission       UniversityCommission?
+  country           Country               @relation(fields: [countryId], references: [id])
+  courses           Course[]
+  moiAcceptances    MoiAcceptance[]
+  commission        UniversityCommission?
   entryRequirements EntryRequirement[]
-  importantUpdates ImportantUpdate[]
-  documents        Document[]
+  importantUpdates  ImportantUpdate[]
+  documents         Document[]
+  photos            SchoolPhoto[]
 
   @@index([countryId])
   @@index([isBlacklisted])
@@ -225,6 +232,16 @@ enum ProgramLevel {
   THREE_YEAR_BACHELORS
   FOUR_YEAR_BACHELORS
   FOUNDATION
+  // Added for the ApplyBoard import: these are real categories students filter
+  // on, and without them ~4,800 programs would collapse into OTHER.
+  INTEGRATED_MASTERS
+  POST_GRADUATE_DIPLOMA
+  ADVANCED_DIPLOMA
+  DOCTORAL_PHD
+  TOPUP_DEGREE
+  ENGLISH
+  NON_CREDENTIAL
+  SECONDARY_SCHOOL
   OTHER
 }
 
@@ -239,19 +256,22 @@ model Course {
   id            String @id @default(uuid())
   institutionId String
 
+  // ApplyBoard's own program id — the upsert key for re-imports.
+  externalId Int? @unique
+
   // Human-readable full name, e.g. "Master of Science - Computational Sciences (Course)"
-  title         String
+  title        String
   // Short display name shown on cards, e.g. "Computational Sciences"
-  shortName     String?
+  shortName    String?
   // URL-safe slug for deep-links, e.g. "master-of-science-computational-sciences-course"
-  slug          String  @unique
+  slug         String       @unique
   // Replaces the free-text `degreeLevel` — machine-readable enum for grouping/filtering
-  programLevel  ProgramLevel @default(OTHER)
+  programLevel ProgramLevel @default(OTHER)
 
   // Duration in calendar months (replaces the freeform `durationText` string).
   // minLength == maxLength means a fixed-length programme.
-  minLength     Int     @default(0)
-  maxLength     Int     @default(0)
+  minLength Int @default(0)
+  maxLength Int @default(0)
 
   // ISO 639-3 language code, e.g. "eng"
   languageOfInstruction String @default("eng")
@@ -311,7 +331,7 @@ model CourseIntake {
 }
 
 model MoiAcceptance {
-  id            String  @id @default(uuid())
+  id            String   @id @default(uuid())
   institutionId String
   courseType    String
   years         Int
@@ -329,27 +349,27 @@ model MoiAcceptance {
 // for backward compat with the Commission screen. The typed fields below are
 // used by the program/dashboard API to build the structured commission object.
 model UniversityCommission {
-  id            String  @id @default(uuid())
-  institutionId String  @unique
+  id            String @id @default(uuid())
+  institutionId String @unique
 
   // Legacy freeform tiers array for the Commission screen display.
   // e.g. [{ label: "1-5 Students", rate: "15%" }, ...]
   tiers Json
 
   // Structured fields for the program response commission object.
-  commissionType         String?  // "percentage" | "fixed_amount"
-  rateFrom               Float?
-  rateTo                 Float?
-  amountFrom             Decimal?
-  amountTo               Decimal?
-  isTierAdjusted         Boolean  @default(false)
+  commissionType          String? // "percentage" | "fixed_amount"
+  rateFrom                Float?
+  rateTo                  Float?
+  amountFrom              Decimal?
+  amountTo                Decimal?
+  isTierAdjusted          Boolean  @default(false)
   maxNumberOfInstallments Int?
-  tuitionBasis           String?  // "net" | "gross"
+  tuitionBasis            String? // "net" | "gross"
 
   notes      String?
   archivedAt DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
 }
@@ -479,14 +499,14 @@ model Announcement {
 // The "Useful Informations" panel on the Report screen (empty in image 19, so
 // the empty state is a designed state).
 model UsefulInformation {
-  id        String    @id @default(uuid())
-  title     String
-  body      String
-  linkUrl   String?
-  sortOrder Int       @default(0)
+  id         String    @id @default(uuid())
+  title      String
+  body       String
+  linkUrl    String?
+  sortOrder  Int       @default(0)
   archivedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([sortOrder])
 }
@@ -503,7 +523,7 @@ enum CourseInquiryStage {
 }
 
 model CourseInquiry {
-  id          String   @id @default(uuid())
+  id          String             @id @default(uuid())
   agentId     String
   nationality String
   countryId   String?
@@ -512,11 +532,11 @@ model CourseInquiry {
   // Was a free-text `status` defaulting to "open". The Report screen counts
   // inquiries by stage (Course Inquiry / Pending / Offered / Applied), which a
   // free-text column cannot answer without guessing at spellings.
-  stage     CourseInquiryStage @default(INQUIRY)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  stage       CourseInquiryStage @default(INQUIRY)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
-  agent User @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agent   User     @relation(fields: [agentId], references: [id], onDelete: Cascade)
   // countryId existed with no relation, so it had no referential integrity and
   // the history table could not display a country name.
   country Country? @relation(fields: [countryId], references: [id], onDelete: SetNull)
@@ -541,11 +561,11 @@ enum ApplicationStage {
 }
 
 model Application {
-  id          String @id @default(uuid())
+  id          String  @id @default(uuid())
   // The "POEC ID: 4367" the reference portal shows on every application. A
   // sequential integer because agents read these out on the phone; a uuid is not
   // something anyone dictates.
-  reference   Int    @unique @default(autoincrement())
+  reference   Int     @unique @default(autoincrement())
   agentId     String
   studentName String
   passportNo  String
@@ -601,4 +621,30 @@ model Notification {
   @@index([userId, readAt])
   @@index([userId, createdAt])
   @@index([applicationId])
+}
+
+// Gallery photos for a school. A separate table rather than a String[] so each
+// photo keeps its upstream id, dimensions and caption, and so a photo can be
+// reordered or removed without rewriting the whole array.
+model SchoolPhoto {
+  id            String @id @default(uuid())
+  institutionId String
+
+  // ApplyBoard's school_photo id — upsert key, unique across all schools.
+  externalId Int? @unique
+
+  url          String
+  thumbnailUrl String?
+  fileName     String?
+  contentType  String?
+  bytes        Int?
+  // Display order within the gallery; ties fall back to createdAt.
+  position     Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
 }
