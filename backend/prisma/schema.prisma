@@ -197,9 +197,14 @@ model Institution {
   // Banner / hero image for the school page. Nullable: only ~60% of schools
   // have one upstream.
   bannerUrl     String?
-  // ApplyBoard's own school id. Nullable so existing rows stay valid, unique so
-  // an import can upsert on it instead of duplicating on every re-run.
-  externalId    Int?      @unique
+  // Upstream id, scoped by `source`. Nullable so hand-created rows stay valid.
+  // Unique on its own is wrong once there is more than one feed: instantapply
+  // university 116 is Otago Polytechnic while ApplyBoard 116 is SUNY
+  // Fulton-Montgomery, so the pair is what identifies a row. See @@unique below.
+  externalId    Int?
+  // Which feed a row came from. "manual" means a human created it and no
+  // importer should overwrite it.
+  source        String    @default("manual")
   // Drives the "Trending Universities" carousel on the Report screen.
   isTrending    Boolean   @default(false)
   archivedAt    DateTime?
@@ -215,10 +220,12 @@ model Institution {
   documents         Document[]
   photos            SchoolPhoto[]
 
+  @@unique([source, externalId])
   @@index([countryId])
   @@index([isBlacklisted])
   @@index([isTrending])
   @@index([archivedAt])
+  @@index([source])
 }
 
 // Structured program-level enum so the dashboard can filter and the response
@@ -256,8 +263,9 @@ model Course {
   id            String @id @default(uuid())
   institutionId String
 
-  // ApplyBoard's own program id — the upsert key for re-imports.
-  externalId Int? @unique
+  // Upstream id, scoped by `source` — see the note on Institution.externalId.
+  externalId Int?
+  source     String @default("manual")
 
   // Human-readable full name, e.g. "Master of Science - Computational Sciences (Course)"
   title        String
@@ -303,11 +311,13 @@ model Course {
   intakes      CourseIntake[]
   applications Application[]
 
+  @@unique([source, externalId])
   @@index([institutionId])
   @@index([programLevel])
   @@index([archivedAt])
   @@index([createdAt])
   @@index([slug])
+  @@index([source])
 }
 
 // Replaces the `intakes String[]` array. Each intake now has its own identity,
@@ -630,8 +640,9 @@ model SchoolPhoto {
   id            String @id @default(uuid())
   institutionId String
 
-  // ApplyBoard's school_photo id — upsert key, unique across all schools.
-  externalId Int? @unique
+  // Upstream photo id, scoped by `source` — see Institution.externalId.
+  externalId Int?
+  source     String @default("manual")
 
   url          String
   thumbnailUrl String?
@@ -646,5 +657,6 @@ model SchoolPhoto {
 
   institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
 
+  @@unique([source, externalId])
   @@index([institutionId])
 }
