@@ -1,7 +1,18 @@
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
-// Used by the Important Updates detail view (the eye icon) and the blacklist list
-// behind the red banner's "Click for list".
+// Used by the Important Updates detail view (the eye icon), the course detail
+// behind a course card's eye icon, and the blacklist list behind the red
+// banner's "Click for list".
+//
+// Rendered into document.body through a portal rather than in place. A dialog
+// is positioned against the viewport, but `position: fixed` resolves against
+// the nearest ancestor with a transform, filter or containment instead of the
+// viewport when one exists -- and .card sets `transform: translateY(-1px)` on
+// hover, which is unavoidable when the thing opening the dialog is a button
+// inside that card. Left in place, the backdrop was sized to the card and then
+// clipped by its `overflow: hidden`. A portal makes the dialog independent of
+// wherever it happens to be invoked from.
 //
 // Deliberately not a bare styled div: a dialog that cannot be dismissed with
 // Escape, traps no focus, and leaves the page scrolling behind it is an
@@ -54,7 +65,7 @@ export default function Modal({ title, subtitle, onClose, children, footer, wide
     };
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div
         className={`modal-panel${wide ? ' modal-wide' : ''}`}
@@ -87,6 +98,7 @@ export default function Modal({ title, subtitle, onClose, children, footer, wide
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-foot">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
