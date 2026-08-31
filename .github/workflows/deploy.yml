@@ -1,0 +1,120 @@
+# Verify on every push, and release to production when main moves.
+#
+# The release itself is still deploy/deploy.sh on the droplet -- this only
+# decides *when* it runs. Keeping the logic on the server means a deploy can
+# always be run by hand over SSH, which matters when GitHub is down or a release
+# has to happen from a phone.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   DEPLOY_HOST         206.189.138.33
+#   DEPLOY_USER         deploy
+#   DEPLOY_SSH_KEY      private half of a keypair whose public half is in the
+#                       deploy user's ~/.ssh/authorized_keys on the droplet
+#   DEPLOY_KNOWN_HOSTS  output of: ssh-keyscan -H 206.189.138.33
+#
+# DEPLOY_KNOWN_HOSTS is not optional padding. Without a pinned host key the
+# runner would accept whatever key answers on that address, so anyone able to
+# redirect the connection could take the deploy key and the database URL it
+# reaches. StrictHostKeyChecking=no is the wrong shortcut here.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Lets a release be re-run from the Actions tab without an empty commit.
+  workflow_dispatch:
+
+concurrency:
+  # One deploy at a time. cancel-in-progress stays false deliberately: killing a
+  # release midway can leave migrations applied against the previous image.
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Lint, test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      # Three separate installs because this is not an npm workspace: the root
+      # holds the lint/format tooling and each app has its own lockfile.
+      - run: npm ci
+      - run: npm ci --prefix backend
+      - run: npm ci --prefix frontend
+
+      # Prisma Client is generated code and is not committed, so anything that
+      # imports it fails to resolve until this runs. Driven through the backend's
+      # own script: `npx prisma` from the root would fetch whatever version npm
+      # felt like, rather than the one in backend/package-lock.json.
+      - run: npm --prefix backend run prisma:generate
+
+      # Tests and the build are the hard gate: a failure here means the
+      # release is broken, so it must not reach production.
+      - run: npm test
+      - run: npm run build
+
+      # Lint is reported but does not block, because the repo currently has 38
+      # pre-existing errors across 19 files (unescaped entities, unused vars, a
+      # setState-in-effect). Blocking on them would reject every deploy from the
+      # day this pipeline is switched on, which would mean turning the pipeline
+      # off rather than fixing the lint.
+      #
+      # Once `npm run lint` is clean, delete continue-on-error so a regression
+      # cannot creep back in.
+      - run: npm run lint
+        continue-on-error: true
+
+  deploy:
+    name: Release to production
+    needs: verify
+    # A pull request must be verified but must never deploy.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Authorise the runner against the droplet
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Run the release
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          # -T because deploy.sh needs no TTY; the exit status is what decides
+          # whether this job passes, and deploy.sh already fails on an unhealthy
+          # api rather than reporting success.
+          ssh -T -o BatchMode=yes "$USER@$HOST" \
+            'cd ~/nv-immigration-portal && bash deploy/deploy.sh'
+
+      - name: Confirm the site is serving
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          # deploy.sh checks the api container's own healthcheck. This goes
+          # through nginx instead, which is the path real traffic takes and the
+          # only one that catches a broken proxy or an expired certificate.
+          #
+          # The api container publishes no host port -- nginx reaches it over
+          # the compose network -- so this must go via https on the public
+          # hostname; port 80 only issues a redirect.
+          ssh -T -o BatchMode=yes "$USER@$HOST" \
+            'curl -fsS -o /dev/null -w "api/health: %{http_code}\n" https://nvimmigrationpvtltd.com/api/health'
