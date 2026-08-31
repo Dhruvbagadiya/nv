@@ -1,0 +1,270 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   World map  —  the "Countries we offer support" section
+   ══════════════════════════════════════════════════════════════════════════
+
+   Every colour here goes through var(--accent-*). useTheme writes an agency's
+   own accent onto :root at runtime, and a logged-in agency user who visits the
+   public landing page gets that accent applied there too — so a literal #E78518
+   anywhere in this file would make the map the one element on the page that
+   ignored white-labelling.
+
+   Note --accent-600 and --accent-500 are aliases of --accent-700 in the default
+   theme, so a 500 → 700 gradient is a flat fill. Depth comes from opacity and
+   from --accent-800, which is a genuinely different colour.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.wm {
+  position: relative;
+  margin: var(--s-5) 0 var(--s-4);
+  /* Set from world.json's own w/h once loaded; the default is that same ratio,
+     so the box reserves its final height before the fetch resolves and the
+     section never shifts under the reader. */
+  aspect-ratio: var(--wm-ratio, 2000 / 774);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  /* A soft accent wash under the outlines. Deliberately not var(--surface):
+     this section sits on .lp-section-tint, and painting white here would knock a
+     hard rectangle out of the tint. */
+  background: radial-gradient(62% 92% at 50% 45%, var(--accent-50), transparent 72%);
+}
+
+.wm-svg { display: block; width: 100%; height: 100%; }
+
+/* ── Countries ─────────────────────────────────────────────────────────── */
+
+.wm-country {
+  fill: var(--accent-700);
+  fill-opacity: 0;
+  stroke: var(--accent-700);
+  stroke-opacity: .62;
+  stroke-width: 1;
+  stroke-linejoin: round;
+  /* Constant hairline in device pixels whatever size the map renders at. Without
+     this the borders would thicken on a wide screen and vanish on a phone. */
+  vector-effect: non-scaling-stroke;
+  /* fill-opacity: 0 means the interior is not "painted", so the default
+     visiblePainted would only accept hover on the 1px border itself. */
+  pointer-events: all;
+  /* pathLength="1" on the element normalises every outline to one unit long,
+     which is what lets this single pair of declarations draw all 176 paths in
+     step instead of needing a rule per country. */
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: wm-draw .85s ease-out forwards;
+  animation-delay: calc(var(--i, 0) * 1.4s);
+  /* Only paint properties transition. Putting filter or transform here would
+     promote 176 elements to their own compositor layers on hover. */
+  transition: fill-opacity .18s ease, stroke-opacity .18s ease, stroke-width .18s ease;
+}
+
+@keyframes wm-draw { to { stroke-dashoffset: 0; } }
+
+.wm-country:hover { fill-opacity: .16; stroke-opacity: 1; }
+
+/* India, where every arc starts. Filled, but a lighter wash than a destination
+   and never dimmed by a region tab — it is where NV is, not somewhere NV sends
+   people, so it should not read as a thirteenth destination. */
+.wm-country.is-home { fill-opacity: .14; stroke-opacity: .9; }
+
+/* A destination NV actually serves: filled, so it reads as a target rather than
+   as one more outline. */
+.wm-country.is-dest { fill-opacity: .1; stroke-opacity: .75; cursor: pointer; }
+
+/* "Lit" means the country matches the region tab currently selected. Countries
+   outside it are dimmed rather than removed — the map should never look like it
+   lost territory. */
+.wm-country.is-dest.is-lit { fill-opacity: .26; stroke-opacity: 1; stroke-width: 1.6; }
+.wm-country.is-dest.is-lit:hover { fill-opacity: .4; }
+.wm-country.is-dest.is-selected { fill-opacity: .55; stroke-width: 2; }
+
+/* ── Flight arcs ───────────────────────────────────────────────────────── */
+
+/* The arcs paint above the countries, so without this they swallow every hover
+   and click meant for the map underneath — the flight paths are decoration and
+   must be invisible to the pointer. */
+.wm-arcs { pointer-events: none; }
+
+.wm-arc { transition: opacity .25s ease; }
+.wm-arc:not(.is-lit) { opacity: .2; }
+
+.wm-arc-line {
+  fill: none;
+  /* --accent-700, not --accent-800: the 800 is a dark burnt orange and at any
+     opacity low enough not to overpower the outlines it reads grey-brown over a
+     near-white ground, which made the flight paths look like stray hairlines. */
+  stroke: var(--accent-700);
+  stroke-opacity: .6;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  /* Starts after the country wave is most of the way across, so the arcs read
+     as a second beat rather than competing with the draw-on. */
+  animation: wm-draw 1.1s ease-out forwards;
+  animation-delay: calc(1.5s + var(--i, 0) * .11s);
+}
+
+/* What flies the route. This was a plain circle, which was the whole problem:
+   a dot travelling an arc is the same mark as a dot marking a country, so a
+   plane halfway across the Arabian Sea read as a thirteenth destination. A
+   silhouette carries its own meaning and cannot be misread as a place. */
+.wm-plane {
+  offset-distance: 0%;
+  /* Banks the glyph to the route's tangent — this is why PLANE_PATH must be
+     drawn nose-along +x. */
+  offset-rotate: auto;
+  opacity: 0;
+  animation: wm-fly 3.4s linear infinite;
+  animation-delay: calc(2.4s + var(--i, 0) * .28s);
+}
+
+.wm-plane-glyph {
+  fill: var(--accent-800);
+  /* Scaling lives here, on a child, so it composes with the motion transform on
+     the parent instead of competing with it. fill-box keeps the scale centred on
+     the glyph rather than on the SVG's origin, which would fling it off-map. */
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* offset-path is set inline per arc, from the same string the visible line uses,
+   so the dot cannot drift off its own route. CSS rather than SMIL
+   <animateMotion> because SMIL ignores prefers-reduced-motion. */
+@keyframes wm-fly {
+  0%   { offset-distance: 0%;   opacity: 0; }
+  10%  { opacity: .85; }
+  88%  { opacity: .85; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+
+/* ── Pins ──────────────────────────────────────────────────────────────── */
+
+/* Group opacity carries the region-tab dimming; the entry fade lives on the
+   children so the two do not fight over the same property. Without it the pins
+   pop in at fetch time, before a single border has drawn. */
+.wm-pin { transition: opacity .25s ease; }
+.wm-pin:not(.is-lit):not(.is-origin) { opacity: .3; }
+
+.wm-pin-halo, .wm-pin-dot {
+  opacity: 0;
+  animation: wm-pin-in .45s ease forwards;
+  animation-delay: calc(2.2s + var(--i, 0) * .09s);
+}
+
+@keyframes wm-pin-in { to { opacity: 1; } }
+
+.wm-pin-dot {
+  fill: var(--accent-800);
+  transition: r .18s ease;
+}
+
+/* Static, unanimated ring. The pulse below is invisible for most of its cycle,
+   which left a destination looking like a bare dot at any given moment — the
+   halo is what says "this is a marked place" in a still frame. Malta, Singapore
+   and Mauritius depend on it entirely: they have no country outline to sit on,
+   so without it Mauritius is one anonymous dot in an empty Indian Ocean. */
+.wm-pin-halo {
+  fill: var(--accent-700);
+  fill-opacity: .16;
+  stroke: var(--accent-700);
+  stroke-opacity: .55;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Only .wm-pin-hit below is meant to be clickable. The dot and the ring paint
+   over it, so they would otherwise take the click and hand the handler an
+   element with no data-iso on it. */
+.wm-pin-dot, .wm-pin-ring, .wm-pin-halo { pointer-events: none; }
+
+.wm-pin-ring {
+  fill: none;
+  stroke: var(--accent-700);
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+  /* A circle has no intrinsic box, so scale() would pivot on the SVG origin and
+     fling the ring off-screen. fill-box makes it pivot on its own centre. */
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: wm-pulse 2.8s ease-out infinite;
+  animation-delay: calc(2.6s + var(--i, 0) * .21s);
+}
+
+@keyframes wm-pulse {
+  0%   { transform: scale(.5); opacity: .85; }
+  70%  { transform: scale(2.6); opacity: 0; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+.wm-pin.is-selected .wm-pin-dot { r: 7; }
+
+/* The pin itself is a few pixels across at phone widths. An invisible generous
+   target sits over it so the pin is tappable and hoverable at the size a finger
+   or a moving cursor actually needs. */
+.wm-pin-hit { fill: transparent; pointer-events: all; cursor: pointer; }
+
+/* Surat. It was --accent-700 — the PALE accent — which made the busiest point on
+   the map the faintest mark on it, while transit dots and every destination were
+   drawn in the dark 800. Home now wins on size and on weight. */
+.wm-pin.is-origin .wm-pin-dot { fill: var(--accent-800); }
+.wm-pin.is-origin .wm-pin-halo { fill-opacity: .26; stroke-opacity: .85; stroke-width: 1.4; }
+.wm-pin.is-origin .wm-pin-ring { stroke-width: 2; animation-delay: 2.2s; animation-duration: 2.2s; }
+
+/* ── Hover label ───────────────────────────────────────────────────────── */
+
+.wm-tip {
+  position: absolute;
+  left: var(--tx, 50%);
+  top: var(--ty, 50%);
+  transform: translate(-50%, calc(-100% - 16px));
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-800);
+  color: var(--accent-contrast-800);
+  font-size: var(--t-small, .84rem);
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .14s ease;
+  z-index: 2;
+}
+
+.wm.is-hovering .wm-tip { opacity: 1; }
+
+/* ── Small screens ─────────────────────────────────────────────────────── */
+
+/* At 390px the map is a ~150px band. It works as a banner, but the individual
+   country outlines are far too small to aim at — the flag grid below it is the
+   real control there, so the pointer affordances come off rather than sitting
+   there looking tappable and missing. */
+@media (hover: none) {
+  .wm-tip { display: none; }
+  .wm-country, .wm-pin-hit { cursor: default; }
+}
+
+@media (max-width: 640px) {
+  .wm { margin: var(--s-4) 0 var(--s-3); border-radius: var(--radius); }
+  .wm-country { stroke-width: .6; }
+  .wm-country.is-dest.is-lit { stroke-width: 1; }
+  .wm-arc-line { stroke-width: .9; }
+  /* The map is a 132px banner at 390px, so a 24-unit glyph renders about 4px
+     long. Scaling it up is the only way the planes are visible at all there. */
+  .wm-plane-glyph { transform: scale(1.9); }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────── */
+
+/* landing.css already collapses every animation under .lp to .001ms, which
+   leaves the draw-on complete because it fills forwards. These rules make that
+   explicit and, more importantly, stop the two infinite animations: a pulse and
+   a travelling dot that merely run *fast* are worse than no animation at all
+   for someone who asked for less of it. */
+@media (prefers-reduced-motion: reduce) {
+  .wm-country, .wm-arc-line { animation: none; stroke-dashoffset: 0; }
+  .wm-pin-halo, .wm-pin-dot { animation: none; opacity: 1; }
+  .wm-plane { animation: none; display: none; }
+  .wm-pin-ring { animation: none; opacity: .55; }
+}

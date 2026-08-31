@@ -26,8 +26,11 @@
  *  meaning now lives inside the central safe area (x 90-390, y 90-350); only
  *  the dot field is allowed to run off the edges. */
 export function RouteMapScene() {
-  // A coarse dot field reads as a world map at a glance without needing real
-  // coastline data (which would be ~40KB of path).
+  // A coarse dot field reads as a world map at a glance, and at 480x440 in a
+  // hero collage that is all it needs to do. Real coastlines DO now ship on this
+  // page — see WorldMap.jsx, 176 countries for 29KB gzipped, fetched from
+  // public/map/world.json — but they are the point of their own section further
+  // down. Here they would be detail nobody looks at.
   const dots = [];
   for (let y = 0; y < 17; y += 1) {
     for (let x = 0; x < 17; x += 1) {
@@ -292,8 +295,10 @@ export function GlobeScene() {
         <ellipse cx="150" cy="150" rx="118" ry="118" />
       </g>
 
-      {/* Continent blobs. Loose shapes, not real geography — precise coastlines
-          at this size just turn to mud. */}
+      {/* Continent blobs. Loose shapes, not real geography: this globe is 300px
+          across and the visible face is smaller still, so genuine coastlines
+          would turn to mud. The real ones are in WorldMap.jsx, at a size that
+          can carry them. */}
       <g clipPath="url(#lp-globe-clip)" fill="#fff" opacity=".28">
         <path d="M74 96c14-12 34-10 44 2s-4 26-18 30-28 8-34-2 0-22 8-30Z" />
         <path d="M96 154c16-6 30 2 32 16s-10 30-24 34-24-6-24-20 2-26 16-30Z" />

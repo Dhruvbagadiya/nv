@@ -2,9 +2,10 @@
  * Tunable geometry.
  *
  * Plane: plane.svg, viewBox 1440x800 (aspect 1.8), no background rectangle, so
- * genuinely transparent. Nose points LEFT and the tail fin is on the right —
- * which is why the flight path below enters from the right and exits left: the
- * plane is always moving nose-first, never backwards. Its three seat groups are
+ * genuinely transparent. Nose points LEFT in the file and the tail fin is on the
+ * right; the sprite is mirrored once, statically, so on screen the nose points
+ * RIGHT. The flight path below therefore enters from the left and departs to the
+ * right: the plane is always moving nose-first, never backwards. Its three seat groups are
  * named in the file, so the offsets are measured rather than estimated: seat
  * centres at 37.15%, 49.31% and 61.46% of the artwork width, cushion spanning
  * y 345-425 of 800.
@@ -16,7 +17,15 @@
  * an alpha channel that was 255 everywhere. These are chroma-keyed from a
  * magenta background and have real alpha.
  *
- * --plane-w        rendered plane width (clamped for 380px..desktop).
+ * --stage-c        the content width the hero actually occupies, mirroring
+ *                  .lp-wrap exactly (max 1180px minus its 24px padding).
+ * --u              THE unit. Every waypoint in the flight path is a multiple of
+ *                  it, for BOTH axes, which is what keeps the path geometrically
+ *                  similar at every viewport and therefore keeps the nose angles
+ *                  true. It is bounded by width AND height: by width alone the
+ *                  path is too tall on a short window, by height alone far too
+ *                  wide on a phone.
+ * --plane-w        rendered plane width, 21u.
  * --person-h       rendered height of BOTH character canvases. Characters are
  *                  sized from the plane's HEIGHT, not its width: what the eye
  *                  judges is how tall a person stands against the fuselage.
@@ -26,38 +35,83 @@
  * --person-w       derived from --person-h and the 0.6 canvas aspect.
  * --seat-clip      fraction of the character canvas shown when seated (from the
  *                  top), i.e. how much is visible above the seat back.
- * --ground-top     vertical anchor (% of the overlay) the walkers travel along.
- * --plane-top      vertical anchor (% of the overlay) the plane parks at.
+ * --ground-top     where the walkers' feet travel, derived from the parked
+ *                  aircraft rather than from the viewport.
+ * --plane-top      vertical anchor the flight path is measured from.
+ * --park-x         where the path parks, in u from centre. The walkers and the
+ *                  walkers are all derived from it.
  *
  * Seat 1 sits at 37.15%. Seats 2+3 share one element, since couple.png holds
  * both people, centred on the midpoint of 49.31% and 61.46% — 55.4%.
  */
 
 .boarding-overlay {
-  /* The 150px floor only binds below ~470px wide, where 32vw would otherwise
-     shrink the plane past legibility. At 180px it took 47% of a 390px phone —
-     noticeably heavier than the 32% it occupies everywhere else. */
-  --plane-w: clamp(150px, 32vw, 440px);
+  /*
+   * The stage the hero actually occupies. .lp-wrap is `max-width:1180px;
+   * margin:0 auto; padding:0 24px`, so this is its inner content box — and
+   * anchoring to it rather than to raw vw is what stops the aircraft sliding off
+   * the hero as the window widens. The old park was a flat 34% of a plane whose
+   * width clamped at 440px, i.e. a fixed +150px, while the gutter it was meant
+   * to sit in is at +48px. That is the bug in the screenshot.
+   */
+  --stage-c: min(1132px, 100vw - 48px);
+
+  /*
+   * One unit for both axes. 96u spans the stage; the 1.35vh ceiling is what
+   * shrinks the whole path on a short window instead of letting the climb-out
+   * run up under the sticky header (it binds at 1366x768 and 1280x800).
+   *
+   * Plain vh, deliberately, not dvh: vh already resolves against the LARGE
+   * viewport, so it does not move when a mobile URL bar collapses. dvh would
+   * resize the path mid-animation.
+   */
+  --u: min(calc(var(--stage-c) / 96), 1.35vh);
+
+  --plane-w: calc(21 * var(--u));
   --plane-h: calc(var(--plane-w) / 1.8);
-  /* 0.72 of the plane's height. The characters were previously derived from the
-     plane's WIDTH via the old landscape canvas, which after the canvas changed
-     to 600x1000 portrait rendered them at roughly a third of the size they
-     should be — they read as ants beside the aircraft. */
   --person-h: calc(var(--plane-h) * 0.72);
   --person-w: calc(var(--person-h) * 0.6);
   --seat-clip: 0.56;
-  --ground-top: 64%;
-  /* Parked position. The plane used to settle dead centre, which put it on top
-     of the H1 — the headline is the one thing on this page that must stay
-     readable, and a pink aircraft across the word "immigration" read as a
-     mistake rather than a scene. It now parks in the empty band between the
-     copy column and the orbit, clear of both.
 
-     The 34% park offset is written literally into the keyframes below rather
-     than held in a custom property: a var() inside @keyframes is substituted at
-     computed-value time and does not reliably survive interpolation, which left
-     the plane drifting out of its parked position part-way through the hold. */
-  --plane-top: 46%;
+  /*
+   * Vertical anchor: every keyframe's translateY is measured from here.
+   *
+   * The px term, not a bare percentage. The hero's own layout is px-driven —
+   * header 74 + padding 96 + content — so its globe sits at roughly y 525-565
+   * whatever the window height is, while a `46%` anchor slides DOWN as the
+   * viewport grows. That is why the park cleared the globe at 900px tall and
+   * grazed it at 1080. The px term pins the aircraft a fixed distance above the
+   * globe on tall screens; the 46% ceiling takes over on short ones, where the
+   * px value alone would push it off the bottom.
+   */
+  --plane-top: min(calc(340px + 6 * var(--u)), 46%);
+
+  /* Where the flight path parks, in u from centre. The walkers' stop positions
+     are derived from this same number so they cannot drift apart from the
+     aircraft. The park's HEIGHT is not here — it is a waypoint in the generated
+     path, and it now sits ON the ground line so that the people walking up to
+     the aircraft are at the same level as its door. */
+  --park-x: 4;
+  --plane-anim: boarding-plane-landscape;
+
+  /* The walkers stop under the seat they are about to occupy. Seat offsets are
+     the mirrored ones used by .boarding-seat--1 / --23 below: 62.85% and 44.6%
+     of the plane's width, i.e. +2.7u and -1.13u from its centre. */
+  --stop-traveller: calc((var(--park-x) + 2.7) * var(--u));
+  --stop-couple: calc((var(--park-x) - 1.13) * var(--u));
+
+  /*
+   * The ground line, in u below the aircraft rather than at a flat percentage of
+   * viewport height. It used to be 64% of viewport HEIGHT while the plane was
+   * sized from viewport WIDTH, so the gap between the walkers' feet and the
+   * fuselage swung from 0.66 plane-heights on a desktop to 1.7 on a phone; in u
+   * it is 1.06 plane-heights everywhere.
+   *
+   * 14u and not less: the walkers cross the entire hero on their way in, so the
+   * lane they travel has to clear the H1's last line. Tuck them up under the
+   * belly and they walk straight through the word "immigration".
+   */
+  --ground-top: calc(var(--plane-top) + 14 * var(--u));
 
   position: fixed;
   inset: 0;
@@ -68,13 +122,51 @@
   transition: opacity var(--fade-dur) ease;
 }
 
+/*
+ * Portrait. A single path cannot read correctly at both 21:9 and 9:19.5, so the
+ * sweep is reproportioned rather than squeezed: less horizontal reach, more
+ * vertical, and a correspondingly larger unit so the aircraft stays legible on a
+ * phone.
+ *
+ * BOTH conditions are needed, and they mirror the hero's own breakpoint. Width
+ * alone would send a landscape phone (844x390) down the portrait path; aspect
+ * alone would send a 912x1368 tablet there even though at 912px the hero is
+ * still the two-column desktop layout. Only below 900px does .lp-hero-visual
+ * take order:-1 and move the orbit to the top of the stack.
+ */
+@media (max-width: 900px) and (max-aspect-ratio: 1/1) {
+  .boarding-overlay {
+    --u: min(calc(var(--stage-c) / 54), 0.95vh);
+    /* The clear band below the restacked orbit: the globe bottoms out at y 465
+       and the H1's first line starts at 611, both px-driven and near-constant
+       across portrait widths. 538 is the centre of that band. */
+    --plane-top: calc(538px + 7 * var(--u));
+    --park-x: 3;
+    /*
+     * Portrait puts the H1 BELOW the aircraft rather than beside it, so the lane
+     * has to move above the headline instead of below it. -5.37u lands the
+     * walkers' feet exactly on the parked belly: the band between the restacked
+     * orbit and the H1 is only ~146px and the aircraft alone fills most of it,
+     * so there is no room to stand them underneath.
+     */
+    --ground-top: calc(var(--plane-top) - 5.37 * var(--u));
+    --plane-anim: boarding-plane-portrait;
+  }
+}
+
 .boarding-overlay--fading {
   opacity: 0;
 }
 
+/*
+ * Below the header, not over it. The overlay is z-index 9999 and fills the
+ * viewport, so at `top:16px` this button sat directly on top of the header's
+ * phone number and clipped the last digits. --head-h is the height the sticky
+ * header occupies (74px, defined on .lp).
+ */
 .boarding-skip {
   position: absolute;
-  top: 16px;
+  top: calc(var(--head-h, 74px) + 12px);
   right: 16px;
   z-index: 1;
   pointer-events: auto;
@@ -103,7 +195,13 @@
   height: var(--plane-h);
   margin-left: calc(var(--plane-w) / -2);
   margin-top: calc(var(--plane-h) / -2);
-  animation: boarding-plane-move var(--dur) linear forwards;
+  /* Longhands, not the shorthand: an animation-name delivered through a custom
+     property is substituted reliably here, while inside the `animation`
+     shorthand it is far more fragile. */
+  animation-name: var(--plane-anim);
+  animation-duration: var(--dur);
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
 }
 
 .boarding-plane__img {
@@ -121,78 +219,227 @@
  * MIRROR, and a mirror is a reflection (determinant -1) while every rotation is
  * +1 — there is no continuous path between them, so a direction change is
  * ALWAYS an instantaneous snap however it is dressed up. So the aircraft is
- * mirrored ONCE, statically, and thereafter only ever rotates — and a full
- * 360deg loop returns to the orientation it began in. It flies in from the LEFT
- * already facing right, loops, parks, boards and departs right, with no flip.
+ * mirrored ONCE, statically, and thereafter only ever rotates.
  *
- * THE LOOP IS AT FULL SCALE, never shrunk. A rotated box has a far larger
- * axis-aligned footprint (242px tall at 45deg against 122px level), so a loop
- * centred on the parked position would push the plane off the top of the page.
- * The loop is therefore moved rather than the plane resized: centred 25% of the
- * plane's height BELOW the parked spot, where there is room, with the plane
- * climbing into position afterwards. Worst case is 69px clear of the viewport
- * top and 746px of 760 at the bottom.
+ * That is also why the path below never travels leftward at any instant: the
+ * generator asserts the control polygon of every segment is monotonically
+ * increasing in x, which (a Bézier lies inside the convex hull of its control
+ * points) is enough to guarantee it.
  *
- * SMOOTHNESS comes from two things:
+ * ══════════════════════════════════════════════════════════════════════════
+ *  GENERATED by scripts/build-boarding-path.mjs — DO NOT HAND-EDIT.
+ *  Change the waypoints in that script and re-run it:
+ *      node scripts/build-boarding-path.mjs
+ * ══════════════════════════════════════════════════════════════════════════
  *
- * 1. SIXTEEN samples around the circle, not eight. Keyframes interpolate in a
- *    straight line, so N samples trace an N-gon: at 8 the path deviated 10.3px
- *    from a true circle (7.6% of the radius) and read as a faceted tumble. At 16
- *    that falls to 2.6px (1.9%), below what the eye resolves at this size.
+ * WHY IT IS GENERATED. The path this replaces was maintained by hand across two
+ * different percentage bases — translateX resolves against the plane's WIDTH,
+ * translateY against its HEIGHT, and the box is 1.8:1 — and the correction ended
+ * up applied twice. Its "loop-the-loop" was really a 1.81:1 vertical ellipse
+ * (Rx 75px, Ry 135px) while the rotation stepped a uniform 22.5deg as though it
+ * were a circle, so the nose never pointed along the direction of travel. The
+ * generator works in ONE unit for both axes and performs that conversion exactly
+ * once, in a place that can be tested.
  *
- * 2. PER-SEGMENT easing. With one linear curve across the whole timeline the
- *    plane slammed from 1307px/s on the approach to 524px/s the instant it hit
- *    the loop. The glide-in now decelerates so it arrives already travelling at
- *    loop speed, the loop itself stays linear (constant angular speed is what a
- *    real loop looks like), the climb to the parked position eases out into a
- *    stop, and the departure eases in.
+ * The script also refuses to emit a path whose PARK is off screen or under the
+ * header, or whose EXIT has not carried the aircraft fully past the right edge,
+ * at any of fourteen test viewports — the check whose absence let the previous
+ * version look right at 1440 and land on the globe at 1920.
  *
- * THE CIRCLE IS COMPUTED, NOT EYEBALLED. translateX resolves against the plane's
- * WIDTH and translateY against its HEIGHT, and the box is 1.8:1, so equal
- * percentages trace a flat ellipse. Rx=17% / Ry=55.3% corrects for that — a true
- * 135px radius. Rotation runs NEGATIVE because for a right-facing aircraft an
- * inside loop is counter-clockwise on screen. */
-@keyframes boarding-plane-move {
-  /* glide in from off-screen left, shedding speed so it enters the loop
-     tangentially rather than braking on the spot. The control points are not
-     guessed: a cubic-bezier's end slope is (1-y2)/(1-x2), so with the glide
-     averaging 1307px/s and the loop running at 524px/s, x2/y2 are solved to
-     leave the segment at exactly loop speed. An earlier hand-picked curve
-     decelerated to 49px/s and the plane visibly stalled before the loop. */
-  0%      { transform: translateX(-260%) translateY(80.3%) rotate(0deg); animation-timing-function: cubic-bezier(.2,.5,.7,.88); }
-  11%     { transform: translateX(34.0%) translateY(80.3%) rotate(-0deg); animation-timing-function: linear; }
-  12.125% { transform: translateX(40.5%) translateY(76.1%) rotate(-22.5deg); animation-timing-function: linear; }
-  13.25%  { transform: translateX(46.0%) translateY(64.1%) rotate(-45deg); animation-timing-function: linear; }
-  14.375% { transform: translateX(49.7%) translateY(46.2%) rotate(-67.5deg); animation-timing-function: linear; }
-  15.5%   { transform: translateX(51.0%) translateY(25.0%) rotate(-90deg); animation-timing-function: linear; }
-  16.625% { transform: translateX(49.7%) translateY(3.8%) rotate(-112.5deg); animation-timing-function: linear; }
-  17.75%  { transform: translateX(46.0%) translateY(-14.1%) rotate(-135deg); animation-timing-function: linear; }
-  18.875% { transform: translateX(40.5%) translateY(-26.1%) rotate(-157.5deg); animation-timing-function: linear; }
-  20%     { transform: translateX(34.0%) translateY(-30.3%) rotate(-180deg); animation-timing-function: linear; }
-  21.125% { transform: translateX(27.5%) translateY(-26.1%) rotate(-202.5deg); animation-timing-function: linear; }
-  22.25%  { transform: translateX(22.0%) translateY(-14.1%) rotate(-225deg); animation-timing-function: linear; }
-  23.375% { transform: translateX(18.3%) translateY(3.8%) rotate(-247.5deg); animation-timing-function: linear; }
-  24.5%   { transform: translateX(17.0%) translateY(25.0%) rotate(-270deg); animation-timing-function: linear; }
-  25.625% { transform: translateX(18.3%) translateY(46.2%) rotate(-292.5deg); animation-timing-function: linear; }
-  26.75%  { transform: translateX(22.0%) translateY(64.1%) rotate(-315deg); animation-timing-function: linear; }
-  27.875% { transform: translateX(27.5%) translateY(76.1%) rotate(-337.5deg); animation-timing-function: linear; }
-  29%     { transform: translateX(34.0%) translateY(80.3%) rotate(-360deg); animation-timing-function: cubic-bezier(.35,.42,.6,1); }
-  /* Rise out of the loop, overshoot the parking spot, then SETTLE DOWN onto it.
-     The loop sits below the parked position, so simply interpolating from the
-     loop's bottom to the park made the plane's last movement a 196px climb — it
-     arrived from underneath, which reads as taking off rather than landing.
-     Going slightly above and easing down means the final motion is a descent.
-     Nose rides high through the climb (-366deg) and levels off (-360deg) as the
-     plane comes down, the way an aircraft noses over to touch down.
+ * Two attitudes are asserted level (0deg): arrival at the park, because a parked
+ * aircraft sitting nose-up reads as broken, and the start of the departure,
+ * because otherwise the nose snaps the instant the hold ends. */
 
-     Start slope is solved from y1/x1 so the climb begins at the speed the loop
-     ended at, rather than jumping. */
-  31.8%   { transform: translateX(34%) translateY(-14%) rotate(-366deg); animation-timing-function: cubic-bezier(.4,0,.5,1); }
-  34.5%   { transform: translateX(34%) translateY(0) rotate(-360deg); animation-timing-function: linear; }
-  /* hold while everyone boards, then accelerate away to the right, nose up */
-  74%     { transform: translateX(34%) translateY(0) rotate(-360deg); animation-timing-function: cubic-bezier(.6,.02,.86,.4); }
-  86%     { transform: translateX(120%) translateY(-14%) rotate(-366deg); }
-  100%    { transform: translateX(310%) translateY(-46%) rotate(-373deg); }
+@keyframes boarding-plane-landscape {
+  0%      { transform: translateX(calc(-95 * var(--u))) translateY(-34.29%) rotate(11.31deg); }
+  0.8%    { transform: translateX(calc(-91 * var(--u))) translateY(-27.21%) rotate(12.01deg); }
+  1.6%    { transform: translateX(calc(-87.01 * var(--u))) translateY(-19.74%) rotate(12.63deg); }
+  2.4%    { transform: translateX(calc(-83.04 * var(--u))) translateY(-11.93%) rotate(13.19deg); }
+  3.2%    { transform: translateX(calc(-79.09 * var(--u))) translateY(-3.85%) rotate(13.68deg); }
+  4%      { transform: translateX(calc(-75.19 * var(--u))) translateY(4.44%) rotate(14.11deg); }
+  4.8%    { transform: translateX(calc(-71.32 * var(--u))) translateY(12.89%) rotate(14.48deg); }
+  5.6%    { transform: translateX(calc(-67.51 * var(--u))) translateY(21.43%) rotate(14.8deg); }
+  6.4%    { transform: translateX(calc(-63.76 * var(--u))) translateY(30%) rotate(15.05deg); }
+  7.2%    { transform: translateX(calc(-60.08 * var(--u))) translateY(38.54%) rotate(15.24deg); }
+  8%      { transform: translateX(calc(-56.48 * var(--u))) translateY(46.98%) rotate(15.38deg); }
+  8.8%    { transform: translateX(calc(-52.97 * var(--u))) translateY(55.28%) rotate(15.44deg); }
+  9.6%    { transform: translateX(calc(-49.56 * var(--u))) translateY(63.36%) rotate(15.44deg); }
+  10.4%   { transform: translateX(calc(-46.25 * var(--u))) translateY(71.17%) rotate(15.36deg); }
+  11.2%   { transform: translateX(calc(-43.07 * var(--u))) translateY(78.64%) rotate(15.19deg); }
+  12%     { transform: translateX(calc(-40 * var(--u))) translateY(85.71%) rotate(14.93deg); }
+  12.53%  { transform: translateX(calc(-38.83 * var(--u))) translateY(88.37%) rotate(14.58deg); }
+  13.07%  { transform: translateX(calc(-37.7 * var(--u))) translateY(90.83%) rotate(14.15deg); }
+  13.6%   { transform: translateX(calc(-36.62 * var(--u))) translateY(93.12%) rotate(13.63deg); }
+  14.13%  { transform: translateX(calc(-35.59 * var(--u))) translateY(95.22%) rotate(13.02deg); }
+  14.67%  { transform: translateX(calc(-34.59 * var(--u))) translateY(97.14%) rotate(12.31deg); }
+  15.2%   { transform: translateX(calc(-33.63 * var(--u))) translateY(98.88%) rotate(11.5deg); }
+  15.73%  { transform: translateX(calc(-32.7 * var(--u))) translateY(100.43%) rotate(10.58deg); }
+  16.27%  { transform: translateX(calc(-31.8 * var(--u))) translateY(101.81%) rotate(9.56deg); }
+  16.8%   { transform: translateX(calc(-30.93 * var(--u))) translateY(102.99%) rotate(8.43deg); }
+  17.33%  { transform: translateX(calc(-30.07 * var(--u))) translateY(104%) rotate(7.2deg); }
+  17.87%  { transform: translateX(calc(-29.24 * var(--u))) translateY(104.82%) rotate(5.88deg); }
+  18.4%   { transform: translateX(calc(-28.42 * var(--u))) translateY(105.46%) rotate(4.48deg); }
+  18.93%  { transform: translateX(calc(-27.6 * var(--u))) translateY(105.92%) rotate(3.03deg); }
+  19.47%  { transform: translateX(calc(-26.8 * var(--u))) translateY(106.19%) rotate(1.52deg); }
+  20%     { transform: translateX(calc(-26 * var(--u))) translateY(106.29%) rotate(0deg); }
+  20.67%  { transform: translateX(calc(-22.22 * var(--u))) translateY(106.29%) rotate(0deg); }
+  21.33%  { transform: translateX(calc(-18.81 * var(--u))) translateY(106.29%) rotate(0deg); }
+  22%     { transform: translateX(calc(-15.7 * var(--u))) translateY(106.29%) rotate(0deg); }
+  22.67%  { transform: translateX(calc(-12.82 * var(--u))) translateY(106.29%) rotate(0deg); }
+  23.33%  { transform: translateX(calc(-10.16 * var(--u))) translateY(106.29%) rotate(0deg); }
+  24%     { transform: translateX(calc(-7.68 * var(--u))) translateY(106.29%) rotate(0deg); }
+  24.67%  { transform: translateX(calc(-5.41 * var(--u))) translateY(106.29%) rotate(0deg); }
+  25.33%  { transform: translateX(calc(-3.33 * var(--u))) translateY(106.29%) rotate(0deg); }
+  26%     { transform: translateX(calc(-1.48 * var(--u))) translateY(106.29%) rotate(0deg); }
+  26.67%  { transform: translateX(calc(0.14 * var(--u))) translateY(106.29%) rotate(0deg); }
+  27.33%  { transform: translateX(calc(1.5 * var(--u))) translateY(106.29%) rotate(0deg); }
+  28%     { transform: translateX(calc(2.58 * var(--u))) translateY(106.29%) rotate(0deg); }
+  28.67%  { transform: translateX(calc(3.36 * var(--u))) translateY(106.29%) rotate(0deg); }
+  29.33%  { transform: translateX(calc(3.84 * var(--u))) translateY(106.29%) rotate(0deg); }
+  30%     { transform: translateX(calc(4 * var(--u))) translateY(106.29%) rotate(0deg); }
+  74%     { transform: translateX(calc(4 * var(--u))) translateY(106.29%) rotate(0deg); }
+  74.53%  { transform: translateX(calc(4.08 * var(--u))) translateY(106.29%) rotate(0deg); }
+  75.07%  { transform: translateX(calc(4.32 * var(--u))) translateY(106.29%) rotate(0deg); }
+  75.6%   { transform: translateX(calc(4.72 * var(--u))) translateY(106.29%) rotate(0deg); }
+  76.13%  { transform: translateX(calc(5.28 * var(--u))) translateY(106.29%) rotate(0deg); }
+  76.67%  { transform: translateX(calc(6 * var(--u))) translateY(106.29%) rotate(0deg); }
+  77.2%   { transform: translateX(calc(6.88 * var(--u))) translateY(106.29%) rotate(0deg); }
+  77.73%  { transform: translateX(calc(7.92 * var(--u))) translateY(106.29%) rotate(0deg); }
+  78.27%  { transform: translateX(calc(9.12 * var(--u))) translateY(106.29%) rotate(0deg); }
+  78.8%   { transform: translateX(calc(10.48 * var(--u))) translateY(106.29%) rotate(0deg); }
+  79.33%  { transform: translateX(calc(12 * var(--u))) translateY(106.29%) rotate(0deg); }
+  79.87%  { transform: translateX(calc(13.68 * var(--u))) translateY(106.29%) rotate(0deg); }
+  80.4%   { transform: translateX(calc(15.52 * var(--u))) translateY(106.29%) rotate(0deg); }
+  80.93%  { transform: translateX(calc(17.52 * var(--u))) translateY(106.29%) rotate(0deg); }
+  81.47%  { transform: translateX(calc(19.68 * var(--u))) translateY(106.29%) rotate(0deg); }
+  82%     { transform: translateX(calc(22 * var(--u))) translateY(106.29%) rotate(0deg); }
+  82.4%   { transform: translateX(calc(23.39 * var(--u))) translateY(106.06%) rotate(-2.16deg); }
+  82.8%   { transform: translateX(calc(24.77 * var(--u))) translateY(105.4%) rotate(-4.23deg); }
+  83.2%   { transform: translateX(calc(26.14 * var(--u))) translateY(104.33%) rotate(-6.2deg); }
+  83.6%   { transform: translateX(calc(27.49 * var(--u))) translateY(102.88%) rotate(-8.07deg); }
+  84%     { transform: translateX(calc(28.83 * var(--u))) translateY(101.06%) rotate(-9.82deg); }
+  84.4%   { transform: translateX(calc(30.17 * var(--u))) translateY(98.91%) rotate(-11.44deg); }
+  84.8%   { transform: translateX(calc(31.5 * var(--u))) translateY(96.45%) rotate(-12.94deg); }
+  85.2%   { transform: translateX(calc(32.82 * var(--u))) translateY(93.7%) rotate(-14.3deg); }
+  85.6%   { transform: translateX(calc(34.13 * var(--u))) translateY(90.7%) rotate(-15.52deg); }
+  86%     { transform: translateX(calc(35.45 * var(--u))) translateY(87.45%) rotate(-16.61deg); }
+  86.4%   { transform: translateX(calc(36.76 * var(--u))) translateY(84%) rotate(-17.56deg); }
+  86.8%   { transform: translateX(calc(38.07 * var(--u))) translateY(80.36%) rotate(-18.36deg); }
+  87.2%   { transform: translateX(calc(39.37 * var(--u))) translateY(76.56%) rotate(-19.03deg); }
+  87.6%   { transform: translateX(calc(40.69 * var(--u))) translateY(72.62%) rotate(-19.56deg); }
+  88%     { transform: translateX(calc(42 * var(--u))) translateY(68.57%) rotate(-19.96deg); }
+  88.53%  { transform: translateX(calc(46.2 * var(--u))) translateY(55.49%) rotate(-19.97deg); }
+  89.07%  { transform: translateX(calc(50.4 * var(--u))) translateY(42.41%) rotate(-19.97deg); }
+  89.6%   { transform: translateX(calc(54.6 * var(--u))) translateY(29.32%) rotate(-19.98deg); }
+  90.13%  { transform: translateX(calc(58.8 * var(--u))) translateY(16.24%) rotate(-19.98deg); }
+  90.67%  { transform: translateX(calc(63 * var(--u))) translateY(3.15%) rotate(-19.98deg); }
+  91.2%   { transform: translateX(calc(67.2 * var(--u))) translateY(-9.94%) rotate(-19.98deg); }
+  91.73%  { transform: translateX(calc(71.4 * var(--u))) translateY(-23.03%) rotate(-19.98deg); }
+  92.27%  { transform: translateX(calc(75.6 * var(--u))) translateY(-36.12%) rotate(-19.98deg); }
+  92.8%   { transform: translateX(calc(79.8 * var(--u))) translateY(-49.2%) rotate(-19.98deg); }
+  93.33%  { transform: translateX(calc(84 * var(--u))) translateY(-62.29%) rotate(-19.98deg); }
+  93.87%  { transform: translateX(calc(88.2 * var(--u))) translateY(-75.38%) rotate(-19.98deg); }
+  94.4%   { transform: translateX(calc(92.4 * var(--u))) translateY(-88.47%) rotate(-19.98deg); }
+  94.93%  { transform: translateX(calc(96.6 * var(--u))) translateY(-101.55%) rotate(-19.97deg); }
+  95.47%  { transform: translateX(calc(100.8 * var(--u))) translateY(-114.63%) rotate(-19.97deg); }
+  96%     { transform: translateX(calc(105 * var(--u))) translateY(-127.71%) rotate(-19.97deg); }
+  100%    { transform: translateX(calc(105 * var(--u))) translateY(-127.71%) rotate(-19.97deg); }
+}
+
+@keyframes boarding-plane-portrait {
+  0%      { transform: translateX(calc(-62 * var(--u))) translateY(-188.57%) rotate(14.04deg); }
+  0.8%    { transform: translateX(calc(-59.2 * var(--u))) translateY(-182.3%) rotate(15.24deg); }
+  1.6%    { transform: translateX(calc(-56.41 * var(--u))) translateY(-175.54%) rotate(16.29deg); }
+  2.4%    { transform: translateX(calc(-53.63 * var(--u))) translateY(-168.37%) rotate(17.2deg); }
+  3.2%    { transform: translateX(calc(-50.88 * var(--u))) translateY(-160.88%) rotate(17.97deg); }
+  4%      { transform: translateX(calc(-48.15 * var(--u))) translateY(-153.14%) rotate(18.62deg); }
+  4.8%    { transform: translateX(calc(-45.46 * var(--u))) translateY(-145.25%) rotate(19.14deg); }
+  5.6%    { transform: translateX(calc(-42.81 * var(--u))) translateY(-137.28%) rotate(19.53deg); }
+  6.4%    { transform: translateX(calc(-40.21 * var(--u))) translateY(-129.31%) rotate(19.8deg); }
+  7.2%    { transform: translateX(calc(-37.66 * var(--u))) translateY(-121.43%) rotate(19.94deg); }
+  8%      { transform: translateX(calc(-35.19 * var(--u))) translateY(-113.71%) rotate(19.94deg); }
+  8.8%    { transform: translateX(calc(-32.78 * var(--u))) translateY(-106.25%) rotate(19.79deg); }
+  9.6%    { transform: translateX(calc(-30.45 * var(--u))) translateY(-99.13%) rotate(19.47deg); }
+  10.4%   { transform: translateX(calc(-28.2 * var(--u))) translateY(-92.42%) rotate(18.96deg); }
+  11.2%   { transform: translateX(calc(-26.05 * var(--u))) translateY(-86.2%) rotate(18.23deg); }
+  12%     { transform: translateX(calc(-24 * var(--u))) translateY(-80.57%) rotate(17.22deg); }
+  12.53%  { transform: translateX(calc(-23.01 * var(--u))) translateY(-78.22%) rotate(15.42deg); }
+  13.07%  { transform: translateX(calc(-22.05 * var(--u))) translateY(-75.97%) rotate(15.11deg); }
+  13.6%   { transform: translateX(calc(-21.11 * var(--u))) translateY(-73.82%) rotate(14.69deg); }
+  14.13%  { transform: translateX(calc(-20.19 * var(--u))) translateY(-71.8%) rotate(14.15deg); }
+  14.67%  { transform: translateX(calc(-19.3 * var(--u))) translateY(-69.9%) rotate(13.5deg); }
+  15.2%   { transform: translateX(calc(-18.42 * var(--u))) translateY(-68.15%) rotate(12.72deg); }
+  15.73%  { transform: translateX(calc(-17.55 * var(--u))) translateY(-66.53%) rotate(11.81deg); }
+  16.27%  { transform: translateX(calc(-16.7 * var(--u))) translateY(-65.08%) rotate(10.77deg); }
+  16.8%   { transform: translateX(calc(-15.86 * var(--u))) translateY(-63.79%) rotate(9.61deg); }
+  17.33%  { transform: translateX(calc(-15.04 * var(--u))) translateY(-62.67%) rotate(8.3deg); }
+  17.87%  { transform: translateX(calc(-14.22 * var(--u))) translateY(-61.73%) rotate(6.87deg); }
+  18.4%   { transform: translateX(calc(-13.41 * var(--u))) translateY(-60.99%) rotate(5.32deg); }
+  18.93%  { transform: translateX(calc(-12.6 * var(--u))) translateY(-60.44%) rotate(3.65deg); }
+  19.47%  { transform: translateX(calc(-11.8 * var(--u))) translateY(-60.11%) rotate(1.87deg); }
+  20%     { transform: translateX(calc(-11 * var(--u))) translateY(-60%) rotate(0deg); }
+  20.67%  { transform: translateX(calc(-9.07 * var(--u))) translateY(-60%) rotate(0deg); }
+  21.33%  { transform: translateX(calc(-7.28 * var(--u))) translateY(-60%) rotate(0deg); }
+  22%     { transform: translateX(calc(-5.65 * var(--u))) translateY(-60%) rotate(0deg); }
+  22.67%  { transform: translateX(calc(-4.17 * var(--u))) translateY(-60%) rotate(0deg); }
+  23.33%  { transform: translateX(calc(-2.84 * var(--u))) translateY(-60%) rotate(0deg); }
+  24%     { transform: translateX(calc(-1.66 * var(--u))) translateY(-60%) rotate(0deg); }
+  24.67%  { transform: translateX(calc(-0.63 * var(--u))) translateY(-60%) rotate(0deg); }
+  25.33%  { transform: translateX(calc(0.25 * var(--u))) translateY(-60%) rotate(0deg); }
+  26%     { transform: translateX(calc(1.01 * var(--u))) translateY(-60%) rotate(0deg); }
+  26.67%  { transform: translateX(calc(1.63 * var(--u))) translateY(-60%) rotate(0deg); }
+  27.33%  { transform: translateX(calc(2.13 * var(--u))) translateY(-60%) rotate(0deg); }
+  28%     { transform: translateX(calc(2.52 * var(--u))) translateY(-60%) rotate(0deg); }
+  28.67%  { transform: translateX(calc(2.79 * var(--u))) translateY(-60%) rotate(0deg); }
+  29.33%  { transform: translateX(calc(2.95 * var(--u))) translateY(-60%) rotate(0deg); }
+  30%     { transform: translateX(calc(3 * var(--u))) translateY(-60%) rotate(0deg); }
+  74%     { transform: translateX(calc(3 * var(--u))) translateY(-60%) rotate(0deg); }
+  74.53%  { transform: translateX(calc(3.05 * var(--u))) translateY(-60%) rotate(0deg); }
+  75.07%  { transform: translateX(calc(3.21 * var(--u))) translateY(-60%) rotate(0deg); }
+  75.6%   { transform: translateX(calc(3.48 * var(--u))) translateY(-60%) rotate(0deg); }
+  76.13%  { transform: translateX(calc(3.85 * var(--u))) translateY(-60%) rotate(0deg); }
+  76.67%  { transform: translateX(calc(4.33 * var(--u))) translateY(-60%) rotate(0deg); }
+  77.2%   { transform: translateX(calc(4.92 * var(--u))) translateY(-60%) rotate(0deg); }
+  77.73%  { transform: translateX(calc(5.61 * var(--u))) translateY(-60%) rotate(0deg); }
+  78.27%  { transform: translateX(calc(6.41 * var(--u))) translateY(-60%) rotate(0deg); }
+  78.8%   { transform: translateX(calc(7.32 * var(--u))) translateY(-60%) rotate(0deg); }
+  79.33%  { transform: translateX(calc(8.33 * var(--u))) translateY(-60%) rotate(0deg); }
+  79.87%  { transform: translateX(calc(9.45 * var(--u))) translateY(-60%) rotate(0deg); }
+  80.4%   { transform: translateX(calc(10.68 * var(--u))) translateY(-60%) rotate(0deg); }
+  80.93%  { transform: translateX(calc(12.01 * var(--u))) translateY(-60%) rotate(0deg); }
+  81.47%  { transform: translateX(calc(13.45 * var(--u))) translateY(-60%) rotate(0deg); }
+  82%     { transform: translateX(calc(15 * var(--u))) translateY(-60%) rotate(0deg); }
+  82.4%   { transform: translateX(calc(15.8 * var(--u))) translateY(-60.16%) rotate(-2.62deg); }
+  82.8%   { transform: translateX(calc(16.61 * var(--u))) translateY(-60.62%) rotate(-5.01deg); }
+  83.2%   { transform: translateX(calc(17.42 * var(--u))) translateY(-61.37%) rotate(-7.18deg); }
+  83.6%   { transform: translateX(calc(18.24 * var(--u))) translateY(-62.37%) rotate(-9.15deg); }
+  84%     { transform: translateX(calc(19.05 * var(--u))) translateY(-63.61%) rotate(-10.93deg); }
+  84.4%   { transform: translateX(calc(19.87 * var(--u))) translateY(-65.07%) rotate(-12.52deg); }
+  84.8%   { transform: translateX(calc(20.68 * var(--u))) translateY(-66.71%) rotate(-13.95deg); }
+  85.2%   { transform: translateX(calc(21.5 * var(--u))) translateY(-68.52%) rotate(-15.21deg); }
+  85.6%   { transform: translateX(calc(22.3 * var(--u))) translateY(-70.48%) rotate(-16.32deg); }
+  86%     { transform: translateX(calc(23.11 * var(--u))) translateY(-72.56%) rotate(-17.28deg); }
+  86.4%   { transform: translateX(calc(23.9 * var(--u))) translateY(-74.74%) rotate(-18.1deg); }
+  86.8%   { transform: translateX(calc(24.69 * var(--u))) translateY(-76.99%) rotate(-18.78deg); }
+  87.2%   { transform: translateX(calc(25.47 * var(--u))) translateY(-79.31%) rotate(-19.33deg); }
+  87.6%   { transform: translateX(calc(26.24 * var(--u))) translateY(-81.65%) rotate(-19.74deg); }
+  88%     { transform: translateX(calc(27 * var(--u))) translateY(-84%) rotate(-20.02deg); }
+  88.53%  { transform: translateX(calc(28.93 * var(--u))) translateY(-90.03%) rotate(-20deg); }
+  89.07%  { transform: translateX(calc(30.87 * var(--u))) translateY(-96.07%) rotate(-20.01deg); }
+  89.6%   { transform: translateX(calc(32.8 * var(--u))) translateY(-102.1%) rotate(-20.01deg); }
+  90.13%  { transform: translateX(calc(34.73 * var(--u))) translateY(-108.14%) rotate(-20.01deg); }
+  90.67%  { transform: translateX(calc(36.67 * var(--u))) translateY(-114.17%) rotate(-20.01deg); }
+  91.2%   { transform: translateX(calc(38.6 * var(--u))) translateY(-120.21%) rotate(-20.01deg); }
+  91.73%  { transform: translateX(calc(40.53 * var(--u))) translateY(-126.24%) rotate(-20.01deg); }
+  92.27%  { transform: translateX(calc(42.47 * var(--u))) translateY(-132.27%) rotate(-20.01deg); }
+  92.8%   { transform: translateX(calc(44.4 * var(--u))) translateY(-138.31%) rotate(-20.01deg); }
+  93.33%  { transform: translateX(calc(46.33 * var(--u))) translateY(-144.34%) rotate(-20.01deg); }
+  93.87%  { transform: translateX(calc(48.27 * var(--u))) translateY(-150.38%) rotate(-20.01deg); }
+  94.4%   { transform: translateX(calc(50.2 * var(--u))) translateY(-156.41%) rotate(-20.01deg); }
+  94.93%  { transform: translateX(calc(52.13 * var(--u))) translateY(-162.45%) rotate(-20.01deg); }
+  95.47%  { transform: translateX(calc(54.07 * var(--u))) translateY(-168.48%) rotate(-20deg); }
+  96%     { transform: translateX(calc(56 * var(--u))) translateY(-174.51%) rotate(-20deg); }
+  100%    { transform: translateX(calc(56 * var(--u))) translateY(-174.51%) rotate(-20deg); }
 }
 
 /* ---- seated passengers (children of .boarding-plane) -------------- */
@@ -314,23 +561,26 @@
 @keyframes boarding-walk-traveller {
   0%   { transform: translateX(calc(-50vw - 100%)); opacity: 1; }
   18%  { transform: translateX(calc(-50vw - 100%)); opacity: 1; animation-timing-function: cubic-bezier(.32,.06,.4,1); }
-  39%  { transform: translateX(88%);  opacity: 1; }
-  40%  { transform: translateX(88%);  opacity: 0; }
-  100% { transform: translateX(88%);  opacity: 0; }
+  39%  { transform: translateX(var(--stop-traveller));  opacity: 1; }
+  40%  { transform: translateX(var(--stop-traveller));  opacity: 0; }
+  100% { transform: translateX(var(--stop-traveller));  opacity: 0; }
 }
 
 /* hidden until 44% (after the plane's brief post-boarding-1 wait) ·
    44-61% walk in · 62% cut to "boarded". */
-/* Ends at +22% rather than the traveller's -58%: seats 2+3 sit further right
-   along the fuselage (55.4% of the plane's width against seat 1's 37.15%), so
-   the couple has to walk past seat 1 to reach their own. */
+/* The couple stop LEFT of where the traveller stopped, not right of it. Seats
+   2+3 sit at 55.4% of the artwork's width against seat 1's 37.15%, but the
+   artwork is mirrored to face right, so on screen those become 44.6% and 62.85%
+   — the order reverses. Both stops are derived from --park-x in one place, so
+   moving the park moves the people with it; the old literal 88% / 164% were
+   tuned before the mirror correction landed and had the two swapped. */
 @keyframes boarding-walk-couple {
   0%   { transform: translateX(calc(-50vw - 100%)); opacity: 0; }
   40%  { transform: translateX(calc(-50vw - 100%)); opacity: 0; }
   44%  { transform: translateX(calc(-50vw - 100%)); opacity: 1; animation-timing-function: cubic-bezier(.32,.06,.4,1); }
-  61%  { transform: translateX(164%);  opacity: 1; }
-  62%  { transform: translateX(164%);  opacity: 0; }
-  100% { transform: translateX(164%);  opacity: 0; }
+  61%  { transform: translateX(var(--stop-couple));  opacity: 1; }
+  62%  { transform: translateX(var(--stop-couple));  opacity: 0; }
+  100% { transform: translateX(var(--stop-couple));  opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -522,13 +522,19 @@
 .lp-tab:hover { background: var(--accent-50); color: var(--accent-800); }
 .lp-tab.is-active { background: var(--accent-700); color: var(--accent-contrast); box-shadow: var(--e-accent); }
 
+/* A <button>, not a <div>: it selects a country on the map above it, so it has
+   to be reachable by keyboard and announced as pressable. Hence the four
+   resets — a button brings its own font, alignment, width and cursor. */
 .lp-country {
   display: flex; align-items: center; gap: 15px; background: var(--surface);
   border: 1px solid var(--line); border-radius: var(--radius); padding: 19px 21px;
+  font-family: var(--font-sans); text-align: left; width: 100%; cursor: pointer;
   font-size: var(--t-body); font-weight: 700; color: var(--ink); box-shadow: var(--e-1);
   transition: transform .26s var(--ease), box-shadow .26s, border-color .26s;
 }
 .lp-country:hover { transform: translateY(-5px); box-shadow: var(--e-3); border-color: var(--accent-700); }
+.lp-country.is-selected { border-color: var(--accent-700); box-shadow: var(--e-accent); }
+.lp-country.is-selected .lp-country-arrow { opacity: 1; transform: none; }
 .lp-country-flag { width: 38px; height: auto; border-radius: 3px; box-shadow: var(--e-1); }
 .lp-country-name { margin-right: auto; }
 .lp-country-arrow { color: var(--accent-700); opacity: 0; transform: translateX(-6px); transition: opacity .26s, transform .26s var(--ease); }

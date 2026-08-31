@@ -107,6 +107,35 @@
   .modal-head p { margin: 0; font-size: var(--fs-xs); color: var(--ink-500); }
   .modal-body { padding: var(--sp-4); }
   .modal-text { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-prose); color: var(--ink-700); white-space: pre-wrap; }
+
+  /* Course detail (the eye icon on a course card). A label/value list rather
+     than a table: the values are free text of wildly varying length -- an entry
+     requirement can be one word or three lines -- and a table forces every row
+     to the width of the longest. */
+  .course-detail { display: flex; flex-direction: column; gap: 18px; }
+  .cd-section { display: flex; flex-direction: column; gap: 2px; }
+  .cd-heading {
+    margin: 0 0 6px; font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--ink-400);
+  }
+  .cd-row {
+    display: grid; grid-template-columns: 150px 1fr; gap: 12px;
+    padding: 7px 0; border-bottom: 1px solid var(--border);
+    font-size: var(--fs-sm); line-height: var(--lh-prose);
+  }
+  .cd-row:last-child { border-bottom: 0; }
+  .cd-label { color: var(--ink-500); }
+  .cd-value { color: var(--ink-700); overflow-wrap: anywhere; }
+  .cd-empty { margin: 0; font-size: var(--fs-sm); color: var(--ink-400); }
+  /* "Unknown" is the absence of a figure, not a figure; muting it keeps it from
+     reading as a value at a glance. */
+  .cd-unknown { color: var(--ink-400); font-style: italic; }
+
+  /* The label column costs more than it earns on a phone. */
+  @media (max-width: 560px) {
+    .cd-row { grid-template-columns: 1fr; gap: 2px; }
+    .cd-label { font-size: 11px; }
+  }
   .modal-foot { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 6px; }
 
   /* Table cells that hold long free text (update bodies, entry requirements). */

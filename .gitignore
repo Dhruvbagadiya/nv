@@ -27,3 +27,13 @@ coverage/
 playwright-report/
 test-results/
 scripts/
+
+# …except the world-map generator. public/map/world.json is generated and
+# committed so the build stays offline; the script that produces it has to be
+# committed alongside it or that data becomes unreproducible. Git cannot
+# re-include a file inside an excluded directory, hence un-ignoring the
+# directory first and then everything in it but this one file.
+!frontend/scripts/
+frontend/scripts/*
+!frontend/scripts/build-world-map.mjs
+!frontend/scripts/build-boarding-path.mjs

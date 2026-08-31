@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { formatFee, isFree } from '../../utils/format.js';
+import Icon from '../../components/ui/Icon.jsx';
+import CourseDetailModal from './CourseDetailModal.jsx';
+import { formatFee } from '../../utils/format.js';
 
 // Props shape matches the program resource returned by the backend:
 //   { id, type: "program", attributes: { name, programLevel, school, programIntakes,
@@ -35,6 +38,7 @@ function formatDuration(min, max) {
 export default function CourseCard({ program }) {
   const { id, attributes: attr } = program;
   const { school } = attr;
+  const [showDetail, setShowDetail] = useState(false);
 
   const initials = school.name.slice(0, 2).toUpperCase();
   const currency = attr.currency ?? 'USD';
@@ -118,10 +122,14 @@ export default function CourseCard({ program }) {
           </div>
           <div className="info-tile">
             <div className="i-label">Application fee</div>
+            {/* Same three states as the detail view: null is "not published",
+                which must not read as a free one. */}
             <div className="i-value mono">
-              {isFree(attr.applicationFee)
-                ? 'None'
-                : formatFee(attr.applicationFee, currency)}
+              {attr.applicationFee == null
+                ? 'Unknown'
+                : attr.applicationFee > 0
+                  ? formatFee(attr.applicationFee, currency)
+                  : 'None'}
             </div>
           </div>
           {duration && (
@@ -153,8 +161,22 @@ export default function CourseCard({ program }) {
           <Link className="btn btn-primary" to={`/partner/add-application?courseId=${id}`}>
             Create application
           </Link>
+          {/* The whole payload is already here, so this opens with no request. */}
+          <button
+            type="button"
+            className="detail-btn"
+            onClick={() => setShowDetail(true)}
+            aria-label={`View details for ${attr.name}`}
+            title="View details"
+          >
+            <Icon name="eye" size={16} />
+          </button>
         </div>
       </div>
+
+      {showDetail && (
+        <CourseDetailModal program={program} onClose={() => setShowDetail(false)} />
+      )}
     </div>
   );
 }

@@ -102,7 +102,11 @@
      padding-top keeps the old gap when the content is tall enough to touch it. */
   .card-actions { display:flex; gap:5px; align-items:center; margin-top:auto; padding-top:7px; }
   .card-actions .btn-primary { flex:1; width:auto; justify-content:center; height: 31px; font-size: 12px; }
-  .heart-btn { width:31px; height:31px; border:1px solid var(--border); border-radius:var(--radius-sm); background:#fff; cursor:pointer; font-size:15px; color:var(--ink-400); flex-shrink: 0; transition: all .13s; }
+  /* Shares the heart button's geometry so the action row stays even whichever
+     of the two a card shows. */
+  .heart-btn, .detail-btn { width:31px; height:31px; border:1px solid var(--border); border-radius:var(--radius-sm); background:#fff; cursor:pointer; font-size:15px; color:var(--ink-400); flex-shrink: 0; transition: all .13s; }
+  .detail-btn { display:inline-flex; align-items:center; justify-content:center; }
+  .detail-btn:hover { border-color: var(--accent-700, var(--ink-700)); color: var(--accent-700, var(--ink-700)); }
   .heart-btn:hover { border-color: var(--danger-700); color: var(--danger-700); }
   .heart-btn.active { color: var(--danger-700); background: var(--danger-100); border-color: var(--danger-100); }
 

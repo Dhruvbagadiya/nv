@@ -4,6 +4,8 @@ import { useReveal, useCountUp } from './useReveal.js';
 import BoardingAnimation from './BoardingAnimation.jsx';
 import Icon from './Icons.jsx';
 import { RouteMapScene, StampScene, BoardingPassScene, GlobeScene, SealRing } from './Scenes.jsx';
+import WorldMap from './WorldMap.jsx';
+import { DESTINATIONS as COUNTRIES } from './worldMapData.js';
 
 // Public marketing home page. Everything else in this app is behind a login or
 // is portal chrome; this is the one screen a stranger sees, so it owns its own
@@ -42,21 +44,9 @@ const SERVICES = [
   { icon: 'exchange', title: 'Money Exchange',    body: 'Secure foreign currency exchange for international travellers.' },
 ];
 
-const COUNTRIES = [
-  { name: 'Canada', iso: 'CA', group: 'North America' },
-  { name: 'USA', iso: 'US', group: 'North America' },
-  { name: 'UK', iso: 'GB', group: 'Europe' },
-  { name: 'Germany', iso: 'DE', group: 'Europe' },
-  { name: 'Poland', iso: 'PL', group: 'Europe' },
-  { name: 'Malta', iso: 'MT', group: 'Europe' },
-  { name: 'Russia', iso: 'RU', group: 'Europe' },
-  { name: 'Europe', iso: 'EU', group: 'Europe' },
-  { name: 'Australia', iso: 'AU', group: 'Oceania' },
-  { name: 'New Zealand', iso: 'NZ', group: 'Oceania' },
-  { name: 'Singapore', iso: 'SG', group: 'Asia' },
-  { name: 'China', iso: 'CN', group: 'Asia' },
-  { name: 'Mauritius', iso: 'MU', group: 'Africa' },
-];
+// COUNTRIES is imported from worldMapData.js, which is the single source of
+// truth for the destination list: the map, the marquee and the flag grid all
+// read the same array, so a country can never appear in one and not another.
 
 const STEPS = [
   { n: '01', t: 'Free assessment',  b: 'Tell us where you want to go. We check eligibility before you spend anything.' },
@@ -228,6 +218,9 @@ export default function LandingPage() {
   const [progress, setProgress] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [group, setGroup] = useState('All');
+  // Which country is picked out on the map and in the flag grid. One piece of
+  // state for both, so clicking in either place highlights it in the other.
+  const [selectedIso, setSelectedIso] = useState(null);
   const [active, setActive] = useState('top');
   const [openFaq, setOpenFaq] = useState(0);
   const spotlight = useSpotlight();
@@ -657,9 +650,26 @@ export default function LandingPage() {
             ))}
           </Reveal>
 
+          {/* Every border on this map is real coastline, drawn from the same
+              geometry an atlas uses. It is decorative: the grid underneath is
+              the accessible, crawlable, tappable copy of the same list. */}
+          <WorldMap
+            group={group}
+            selectedIso={selectedIso}
+            onSelect={(iso) => setSelectedIso((prev) => (prev === iso ? null : iso))}
+          />
+
           <div className="lp-grid lp-grid-3">
             {shown.map((c, i) => (
-              <Reveal key={c.name} delay={i * 50} className="lp-country">
+              <Reveal
+                key={c.name}
+                delay={i * 50}
+                as="button"
+                type="button"
+                aria-pressed={selectedIso === c.iso}
+                className={`lp-country ${selectedIso === c.iso ? 'is-selected' : ''}`}
+                onClick={() => setSelectedIso((prev) => (prev === c.iso ? null : c.iso))}
+              >
                 <img
                   className="lp-country-flag"
                   src={`https://flagcdn.com/w40/${c.iso.toLowerCase()}.png`}

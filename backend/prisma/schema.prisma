@@ -267,6 +267,18 @@ model Course {
   externalId Int?
   source     String @default("manual")
 
+  // The provider's own link to the university's course page. ApplyBoard does
+  // not publish one; instantapply does, and agents use it to check details the
+  // feed does not carry.
+  externalUrl String?
+
+  // Entry requirements as published by the feed: IELTS/PTE/TOEFL/Duolingo
+  // bands, academic score, accepted tests, MOI. Json rather than columns
+  // because the shape is irregular per provider and per course — some carry
+  // "No", some "6.5", some nothing — and a dozen nullable columns would encode
+  // one provider's format as the schema.
+  entryRequirements Json?
+
   // Human-readable full name, e.g. "Master of Science - Computational Sciences (Course)"
   title        String
   // Short display name shown on cards, e.g. "Computational Sciences"
@@ -285,7 +297,18 @@ model Course {
   languageOfInstruction String @default("eng")
 
   tuitionFee     Decimal
-  applicationFee Decimal
+  // Nullable because "no fee published" and "no fee charged" are different
+  // answers, and an agent acting on the wrong one quotes a student the wrong
+  // price. instantapply publishes a fee on about 4% of its courses; ApplyBoard
+  // publishes one on all of its, including genuine zeroes.
+  applicationFee Decimal?
+
+  // ISO 4217 for tuitionFee, when the feed publishes one per course. Country
+  // carries a currencyCode and is the fallback, but it is not always right:
+  // De Montfort University Dubai is a UK institution quoting AED, Lincoln
+  // University (New Zealand) is filed under the UK and quotes NZD, and
+  // academyEX quotes USD in New Zealand. Null means "use the country's".
+  currencyCode String?
 
   // Convenience pre-computed commission amount (highest tier) stored alongside
   // the structured commission object so the card can show it without a join.

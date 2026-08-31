@@ -14,6 +14,13 @@ const PROGRAM_INCLUDE = {
         select: { code: true, currencyCode: true },
       },
       commission: true,
+      // Gallery photos back the detail view. Bounded: a school with 40 photos
+      // must not multiply the payload of a 12-card page by 40.
+      photos: {
+        orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
+        take: 12,
+        select: { id: true, url: true, thumbnailUrl: true },
+      },
     },
   },
   intakes: {
@@ -81,6 +88,12 @@ function toProgramResource(course) {
     province: institution.province ?? null,
     countryCode: country.code,
     logoThumbnailUrl: institution.logoUrl ?? null,
+    bannerUrl: institution.bannerUrl ?? null,
+    photos: (institution.photos ?? []).map((p) => ({
+      id: p.id,
+      url: p.url,
+      thumbnailUrl: p.thumbnailUrl ?? null,
+    })),
   };
 
   const programIntakes = (course.intakes ?? []).map((intake) => ({
@@ -98,9 +111,14 @@ function toProgramResource(course) {
 
   const attributes = {
     abAppCreationEnabled: course.abAppCreationEnabled,
-    applicationFee: Number(course.applicationFee),
+    // Number(null) is 0, so this must branch: null means no fee was published,
+    // and collapsing it to 0 would present an unknown fee as a free one.
+    applicationFee: course.applicationFee == null ? null : Number(course.applicationFee),
     commissionAmount: course.commissionAmount != null ? Number(course.commissionAmount) : null,
-    currency: country.currencyCode,
+    // The course's own currency wins where the feed publishes one: a country
+    // default cannot express De Montfort University Dubai, a UK institution
+    // quoting AED, or Lincoln University (New Zealand) quoting NZD.
+    currency: course.currencyCode ?? country.currencyCode,
     id: course.id,
     languageOfInstructionCode: course.languageOfInstruction,
     maxLength: course.maxLength,
@@ -116,6 +134,11 @@ function toProgramResource(course) {
       : null,
     tags: course.tags ?? [],
     tuition: Number(course.tuitionFee),
+    // Published by instantapply only; ApplyBoard rows carry null for both.
+    // entryRequirements is free-form per provider, so it is passed through as
+    // stored rather than flattened into columns the next feed would not fit.
+    entryRequirements: course.entryRequirements ?? null,
+    externalUrl: course.externalUrl ?? null,
   };
 
   // Only include commission key if it exists
