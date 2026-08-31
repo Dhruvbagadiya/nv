@@ -23,6 +23,9 @@ export const createInstitutionBody = z
     city:         z.string().trim().max(120).nullable().optional(),
     province:     z.string().trim().max(120).nullable().optional(),
     logoUrl:      z.string().url().max(500).nullable().optional(),
+    // Wide header image for the institution page. Populated by the ApplyBoard
+    // import; instantapply publishes no banners, so it stays null for those.
+    bannerUrl:    z.string().url().max(500).nullable().optional(),
     isTrending:   z.boolean().optional(),
     isBlacklisted: z.boolean().optional(),
   })
@@ -35,3 +38,29 @@ export const updateInstitutionBody = createInstitutionBody
 export const blacklistBody = z.object({ isBlacklisted: z.boolean() }).strict();
 
 export const idParam = z.object({ id: z.string().uuid() });
+
+
+// ---------------------------------------------------------------- gallery
+
+export const photoIdParam = z.object({
+  id: z.string().uuid(),
+  photoId: z.string().uuid(),
+});
+
+export const addPhotoBody = z
+  .object({
+    url: z.string().trim().url().max(500),
+    thumbnailUrl: z.string().trim().url().max(500).nullable().optional(),
+    fileName: z.string().trim().max(200).nullable().optional(),
+    // Omitted means "append"; the service works out the next position.
+    position: z.coerce.number().int().nonnegative().optional(),
+  })
+  .strict();
+
+export const reorderPhotosBody = z
+  .object({
+    // The full list, in the order wanted. Capped to match the read limit so a
+    // reorder cannot be used to write an unbounded transaction.
+    ids: z.array(z.string().uuid()).min(1).max(60),
+  })
+  .strict();

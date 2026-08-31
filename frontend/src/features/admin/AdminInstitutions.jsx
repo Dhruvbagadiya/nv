@@ -5,6 +5,7 @@ import Page from '../../components/ui/Page.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
 import Modal from '../../components/ui/Modal.jsx';
+import InstitutionPhotos from './InstitutionPhotos.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 import {
@@ -32,6 +33,7 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
     city:          initial?.city          ?? '',
     province:      initial?.province      ?? '',
     logoUrl:       initial?.logoUrl       ?? '',
+    bannerUrl:     initial?.bannerUrl     ?? '',
     isTrending:    initial?.isTrending    ?? false,
     isBlacklisted: initial?.isBlacklisted ?? false,
   });
@@ -62,7 +64,8 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
       countryId:     form.countryId,
       city:          form.city     || null,
       province:      form.province || null,
-      logoUrl:       form.logoUrl  || null,
+      logoUrl:       form.logoUrl   || null,
+      bannerUrl:     form.bannerUrl || null,
       isTrending:    form.isTrending,
       isBlacklisted: form.isBlacklisted,
     });
@@ -120,6 +123,21 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
                 onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             )}
           </div>
+          <div className="form-field" style={{ gridColumn: '1 / -1' }}>
+            <label className="flabel" htmlFor="inst-banner">Banner URL</label>
+            <input id="inst-banner" type="text" value={form.bannerUrl}
+              onChange={(e) => set('bannerUrl', e.target.value)}
+              placeholder="https://…/banner.png" />
+            <p className="field-hint">
+              Wide header image. Set by the ApplyBoard import; instantapply publishes none.
+            </p>
+            {form.bannerUrl && (
+              <img src={form.bannerUrl} alt="banner preview"
+                style={{ marginTop: 6, width: '100%', maxHeight: 90, objectFit: 'cover',
+                  border: '1px solid var(--border)', borderRadius: 6 }}
+                onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            )}
+          </div>
           <div className="form-field">
             <label className="checkbox-row">
               <input type="checkbox" checked={form.isTrending}
@@ -145,6 +163,14 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
           </button>
         </div>
       </form>
+
+      {/* Outside the form on purpose: photos save immediately through their own
+          endpoints, so nesting them would put controls that act at once beside a
+          Save button that implies nothing has been applied yet. Only on edit --
+          there is no institution to attach a photo to until one exists. */}
+      {isEdit && (
+        <InstitutionPhotos institutionId={initial.id} institutionName={initial.name} />
+      )}
     </Modal>
   );
 }

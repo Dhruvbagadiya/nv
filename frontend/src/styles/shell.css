@@ -123,6 +123,11 @@
 
   /* ===================== LAYOUT ===================== */
   .layout { display: block; }
+  /* Stacking, from the back: overlay 34, drawer 35, header 40. The drawer has
+     to sit ABOVE its own overlay -- with the two the other way round the drawer
+     slid into view but every tap landed on the overlay, whose handler closes
+     it, so the menu looked open and answered nothing. The header stays above
+     both so the toggle can still close the drawer. */
   .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(11,14,20,0.4); z-index: 34; }
 
   .sidebar {
@@ -135,13 +140,19 @@
     padding-top: calc(var(--header-h) + 7px);
     height: 100vh;
     overflow: hidden;
-    z-index: 33;
+    z-index: 35;
     display: flex;
     flex-direction: column;
     transition: width .18s ease, box-shadow .18s ease;
   }
-  .sidebar:hover { width: var(--sidebar-w); box-shadow: var(--shadow-lg); }
-  @media (min-width: 901px) {
+  /* Hover-to-expand only where hovering exists. On a touch screen the browser
+     synthesises a hover on first tap, so the first tap widened the rail instead
+     of following the link, and the second tap landed on whatever had moved
+     under the finger. */
+  @media (hover: hover) and (pointer: fine) {
+    .sidebar:hover { width: var(--sidebar-w); box-shadow: var(--shadow-lg); }
+  }
+  @media (min-width: 901px) and (hover: hover) and (pointer: fine) {
     .sidebar:hover ~ .main { margin-left: var(--sidebar-w); }
   }
   .sidebar-nav { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 1px; min-height: 0; }

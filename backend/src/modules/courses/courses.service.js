@@ -134,6 +134,16 @@ function toProgramResource(course) {
       : null,
     tags: course.tags ?? [],
     tuition: Number(course.tuitionFee),
+    // The admin table branches on this to offer Restore instead of Archive. It
+    // was read there before it was ever sent, so the button could not appear
+    // and an archived course had no way back through the UI.
+    archivedAt: course.archivedAt ? course.archivedAt.toISOString() : null,
+    // Which feed owns this row. Admin screens surface it because an edit to a
+    // scraped course is overwritten by the next import of that feed -- the
+    // importer matches on (source, externalId) and rewrites the fields it owns.
+    // Without this an admin has no way to tell which edits will survive.
+    source: course.source ?? 'manual',
+    externalId: course.externalId ?? null,
     // Published by instantapply only; ApplyBoard rows carry null for both.
     // entryRequirements is free-form per provider, so it is passed through as
     // stored rather than flattened into columns the next feed would not fit.
@@ -169,6 +179,7 @@ export async function searchCourses({
   tag,
   programLevel,
   institutionId,
+  status = 'active',
   page = 1,
   pageSize = 12,
 }) {
@@ -197,8 +208,18 @@ export async function searchCourses({
     matchingInstitutionIds = matches.map((m) => m.id);
   }
 
+  // 'active' is the default and the only thing the public catalogue ever asks
+  // for. The others exist so an admin can find a soft-deleted course again --
+  // archiving is reversible, but only if something can list the archived rows.
+  const archiveWhere =
+    status === 'archived'
+      ? { archivedAt: { not: null } }
+      : status === 'all'
+        ? {}
+        : NOT_ARCHIVED;
+
   const where = {
-    ...NOT_ARCHIVED,
+    ...archiveWhere,
     ...(search && {
       OR: [
         { title: { contains: search, mode: 'insensitive' } },

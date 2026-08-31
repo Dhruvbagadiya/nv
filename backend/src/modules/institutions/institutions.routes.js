@@ -9,6 +9,9 @@ import {
   updateInstitutionBody,
   blacklistBody,
   idParam,
+  photoIdParam,
+  addPhotoBody,
+  reorderPhotosBody,
 } from './institutions.schemas.js';
 import {
   listInstitutionsHandler,
@@ -18,6 +21,10 @@ import {
   setBlacklistHandler,
   archiveInstitutionHandler,
   restoreInstitutionHandler,
+  listPhotosHandler,
+  addPhotoHandler,
+  deletePhotoHandler,
+  reorderPhotosHandler,
 } from './institutions.controller.js';
 
 const router = Router();
@@ -37,5 +44,18 @@ router.patch('/:id/blacklist', ...admin, validate(idParam, 'params'), validate(b
 router.delete('/:id', ...admin, validate(idParam, 'params'), asyncHandler(archiveInstitutionHandler));
 
 router.post('/:id/restore', ...admin, validate(idParam, 'params'), asyncHandler(restoreInstitutionHandler));
+
+// Gallery photos. Read is admin-only too: the public catalogue already receives
+// a school's photos inside the program resource, so there is no unauthenticated
+// caller for this and no reason to widen the surface.
+router.get('/:id/photos', ...admin, validate(idParam, 'params'), asyncHandler(listPhotosHandler));
+
+router.post('/:id/photos', ...admin, validate(idParam, 'params'), validate(addPhotoBody), asyncHandler(addPhotoHandler));
+
+router.put('/:id/photos/reorder', ...admin, validate(idParam, 'params'), validate(reorderPhotosBody), asyncHandler(reorderPhotosHandler));
+
+// Nested under the institution so ownership is checked by the path, not taken
+// on trust from the photo id alone.
+router.delete('/:id/photos/:photoId', ...admin, validate(photoIdParam, 'params'), asyncHandler(deletePhotoHandler));
 
 export default router;

@@ -2,8 +2,13 @@ import { api } from './client.js';
 
 // Mirrors GET /api/courses?country=&search=&tag=&programLevel=&page= from the backend.
 // Response shape: { data: [{id, type, attributes}], meta: { counts: {total}, page, pageSize, totalPages } }
-export async function fetchCourses({ country, search, tag, institutionId, programLevel, page = 1 }) {
+export async function fetchCourses({
+  country, search, tag, institutionId, programLevel, status, page = 1,
+}) {
   const params = { page };
+  // Only the admin screen sends this. Omitted elsewhere so the API applies its
+  // 'active' default and the catalogue never shows a soft-deleted course.
+  if (status) params.status = status;
   // Omitted rather than sent empty: the API's zod schemas reject a non-uuid
   // institutionId, and "" is not a uuid.
   if (country && country !== 'ALL') params.country = country;

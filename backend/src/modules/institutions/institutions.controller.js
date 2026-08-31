@@ -36,3 +36,20 @@ export async function archiveInstitutionHandler(req, res) {
 export async function restoreInstitutionHandler(req, res) {
   res.json(await institutionsService.restoreInstitution(req.params.id));
 }
+
+export async function listPhotosHandler(req, res) {
+  res.json(await institutionsService.listPhotos(req.params.id));
+}
+
+export async function addPhotoHandler(req, res) {
+  res.status(201).json(await institutionsService.addPhoto(req.params.id, req.body));
+}
+
+export async function deletePhotoHandler(req, res) {
+  await institutionsService.deletePhoto(req.params.id, req.params.photoId);
+  res.status(204).send();
+}
+
+export async function reorderPhotosHandler(req, res) {
+  res.json(await institutionsService.reorderPhotos(req.params.id, req.body.ids));
+}

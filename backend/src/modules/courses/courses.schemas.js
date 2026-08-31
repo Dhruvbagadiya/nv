@@ -30,6 +30,11 @@ export const listCoursesQuery = z.object({
   // The service maps it to the prisma enum field.
   programLevel: optionalEnum(PROGRAM_LEVELS),
   institutionId: optionalUuid(),
+  // Archived courses are hidden by default -- the catalogue agents search must
+  // never show them. Admin screens need to reach them, though: archiving is a
+  // soft delete and there is a restore endpoint, which was unreachable while
+  // nothing could list an archived row.
+  status: z.enum(['active', 'archived', 'all']).default('active'),
   ...paginationQuery,
 });
 
@@ -52,7 +57,22 @@ const courseFields = {
   maxLength: z.coerce.number().int().nonnegative().default(0),
   languageOfInstruction: z.string().trim().max(10).default('eng'),
   tuitionFee: z.coerce.number().nonnegative(),
-  applicationFee: z.coerce.number().nonnegative(),
+  // Nullable: "no application fee published" and "no fee charged" are different
+  // facts, and the column now stores the first as NULL rather than as a 0 that
+  // reads as free. An admin editing a scraped course must be able to leave it
+  // unknown instead of being forced to invent a number.
+  applicationFee: z.coerce.number().nonnegative().optional().nullable(),
+  // ISO 4217 for this course's fees. Null falls back to the country's currency,
+  // which is right for most rows but cannot express a UK university's Dubai
+  // campus quoting AED.
+  currencyCode: z.string().trim().length(3).toUpperCase().optional().nullable(),
+  // The provider's own page for the course.
+  externalUrl: z.string().trim().url().max(2048).optional().nullable(),
+  // Free-form per provider (IELTS/PTE/TOEFL bands, academic score, MOI, and
+  // whatever the next feed publishes), so it is stored and validated as an
+  // object rather than as a fixed set of columns that would encode one
+  // provider's format as the schema.
+  entryRequirements: z.record(z.unknown()).optional().nullable(),
   commissionAmount: z.coerce.number().nonnegative().optional().nullable(),
   abAppCreationEnabled: z.boolean().default(false),
   successScoreIntent: z.enum(['positive', 'negative', 'neutral']).optional().nullable(),
@@ -86,7 +106,10 @@ export const bulkImportBody = z.object({
         maxLength: z.coerce.number().int().nonnegative().default(0),
         languageOfInstruction: z.string().trim().max(10).default('eng'),
         tuitionFee: z.coerce.number().nonnegative(),
-        applicationFee: z.coerce.number().nonnegative(),
+        applicationFee: z.coerce.number().nonnegative().optional().nullable(),
+        currencyCode: z.string().trim().length(3).toUpperCase().optional().nullable(),
+        externalUrl: z.string().trim().url().max(2048).optional().nullable(),
+        entryRequirements: z.record(z.unknown()).optional().nullable(),
         commissionAmount: z.coerce.number().nonnegative().optional().nullable(),
         abAppCreationEnabled: z.boolean().default(false),
         tags: z.array(z.string().trim().max(80)).max(20).default([]),

@@ -106,7 +106,15 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
     maxLength:             attr.maxLength         ?? '',
     languageOfInstruction: attr.languageOfInstructionCode ?? 'eng',
     tuitionFee:            attr.tuition           ?? '',
-    applicationFee:        attr.applicationFee    ?? '',
+    // '' means "not published" and is sent as null. 0 is a real answer -- the
+    // course is free to apply to -- so the two must stay distinguishable here,
+    // not collapsed the way Number('') === 0 would.
+    applicationFee:        attr.applicationFee ?? '',
+    currencyCode:          attr.currency          ?? '',
+    externalUrl:           attr.externalUrl       ?? '',
+    entryRequirements:     attr.entryRequirements
+      ? JSON.stringify(attr.entryRequirements, null, 2)
+      : '',
     commissionAmount:      attr.commissionAmount  ?? '',
     abAppCreationEnabled:  attr.abAppCreationEnabled ?? false,
     tags:                  attr.tags              ?? [],
@@ -154,6 +162,25 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
   const submit = (e) => {
     e.preventDefault();
     setError(null);
+
+    // entryRequirements is free-form per provider, so the field is raw JSON.
+    // Parsing here rather than letting the API reject it means the admin gets
+    // the position of their typo instead of a generic "Validation failed", and
+    // the rest of their edits are not lost to a round trip.
+    let parsedRequirements = null;
+    if (form.entryRequirements.trim()) {
+      try {
+        parsedRequirements = JSON.parse(form.entryRequirements);
+      } catch (err) {
+        setError('Entry requirements must be valid JSON — ' + err.message);
+        return;
+      }
+      if (parsedRequirements === null || typeof parsedRequirements !== 'object' || Array.isArray(parsedRequirements)) {
+        setError('Entry requirements must be a JSON object, e.g. {"ielts": {"overall": "6.5"}}');
+        return;
+      }
+    }
+
     save.mutate({
       institutionId:         instId,
       title:                 form.title,
@@ -164,7 +191,12 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
       maxLength:             Number(form.maxLength)  || 0,
       languageOfInstruction: form.languageOfInstruction || 'eng',
       tuitionFee:            Number(form.tuitionFee),
-      applicationFee:        Number(form.applicationFee),
+      // Empty means unknown, which the column now stores as NULL. Number('')
+      // is 0, which would publish "free to apply" over a fee nobody stated.
+      applicationFee:        form.applicationFee === '' ? null : Number(form.applicationFee),
+      currencyCode:          form.currencyCode.trim() || null,
+      externalUrl:           form.externalUrl.trim()  || null,
+      entryRequirements:     parsedRequirements,
       commissionAmount:      form.commissionAmount !== '' ? Number(form.commissionAmount) : null,
       abAppCreationEnabled:  form.abAppCreationEnabled,
       tags:                  form.tags,
@@ -182,6 +214,19 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
   return (
     <Modal title={isEdit ? 'Edit course' : 'Add course'} onClose={onClose} wide>
       <form onSubmit={submit}>
+        {/* An edit to a scraped course survives only until the next import of
+            that feed, which rewrites the fields it owns by (source, externalId).
+            Saying so here is the difference between an admin making an informed
+            change and one wondering why their correction vanished overnight. */}
+        {isEdit && attr.source && attr.source !== 'manual' && (
+          <p className="form-notice">
+            Imported from <strong>{attr.source}</strong>
+            {attr.externalId != null && <> (id {attr.externalId})</>}. Edits to imported
+            fields are overwritten the next time this feed is imported — correct the
+            source or the import mapping to make a change stick.
+          </p>
+        )}
+
         {/* Section: Basic info */}
         <div className="admin-section-label">Basic information</div>
         <div className="admin-form-grid">
@@ -248,9 +293,20 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
               onChange={(e) => set('tuitionFee', e.target.value)} required />
           </div>
           <div className="form-field">
-            <label className="flabel" htmlFor="c-appfee">Application fee *</label>
+            <label className="flabel" htmlFor="c-appfee">Application fee</label>
+            {/* Not required, and deliberately so: most scraped courses do not
+                publish one. Blank is stored as "unknown"; 0 means free. */}
             <input id="c-appfee" type="number" min={0} value={form.applicationFee}
-              onChange={(e) => set('applicationFee', e.target.value)} required />
+              onChange={(e) => set('applicationFee', e.target.value)}
+              placeholder="leave blank if not published" />
+            <p className="field-hint">Blank shows as “Unknown”. Enter 0 only if applying is genuinely free.</p>
+          </div>
+          <div className="form-field">
+            <label className="flabel" htmlFor="c-currency">Currency</label>
+            <input id="c-currency" type="text" value={form.currencyCode}
+              onChange={(e) => set('currencyCode', e.target.value.toUpperCase())}
+              placeholder="GBP" maxLength={3} />
+            <p className="field-hint">ISO 4217. Blank uses the country’s currency.</p>
           </div>
           <div className="form-field">
             <label className="flabel" htmlFor="c-commission">Commission amount</label>
@@ -264,6 +320,33 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
                 onChange={(e) => set('abAppCreationEnabled', e.target.checked)} />
               <span>AB app creation enabled</span>
             </label>
+          </div>
+        </div>
+
+        {/* Section: Provider data — populated by the scrapers, editable here.
+            These are the fields the course card's eye icon shows. */}
+        <div className="admin-section-label">Provider details</div>
+        <div className="admin-form-grid">
+          <div className="form-field" style={{ gridColumn: '1 / -1' }}>
+            <label className="flabel" htmlFor="c-exturl">Course page URL</label>
+            <input id="c-exturl" type="url" value={form.externalUrl}
+              onChange={(e) => set('externalUrl', e.target.value)}
+              placeholder="https://university.example/courses/msc-computing" />
+            <p className="field-hint">The university’s own page. Shown as a link in the course detail view.</p>
+          </div>
+          <div className="form-field" style={{ gridColumn: '1 / -1' }}>
+            <label className="flabel" htmlFor="c-reqs">Entry requirements (JSON)</label>
+            {/* Raw JSON rather than a dozen inputs: the shape differs per
+                provider and per course, and fixed fields would either drop what
+                does not fit or grow a column every time a feed is added. */}
+            <textarea id="c-reqs" rows={8} value={form.entryRequirements}
+              onChange={(e) => set('entryRequirements', e.target.value)}
+              spellCheck={false}
+              placeholder={'{\n  "summary": "12th Grade",\n  "academicScore": "60%",\n  "ielts": { "overall": "6", "notLessThan": "5.5" },\n  "acceptedEnglishTests": ["IELTS", "PTE"],\n  "moi": "No"\n}'} />
+            <p className="field-hint">
+              Leave blank if none published. Recognised keys: summary, academicScore, ielts, pte,
+              toefl, duolingo, acceptedEnglishTests, moi, passoutYearAccepted, scholarship.
+            </p>
           </div>
         </div>
 
@@ -296,7 +379,7 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-const FILTER_DEFAULTS = { country: '', institutionId: '', programLevel: '', search: '', page: 1 };
+const FILTER_DEFAULTS = { country: '', institutionId: '', programLevel: '', search: '', status: '', page: 1 };
 
 export default function AdminCourses() {
   const queryClient = useQueryClient();
@@ -327,6 +410,15 @@ export default function AdminCourses() {
     { name: 'programLevel', label: 'Level',          type: 'select', placeholder: 'All levels',
       options: PROGRAM_LEVELS },
     { name: 'search',       label: 'Search',         type: 'text',   placeholder: 'Title or institution' },
+    // Archiving is a soft delete with a restore endpoint, so an admin has to be
+    // able to list what was archived; without this the Restore button could
+    // never be reached.
+    { name: 'status',       label: 'Status',         type: 'select', placeholder: 'Active',
+      options: [
+        { value: 'active',   label: 'Active' },
+        { value: 'archived', label: 'Archived' },
+        { value: 'all',      label: 'All' },
+      ] },
   ];
 
   const columns = [
@@ -376,6 +468,35 @@ export default function AdminCourses() {
       key: 'tuition',
       header: 'Tuition',
       render: (p) => formatFee(p.attributes.tuition, p.attributes.currency),
+    },
+    {
+      key: 'appFee',
+      header: 'App. fee',
+      // Blank is not free. Most scraped courses publish no figure, and printing
+      // those as a dash or a zero would read as "free to apply".
+      render: (p) =>
+        p.attributes.applicationFee == null ? (
+          <span className="cell-muted">Unknown</span>
+        ) : p.attributes.applicationFee > 0 ? (
+          formatFee(p.attributes.applicationFee, p.attributes.currency)
+        ) : (
+          'None'
+        ),
+    },
+    {
+      key: 'source',
+      header: 'Source',
+      // Scraped rows are rewritten by the next import, so an edit here is not
+      // permanent. Saying so in the table is cheaper than an admin discovering
+      // it when their change disappears.
+      render: (p) =>
+        p.attributes.source === 'manual' ? (
+          <span className="cell-muted">Manual</span>
+        ) : (
+          <span className="tag-pill" title={`Imported from ${p.attributes.source} — edits are overwritten by the next import`}>
+            {p.attributes.source}
+          </span>
+        ),
     },
     {
       key: 'intakes',

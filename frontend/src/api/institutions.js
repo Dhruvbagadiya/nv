@@ -38,3 +38,20 @@ export async function restoreInstitution(id) {
   const { data } = await api.post(`/institutions/${id}/restore`);
   return data;
 }
+
+// ---------------------------------------------------------------- gallery
+// Admin-only. Kept off the institution body because the gallery is edited one
+// photo at a time; a whole-array save would let two admins overwrite each
+// other's changes without either seeing a conflict.
+
+export const fetchInstitutionPhotos = (id) =>
+  api.get(`/institutions/${id}/photos`).then((r) => r.data);
+
+export const addInstitutionPhoto = (id, body) =>
+  api.post(`/institutions/${id}/photos`, body).then((r) => r.data);
+
+export const deleteInstitutionPhoto = (id, photoId) =>
+  api.delete(`/institutions/${id}/photos/${photoId}`);
+
+export const reorderInstitutionPhotos = (id, ids) =>
+  api.put(`/institutions/${id}/photos/reorder`, { ids }).then((r) => r.data);

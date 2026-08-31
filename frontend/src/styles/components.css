@@ -175,6 +175,9 @@
   tbody td.center { text-align: center; }
   .cell-strong { color: var(--ink-950); font-weight: 700; }
   .cell-mono { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--ink-600); }
+  /* For a cell whose value is an absence -- "Unknown", "Manual" -- so it does
+     not read as data at a glance. */
+  .cell-muted { color: var(--ink-400); font-style: italic; font-size: var(--fs-xs); }
   .cell-flag { display: inline-flex; align-items: center; gap: var(--sp-1); color: var(--ink-950); font-weight: 600; }
   .status-line { font-size: var(--fs-xs); margin-bottom: 2px; color: var(--ink-500); }
   .status-line b { color: var(--ink-950); font-weight: 700; }
