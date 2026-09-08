@@ -1,4 +1,5 @@
 import { prisma } from '../../utils/prisma.js';
+import { archiveWhere } from '../../utils/softDelete.js';
 import { paginateQuery } from '../../utils/pagination.js';
 import { NotFoundError } from '../../utils/httpErrors.js';
 
@@ -8,9 +9,9 @@ const UPDATE_INCLUDE = {
 };
 
 // Reference images 5-6: filtered by publish-date range, country and institution.
-export async function listImportantUpdates({ from, to, countryId, institutionId, page, pageSize }) {
+export async function listImportantUpdates({ from, to, countryId, institutionId, status, page, pageSize }) {
   const where = {
-    archivedAt: null,
+    ...archiveWhere(status),
     ...((from || to) && {
       publishDate: {
         ...(from && { gte: from }),
@@ -57,4 +58,10 @@ export async function updateImportantUpdate(id, data) {
 
 export async function archiveImportantUpdate(id) {
   return prisma.importantUpdate.update({ where: { id }, data: { archivedAt: new Date() } });
+}
+
+// Without this, archiving an update removed it from the product permanently:
+// the row remained but no query could reach it.
+export async function restoreImportantUpdate(id) {
+  return prisma.importantUpdate.update({ where: { id }, data: { archivedAt: null } });
 }

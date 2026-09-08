@@ -1,5 +1,6 @@
 import { prisma } from '../../utils/prisma.js';
 import { paginateQuery } from '../../utils/pagination.js';
+import { archiveWhere } from '../../utils/softDelete.js';
 
 const DOCUMENT_INCLUDE = {
   country: { select: { id: true, code: true, name: true } },
@@ -9,10 +10,10 @@ const DOCUMENT_INCLUDE = {
 // All five Document Bank screens (images 7-18) are this one query with a
 // different `category`. Visa Documents, Refund Forms, Institute Brochures, SOP
 // and LOR are the same UI over the same table.
-export async function listDocuments({ category, countryId, institutionId, search, page, pageSize }) {
+export async function listDocuments({ category, countryId, institutionId, search, status, page, pageSize }) {
   const where = {
     category,
-    archivedAt: null,
+    ...archiveWhere(status),
     ...(countryId && { countryId }),
     ...(institutionId && { institutionId }),
     ...(search && { title: { contains: search, mode: 'insensitive' } }),
@@ -48,6 +49,12 @@ export async function updateDocument(id, data) {
 
 export async function archiveDocument(id) {
   return prisma.document.update({ where: { id }, data: { archivedAt: new Date() } });
+}
+
+// Archiving a document was irreversible through the API: listDocuments filtered
+// archivedAt: null unconditionally, so nothing could find the row to restore it.
+export async function restoreDocument(id) {
+  return prisma.document.update({ where: { id }, data: { archivedAt: null } });
 }
 
 // Which countries and institutions actually have documents in this category.

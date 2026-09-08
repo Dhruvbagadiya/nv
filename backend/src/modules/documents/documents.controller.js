@@ -38,3 +38,7 @@ export async function uploadUrlHandler(req, res) {
 export async function storageStatusHandler(req, res) {
   res.json(storageStatus());
 }
+
+export async function restoreDocumentHandler(req, res) {
+  res.json(await service.restoreDocument(req.params.id));
+}

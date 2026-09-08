@@ -19,6 +19,8 @@ export default function AdminMoiAcceptances() {
     list: fetchMoiAcceptances,
     create: createMoiAcceptance,
     update: updateMoiAcceptance,
+    // This is a hard delete, not an archive — say so on the button.
+    removeLabel: 'Delete',
     remove: deleteMoiAcceptance,
     confirmRemove: (r) => `Delete the MOI record for ${r.institution.name} (${r.courseType})?`,
 

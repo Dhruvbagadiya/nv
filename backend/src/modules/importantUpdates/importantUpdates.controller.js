@@ -20,3 +20,7 @@ export async function archiveUpdateHandler(req, res) {
   await service.archiveImportantUpdate(req.params.id);
   res.status(204).send();
 }
+
+export async function restoreImportantUpdateHandler(req, res) {
+  res.json(await service.restoreImportantUpdate(req.params.id));
+}

@@ -1,7 +1,7 @@
 import * as service from './support.service.js';
 
 export async function listContactsHandler(req, res) {
-  res.json({ items: await service.listSupportContacts() });
+  res.json({ items: await service.listSupportContacts(req.query) });
 }
 
 export async function createContactHandler(req, res) {
@@ -15,4 +15,8 @@ export async function updateContactHandler(req, res) {
 export async function archiveContactHandler(req, res) {
   await service.archiveSupportContact(req.params.id);
   res.status(204).send();
+}
+
+export async function restoreContactHandler(req, res) {
+  res.json(await service.restoreSupportContact(req.params.id));
 }

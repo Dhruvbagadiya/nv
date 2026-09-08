@@ -2,6 +2,7 @@ import { prisma } from '../../utils/prisma.js';
 import { NotFoundError } from '../../utils/httpErrors.js';
 import { toSkipTake, maxReachablePage } from '../../utils/pagination.js';
 import { slugify } from '../../utils/slug.js';
+import { archiveWhere } from '../../utils/softDelete.js';
 
 // ============================================================================
 // Helpers
@@ -227,15 +228,11 @@ export async function searchCourses({
   // 'active' is the default and the only thing the public catalogue ever asks
   // for. The others exist so an admin can find a soft-deleted course again --
   // archiving is reversible, but only if something can list the archived rows.
-  const archiveWhere =
-    status === 'archived'
-      ? { archivedAt: { not: null } }
-      : status === 'all'
-        ? {}
-        : NOT_ARCHIVED;
-
+  //
+  // NOT_ARCHIVED also excludes courses whose institution is archived, which the
+  // shared helper cannot know about, so the active case keeps using it.
   const where = {
-    ...archiveWhere,
+    ...(status === 'active' ? NOT_ARCHIVED : archiveWhere(status)),
     ...(search && {
       OR: [
         { title: { contains: search, mode: 'insensitive' } },

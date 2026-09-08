@@ -130,7 +130,7 @@ describe('admin resource pages', () => {
     });
   });
 
-  it('asks before archiving, and does not call the API when declined', async () => {
+  it('asks before deleting, and does not call the API when declined', async () => {
     adminApi.fetchAllAnnouncements.mockResolvedValue({
       items: [{ id: 'a1', variant: 'INFO', message: 'Keep me', ctaLabel: null, ctaUrl: null, isActive: true, sortOrder: 0 }],
     });
@@ -138,7 +138,9 @@ describe('admin resource pages', () => {
 
     renderScreen(<AdminAnnouncements />);
     await waitFor(() => expect(screen.getByText('Keep me')).toBeTruthy());
-    fireEvent.click(screen.getByText('Archive'));
+    // "Delete", not "Archive": this screen maps `remove` to a real delete, and
+    // the button now says what it does.
+    fireEvent.click(screen.getByText('Delete'));
 
     expect(window.confirm).toHaveBeenCalled();
     expect(adminApi.deleteAnnouncement).not.toHaveBeenCalled();
@@ -275,5 +277,32 @@ describe('SubAgentButton', () => {
       email: 'new@example.com',
       password: 'temporary-pw-1',
     });
+  });
+});
+
+describe('destructive row action', () => {
+  const ROW = { id: 'a1', variant: 'INFO', message: 'Keep me', ctaLabel: null, ctaUrl: null, isActive: true, sortOrder: 0 };
+
+  // The button read "Archive" on every screen, including the two that map
+  // `remove` to a real delete. The confirm text said "permanently" while the
+  // button beside it promised the row was only being filed away.
+  it('says Delete where the action really deletes', async () => {
+    adminApi.fetchAllAnnouncements.mockResolvedValue({ items: [ROW] });
+    renderScreen(<AdminAnnouncements />);
+
+    await waitFor(() => expect(screen.getByText('Keep me')).toBeTruthy());
+    expect(screen.getByRole('button', { name: /^Delete/ })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^Archive/ })).toBeNull();
+  });
+
+  // Twenty rows produced twenty buttons all announced as just "Delete", with
+  // nothing to say which record each one belonged to.
+  it('names the row in the action label', async () => {
+    adminApi.fetchAllAnnouncements.mockResolvedValue({ items: [ROW] });
+    renderScreen(<AdminAnnouncements />);
+
+    await waitFor(() => expect(screen.getByText('Keep me')).toBeTruthy());
+    const label = screen.getByRole('button', { name: /^Delete/ }).getAttribute('aria-label');
+    expect(label.startsWith('Delete')).toBe(true);
   });
 });
