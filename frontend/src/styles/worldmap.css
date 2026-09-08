@@ -22,10 +22,14 @@
   aspect-ratio: var(--wm-ratio, 2000 / 774);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  /* A soft accent wash under the outlines. Deliberately not var(--surface):
-     this section sits on .lp-section-tint, and painting white here would knock a
-     hard rectangle out of the tint. */
-  background: radial-gradient(62% 92% at 50% 45%, var(--accent-50), transparent 72%);
+  /* A soft accent wash under the outlines.
+     --accent-50 is a near-WHITE tint. On the light page that read as the faint
+     halo it was meant to be; on the dark page it became a white cloud sitting
+     behind the continents, the brightest thing on the whole section. The wash is
+     now the accent itself at low alpha, which is the same idea expressed in a
+     way that does not depend on the page being white. */
+  background: radial-gradient(62% 92% at 50% 45%,
+    color-mix(in srgb, var(--accent-700) 15%, transparent), transparent 72%);
 }
 
 .wm-svg { display: block; width: 100%; height: 100%; }
@@ -119,8 +123,14 @@
   animation-delay: calc(2.4s + var(--i, 0) * .28s);
 }
 
+/* PROMINENCE INVERTS ON A DARK PAGE.
+   These marks were drawn in --accent-800 because, against white, the darkest
+   accent is the most emphatic one. Against #0a0906 that is exactly backwards:
+   800 is now the closest colour to the background and these became the faintest
+   marks on the map — the very fault the comment on .wm-pin.is-origin below
+   describes, arrived at from the other direction. Emphasis is --accent-600. */
 .wm-plane-glyph {
-  fill: var(--accent-800);
+  fill: var(--accent-600);
   /* Scaling lives here, on a child, so it composes with the motion transform on
      the parent instead of competing with it. fill-box keeps the scale centred on
      the glyph rather than on the SVG's origin, which would fling it off-map. */
@@ -155,7 +165,7 @@
 @keyframes wm-pin-in { to { opacity: 1; } }
 
 .wm-pin-dot {
-  fill: var(--accent-800);
+  fill: var(--accent-600);
   transition: r .18s ease;
 }
 
@@ -208,7 +218,7 @@
 /* Surat. It was --accent-700 — the PALE accent — which made the busiest point on
    the map the faintest mark on it, while transit dots and every destination were
    drawn in the dark 800. Home now wins on size and on weight. */
-.wm-pin.is-origin .wm-pin-dot { fill: var(--accent-800); }
+.wm-pin.is-origin .wm-pin-dot { fill: #FFD9A8; }
 .wm-pin.is-origin .wm-pin-halo { fill-opacity: .26; stroke-opacity: .85; stroke-width: 1.4; }
 .wm-pin.is-origin .wm-pin-ring { stroke-width: 2; animation-delay: 2.2s; animation-duration: 2.2s; }
 

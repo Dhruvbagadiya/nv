@@ -275,13 +275,15 @@ export function GlobeScene() {
         <clipPath id="lp-globe-clip"><circle cx="150" cy="150" r="118" /></clipPath>
       </defs>
 
-      <circle cx="150" cy="150" r="118" fill="url(#lp-globe-fill)" />
-      <circle cx="150" cy="150" r="118" fill="url(#lp-globe-light)" />
+      {/* Classed so the theme can control how solid the sphere is. On the dark
+          page an opaque ball would punch a hole in the world map behind it. */}
+      <circle className="lp-globe-body" cx="150" cy="150" r="118" fill="url(#lp-globe-fill)" />
+      <circle className="lp-globe-sheen" cx="150" cy="150" r="118" fill="url(#lp-globe-light)" />
 
       {/* Graticule. Parallels are straight lines and meridians are ellipses
           narrowing toward the poles — the standard orthographic projection,
           which is what makes a circle read as a sphere. */}
-      <g clipPath="url(#lp-globe-clip)" fill="none" stroke="#fff" strokeWidth="1.2" opacity=".38">
+      <g className="lp-globe-grat" clipPath="url(#lp-globe-clip)" fill="none" stroke="#fff" strokeWidth="1.2" opacity=".38">
         <path d="M32 150h236" />
         {[46, 88].map((d) => (
           <g key={d}>
@@ -299,14 +301,14 @@ export function GlobeScene() {
           across and the visible face is smaller still, so genuine coastlines
           would turn to mud. The real ones are in WorldMap.jsx, at a size that
           can carry them. */}
-      <g clipPath="url(#lp-globe-clip)" fill="#fff" opacity=".28">
+      <g className="lp-globe-land" clipPath="url(#lp-globe-clip)" fill="#fff" opacity=".28">
         <path d="M74 96c14-12 34-10 44 2s-4 26-18 30-28 8-34-2 0-22 8-30Z" />
         <path d="M96 154c16-6 30 2 32 16s-10 30-24 34-24-6-24-20 2-26 16-30Z" />
         <path d="M158 84c22-10 48-6 58 8s2 30-14 34-38 2-46-8-4-28 2-34Z" />
         <path d="M186 150c18-4 32 6 32 20s-12 28-26 28-22-12-20-26 6-20 14-22Z" />
       </g>
 
-      <circle cx="150" cy="150" r="118" fill="none" stroke="#fff" strokeOpacity=".3" strokeWidth="1.5" />
+      <circle className="lp-globe-rim" cx="150" cy="150" r="118" fill="none" stroke="#fff" strokeOpacity=".3" strokeWidth="1.5" />
 
       {/* Orbiting arc + plane. Rotated by CSS on .lp-globe-orbit. */}
       <g className="lp-globe-orbit">
