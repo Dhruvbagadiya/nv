@@ -4,6 +4,8 @@ import Page from '../../components/ui/Page.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
 import Modal from '../../components/ui/Modal.jsx';
+import EntryRequirementsFields, { cleanRequirements } from './EntryRequirementsFields.jsx';
+import { MONTH_NAMES, MONTH_FULL, nextIntakes, formatIntake } from '../../utils/intakes.js';
 import Icon from '../../components/ui/Icon.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
@@ -18,6 +20,55 @@ function slugify(str) {
 }
 
 // ── Intake row editor ─────────────────────────────────────────────────────────
+/*
+ * Which months the course runs in, every year.
+ *
+ * This is the answer for a rolling intake: pick February and September once and
+ * it stays true, instead of adding dated rows that have to be replaced every
+ * year and silently advertise a passed intake the moment nobody does.
+ *
+ * The dated editor below is still there for the cases that need it — an intake
+ * with a real application deadline, which a month alone cannot express.
+ */
+function IntakeMonthPicker({ months, onChange }) {
+  const selected = Array.isArray(months) ? months : [];
+  const toggle = (m) =>
+    onChange(selected.includes(m) ? selected.filter((x) => x !== m) : [...selected, m].sort((a, b) => a - b));
+
+  const upcoming = nextIntakes(selected, 3);
+
+  return (
+    <div className="month-picker">
+      <div className="month-grid" role="group" aria-label="Intake months">
+        {MONTH_NAMES.map((name, i) => {
+          const m = i + 1;
+          const on = selected.includes(m);
+          return (
+            <button
+              key={m}
+              type="button"
+              className={`month-cell${on ? ' on' : ''}`}
+              aria-pressed={on}
+              aria-label={MONTH_FULL[i]}
+              onClick={() => toggle(m)}
+            >
+              {name}
+            </button>
+          );
+        })}
+      </div>
+      {/* Shown because the year is derived, not stored: this is what a student
+          will actually be told, and it is worth seeing before saving. */}
+      <p className="field-hint">
+        {upcoming.length
+          ? 'Runs every ' + selected.map((m) => MONTH_FULL[m - 1]).join(', ') +
+            '. Next: ' + upcoming.map(formatIntake).join(' · ')
+          : 'No months selected — this course will not appear under any intake filter.'}
+      </p>
+    </div>
+  );
+}
+
 function IntakeEditor({ intakes, onChange }) {
   const add = () => onChange([...intakes, { startDate: '', openDate: '', submissionDeadline: '' }]);
   const remove = (i) => onChange(intakes.filter((_, idx) => idx !== i));
@@ -112,11 +163,13 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
     applicationFee:        attr.applicationFee ?? '',
     currencyCode:          attr.currency          ?? '',
     externalUrl:           attr.externalUrl       ?? '',
-    entryRequirements:     attr.entryRequirements
-      ? JSON.stringify(attr.entryRequirements, null, 2)
-      : '',
+    // Held as an object now. It used to be a JSON string an admin had to type
+    // by hand, which meant knowing the key names and getting the punctuation
+    // right to correct an IELTS score.
+    entryRequirements:     attr.entryRequirements ?? {},
     commissionAmount:      attr.commissionAmount  ?? '',
     abAppCreationEnabled:  attr.abAppCreationEnabled ?? false,
+    intakeMonths:          attr.intakeMonths      ?? [],
     tags:                  attr.tags              ?? [],
     badges:                attr.badges            ?? [],
     intakes:               (attr.programIntakes ?? []).map((i) => ({
@@ -163,23 +216,9 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
     e.preventDefault();
     setError(null);
 
-    // entryRequirements is free-form per provider, so the field is raw JSON.
-    // Parsing here rather than letting the API reject it means the admin gets
-    // the position of their typo instead of a generic "Validation failed", and
-    // the rest of their edits are not lost to a round trip.
-    let parsedRequirements = null;
-    if (form.entryRequirements.trim()) {
-      try {
-        parsedRequirements = JSON.parse(form.entryRequirements);
-      } catch (err) {
-        setError('Entry requirements must be valid JSON — ' + err.message);
-        return;
-      }
-      if (parsedRequirements === null || typeof parsedRequirements !== 'object' || Array.isArray(parsedRequirements)) {
-        setError('Entry requirements must be a JSON object, e.g. {"ielts": {"overall": "6.5"}}');
-        return;
-      }
-    }
+    // Empty values are stripped, so a form nobody filled in saves null rather
+    // than an object full of blanks.
+    const parsedRequirements = cleanRequirements(form.entryRequirements);
 
     save.mutate({
       institutionId:         instId,
@@ -199,6 +238,7 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
       entryRequirements:     parsedRequirements,
       commissionAmount:      form.commissionAmount !== '' ? Number(form.commissionAmount) : null,
       abAppCreationEnabled:  form.abAppCreationEnabled,
+      intakeMonths:          form.intakeMonths,
       tags:                  form.tags,
       badges:                form.badges,
       intakes:               form.intakes
@@ -334,21 +374,13 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
               placeholder="https://university.example/courses/msc-computing" />
             <p className="field-hint">The university’s own page. Shown as a link in the course detail view.</p>
           </div>
-          <div className="form-field" style={{ gridColumn: '1 / -1' }}>
-            <label className="flabel" htmlFor="c-reqs">Entry requirements (JSON)</label>
-            {/* Raw JSON rather than a dozen inputs: the shape differs per
-                provider and per course, and fixed fields would either drop what
-                does not fit or grow a column every time a feed is added. */}
-            <textarea id="c-reqs" rows={8} value={form.entryRequirements}
-              onChange={(e) => set('entryRequirements', e.target.value)}
-              spellCheck={false}
-              placeholder={'{\n  "summary": "12th Grade",\n  "academicScore": "60%",\n  "ielts": { "overall": "6", "notLessThan": "5.5" },\n  "acceptedEnglishTests": ["IELTS", "PTE"],\n  "moi": "No"\n}'} />
-            <p className="field-hint">
-              Leave blank if none published. Recognised keys: summary, academicScore, ielts, pte,
-              toefl, duolingo, acceptedEnglishTests, moi, passoutYearAccepted, scholarship.
-            </p>
-          </div>
         </div>
+
+        <div className="admin-section-label">Entry requirements</div>
+        <EntryRequirementsFields
+          value={form.entryRequirements}
+          onChange={(v) => set('entryRequirements', v)}
+        />
 
         {/* Section: Tags & badges */}
         <div className="admin-section-label">Tags &amp; badges</div>
@@ -363,6 +395,22 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
 
         {/* Section: Intakes */}
         <div className="admin-section-label">Intakes</div>
+        <div className="form-field">
+          <label className="flabel">Runs in these months, every year</label>
+          <IntakeMonthPicker months={form.intakeMonths} onChange={(v) => set('intakeMonths', v)} />
+        </div>
+
+        <div className="form-field">
+          <label className="flabel">
+            Specific dated intakes
+            <span className="field-hint" style={{ display: 'inline' }}> (optional)</span>
+          </label>
+          <p className="field-hint" style={{ marginTop: 0 }}>
+            Only needed where a provider publishes a real start date or application
+            deadline. For a course that simply runs every February and September, the
+            months above are enough and never need updating.
+          </p>
+        </div>
         <IntakeEditor intakes={form.intakes} onChange={(v) => set('intakes', v)} />
 
         {error && <p className="form-error" style={{ marginTop: 12 }}>{error}</p>}

@@ -26,12 +26,17 @@ function pageWindow(page, totalPages, span = 1) {
   return out;
 }
 
-export default function Pagination({ page, totalPages, total, pageSize, onChange }) {
+export default function Pagination({ page, totalPages, total, pageSize, maxPage, onChange }) {
   if (!totalPages || totalPages <= 1) return null;
 
-  const current = Math.min(Math.max(page, 1), totalPages);
+  // The API refuses offsets past a limit, because OFFSET makes Postgres walk
+  // every skipped row — page 7,757 of the catalogue took seconds and then 400d.
+  // Navigation is capped at what the server will actually serve; the true page
+  // count is still reported, so the numbers do not quietly lie.
+  const lastNavigable = Math.min(totalPages, maxPage || totalPages);
+  const current = Math.min(Math.max(page, 1), lastNavigable);
   const go = (next) => {
-    if (next >= 1 && next <= totalPages && next !== current) onChange(next);
+    if (next >= 1 && next <= lastNavigable && next !== current) onChange(next);
   };
 
   const firstRow = total ? (current - 1) * (pageSize || 0) + 1 : null;
@@ -43,6 +48,11 @@ export default function Pagination({ page, totalPages, total, pageSize, onChange
         {total != null && pageSize
           ? `Showing ${firstRow}–${lastRow} of ${total}`
           : `Page ${current} of ${totalPages}`}
+        {lastNavigable < totalPages && (
+          <span className="pagination-capped">
+            {' '}· browsable to page {lastNavigable} — filter or search to reach the rest
+          </span>
+        )}
       </div>
 
       <nav className="pagination" aria-label="Pagination">
@@ -56,7 +66,7 @@ export default function Pagination({ page, totalPages, total, pageSize, onChange
           ‹
         </button>
 
-        {pageWindow(current, totalPages).map((item) =>
+        {pageWindow(current, lastNavigable).map((item) =>
           item.gap ? (
             <span key={item.key} className="page-btn" aria-hidden="true" style={{ border: 'none' }}>
               …
@@ -79,7 +89,7 @@ export default function Pagination({ page, totalPages, total, pageSize, onChange
           type="button"
           className="page-btn"
           onClick={() => go(current + 1)}
-          disabled={current >= totalPages}
+          disabled={current >= lastNavigable}
           aria-label="Next page"
         >
           ›
