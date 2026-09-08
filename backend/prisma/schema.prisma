@@ -321,6 +321,14 @@ model Course {
   successScoreIntent SuccessScoreIntent?
   successScoreLabel  String?
 
+  // Months this course recurs in, 1-12, with no year. Most courses run on a
+  // fixed cycle -- "every February and September" -- and that fact does not
+  // expire, so it is stored once instead of as a row per year that has to be
+  // re-entered each intake season. CourseIntake still holds dated instances
+  // where a provider publishes a real start or deadline; the two answer
+  // different questions and only one of them goes stale.
+  intakeMonths Int[]
+
   tags   String[] // ["top_programs", "popular_programs", "high_job_availability", ...]
   // Display pills e.g. "Instant Offer", "Instant Submission"
   badges String[]

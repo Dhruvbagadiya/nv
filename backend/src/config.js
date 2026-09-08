@@ -1,5 +1,26 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import { z } from 'zod';
+
+/*
+ * Two files, in precedence order, and dotenv never overwrites a variable that is
+ * already set:
+ *
+ *   process.env   whatever the platform injects — always wins
+ *   .env.local    THIS machine only. Gitignored, never deployed.
+ *   .env          the deployable configuration
+ *
+ * `.env` alone was not enough. Working on this machine meant editing the file
+ * that gets deployed — NODE_ENV flipped to development, localhost added to the
+ * CORS list, the database host swapped for its public name — and every one of
+ * those is wrong in production. `NODE_ENV=development` alone would disable the
+ * `secure` flag on the refresh cookie and start returning stack traces on 500s.
+ *
+ * Local overrides now live in .env.local, so .env stays deployable as written.
+ * Loading .env.local FIRST is what gives it precedence: dotenv only fills in
+ * variables that are still unset.
+ */
+dotenv.config({ path: '.env.local' });
+dotenv.config();
 
 // Every process.env read in the app goes through here. The point is to fail at
 // boot with a readable message instead of at request time with a 500 — a missing

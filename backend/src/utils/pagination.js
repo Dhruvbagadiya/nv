@@ -37,17 +37,31 @@ export function toSkipTake({ page = 1, pageSize = DEFAULT_PAGE_SIZE } = {}) {
   return { skip, take: safeSize, page: safePage, pageSize: safeSize };
 }
 
+/**
+ * The deepest page this API will actually serve, given MAX_OFFSET.
+ *
+ * totalPages stays truthful -- 93,076 courses really are 7,757 pages of 12 --
+ * but offering a page the server refuses is a broken control. A client should
+ * paginate to maxPage and filter beyond it.
+ */
+export function maxReachablePage(totalPages, pageSize) {
+  const safeSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Math.trunc(Number(pageSize) || DEFAULT_PAGE_SIZE)));
+  return Math.max(1, Math.min(totalPages, Math.floor(MAX_OFFSET / safeSize) + 1));
+}
+
 export function paginated(items, total, { page, pageSize }) {
+  const totalPages = Math.ceil(total / pageSize);
   return {
     items,
     meta: {
       total,
       page,
       pageSize,
+      maxPage: maxReachablePage(totalPages, pageSize),
       // Math.ceil(0 / 20) is 0, which reads as "no pages" rather than "one empty
       // page" — the Pagination component treats <= 1 as nothing to render, so
       // both agree.
-      totalPages: Math.ceil(total / pageSize),
+      totalPages,
     },
   };
 }

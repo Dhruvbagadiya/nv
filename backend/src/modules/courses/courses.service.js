@@ -1,6 +1,6 @@
 import { prisma } from '../../utils/prisma.js';
 import { NotFoundError } from '../../utils/httpErrors.js';
-import { toSkipTake } from '../../utils/pagination.js';
+import { toSkipTake, maxReachablePage } from '../../utils/pagination.js';
 
 // ============================================================================
 // Helpers
@@ -125,6 +125,11 @@ function toProgramResource(course) {
     minLength: course.minLength,
     name: course.title,
     programIntakes,
+    // The recurring pattern, 1-12. Dated instances stay in programIntakes; this
+    // says which months the course runs in every year, which is the only thing
+    // a provider that publishes "Feb, Sep" with no year can tell us -- and the
+    // only form that does not go stale each intake season.
+    intakeMonths: course.intakeMonths ?? [],
     programLevel: toProgramLevelSlug(course.programLevel),
     school,
     shortName: course.shortName ?? null,
@@ -179,6 +184,7 @@ export async function searchCourses({
   tag,
   programLevel,
   institutionId,
+  intakeMonth,
   status = 'active',
   page = 1,
   pageSize = 12,
@@ -230,6 +236,7 @@ export async function searchCourses({
       ],
     }),
     ...(tag && { tags: { has: tag } }),
+    ...(intakeMonth && { intakeMonths: { has: Number(intakeMonth) } }),
     ...(programLevel && { programLevel }),
     ...(institutionId && { institutionId }),
     ...(country &&
@@ -249,13 +256,18 @@ export async function searchCourses({
     prisma.course.count({ where }),
   ]);
 
+  const totalPages = Math.ceil(total / safeSize);
   return {
     data: rows.map(toProgramResource),
     meta: {
       counts: { total },
       page: safePage,
       pageSize: safeSize,
-      totalPages: Math.ceil(total / safeSize),
+      totalPages,
+      // The catalogue is deeper than the offset limit allows: 93,076 courses is
+      // 7,757 pages, and anything past ~834 is refused. Sending the reachable
+      // limit stops the client offering a "last page" button that always fails.
+      maxPage: maxReachablePage(totalPages, safeSize),
     },
   };
 }

@@ -36,7 +36,22 @@ describe('pagination', () => {
   it('separates rows from their metadata', () => {
     const result = paginated([{ id: 1 }], 41, { page: 2, pageSize: 20 });
     expect(result.items).toHaveLength(1);
-    expect(result.meta).toEqual({ total: 41, page: 2, pageSize: 20, totalPages: 3 });
+    expect(result.meta).toEqual({ total: 41, page: 2, pageSize: 20, totalPages: 3, maxPage: 3 });
+  });
+
+  // A catalogue can be deeper than the offset limit allows: 93,076 courses is
+  // 7,757 pages of 12, and anything past page 834 is refused. totalPages stays
+  // truthful; maxPage is what a client may actually navigate to, so it does not
+  // render a control that always fails.
+  it('caps the navigable page when the list is deeper than the offset limit', () => {
+    const meta = paginated([], 93076, { page: 1, pageSize: 12 }).meta;
+    expect(meta.totalPages).toBe(7757);
+    expect(meta.maxPage).toBe(834);
+  });
+
+  it('leaves maxPage equal to totalPages when everything is reachable', () => {
+    const meta = paginated([], 41, { page: 1, pageSize: 20 }).meta;
+    expect(meta.maxPage).toBe(meta.totalPages);
   });
 
   // 0 pages, not 1: the Pagination component renders nothing for <= 1, so both

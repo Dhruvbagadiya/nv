@@ -35,6 +35,9 @@ export const listCoursesQuery = z.object({
   // soft delete and there is a restore endpoint, which was unreachable while
   // nothing could list an archived row.
   status: z.enum(['active', 'archived', 'all']).default('active'),
+  // Filter by the month a course starts, 1-12. Works for both feeds now that
+  // the pattern is stored on Course rather than inferred from dated rows.
+  intakeMonth: z.coerce.number().int().min(1).max(12).optional(),
   ...paginationQuery,
 });
 
@@ -79,6 +82,10 @@ const courseFields = {
   successScoreLabel: z.string().trim().max(80).optional().nullable(),
   tags: z.array(z.string().trim().max(80)).max(20).default([]),
   badges: z.array(z.string().trim().max(80)).max(10).default([]),
+  // Recurring intake months, 1-12. Separate from `intakes` below on purpose:
+  // this is the yearly pattern and never expires, while `intakes` are dated
+  // instances with real deadlines that do.
+  intakeMonths: z.array(z.coerce.number().int().min(1).max(12)).max(12).default([]),
   // Structured intakes replacing the old String[] array.
   intakes: z.array(intakeFields).max(50).default([]),
 };
