@@ -72,7 +72,7 @@ export function extractDominantColor(imgEl) {
 export default function LogoCropper({
   onCropped,
   onCancel,
-  aspectRatio = 1,
+  _aspectRatio = 1,
   outputSize  = 256,
 }) {
   const fileRef       = useRef(null);

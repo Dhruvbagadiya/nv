@@ -32,17 +32,39 @@ export const COURSE_INQUIRY_STAGES = [
 // and AdminCourses, and the two had already drifted: admin could save a course as
 // OTHER, but the partner course finder's filter omitted that value, so those
 // courses were unreachable through the Level filter.
+// All seventeen values of the database's ProgramLevel enum, in the order a
+// prospectus reads: undergraduate, postgraduate, doctoral, then the sub-degree
+// and preparatory awards.
+//
+// This was nine, while the database had seventeen and 4,907 live courses sat on
+// one of the eight missing ones. Those courses could not be filtered in either
+// catalogue, and opening one in the admin editor gave a <select> whose value
+// matched no <option> -- so a doctorate could be saved back as a master's.
+// The browser cannot import the Prisma enum, so parity is asserted by
+// programLevels.test.js, which reads schema.prisma directly.
 export const PROGRAM_LEVELS = [
-  { value: 'MASTERS_DEGREE', label: "Master's Degree" },
-  { value: 'POST_GRADUATE_CERTIFICATE', label: 'Postgraduate Certificate' },
   { value: 'BACHELORS_DEGREE', label: "Bachelor's Degree" },
   { value: 'THREE_YEAR_BACHELORS', label: "3-Year Bachelor's" },
   { value: 'FOUR_YEAR_BACHELORS', label: "4-Year Bachelor's" },
+  { value: 'TOPUP_DEGREE', label: 'Top-up Degree' },
+  { value: 'INTEGRATED_MASTERS', label: "Integrated Master's" },
+  { value: 'MASTERS_DEGREE', label: "Master's Degree" },
+  { value: 'POST_GRADUATE_CERTIFICATE', label: 'Postgraduate Certificate' },
+  { value: 'POST_GRADUATE_DIPLOMA', label: 'Postgraduate Diploma' },
+  { value: 'DOCTORAL_PHD', label: 'Doctorate / PhD' },
+  { value: 'ADVANCED_DIPLOMA', label: 'Advanced Diploma' },
   { value: 'DIPLOMA', label: 'Diploma' },
   { value: 'CERTIFICATE', label: 'Certificate' },
   { value: 'FOUNDATION', label: 'Foundation' },
+  { value: 'ENGLISH', label: 'English Language' },
+  { value: 'SECONDARY_SCHOOL', label: 'Secondary School' },
+  { value: 'NON_CREDENTIAL', label: 'Non-credential' },
   { value: 'OTHER', label: 'Other' },
 ];
+
+/** Human label for a level, falling back to the raw value rather than blank. */
+export const programLevelLabel = (value) =>
+  PROGRAM_LEVELS.find((l) => l.value === value)?.label ?? value ?? '—';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 

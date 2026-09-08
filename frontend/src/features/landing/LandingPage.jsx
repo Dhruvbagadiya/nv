@@ -2,9 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useReveal, useCountUp } from './useReveal.js';
 import BoardingAnimation from './BoardingAnimation.jsx';
+import WorldBackdrop from './WorldBackdrop.jsx';
+import EnquiryDialog from './EnquiryDialog.jsx';
 import Icon from './Icons.jsx';
-import { RouteMapScene, StampScene, BoardingPassScene, GlobeScene, SealRing } from './Scenes.jsx';
-import WorldMap from './WorldMap.jsx';
+// RouteMapScene, StampScene, GlobeScene and BoardingPassScene are no longer
+// imported — photographs took their places. They remain exported from
+// Scenes.jsx rather than deleted: they are the fallback if a photo has to come
+// out, and they need no network request.
+import { SealRing } from './Scenes.jsx';
 import { DESTINATIONS as COUNTRIES } from './worldMapData.js';
 
 // Public marketing home page. Everything else in this app is behind a login or
@@ -12,9 +17,14 @@ import { DESTINATIONS as COUNTRIES } from './worldMapData.js';
 // header and footer rather than borrowing the portal's.
 //
 // Content is data-driven from the constants below so copy edits never mean
-// touching JSX. Iconography is the inline set in Icons.jsx and imagery is the
-// inline SVG in Scenes.jsx — this page ships zero raster assets of its own, so
-// it renders identically on every OS and stays sharp on any display.
+// touching JSX. Iconography is the inline set in Icons.jsx, and the decorative
+// artwork is inline SVG in Scenes.jsx.
+//
+// This page USED to ship zero raster assets. It now carries four photographs
+// from public/photos, because an immigration consultancy sells trust and a
+// diagram cannot do what a photograph of a person does. They are cropped and
+// resized to the size they actually render at — 208 KB for the set — and each
+// one carries width/height so nothing reflows as they arrive.
 
 // Surat is the head office and the number every CTA on this page dials.
 // The other branches still appear in the footer with their own numbers.
@@ -271,11 +281,25 @@ export default function LandingPage() {
     };
   }, [menuOpen]);
 
+  const [enquiryOpen, setEnquiryOpen] = useState(false);
+
   const shown = group === 'All' ? COUNTRIES : COUNTRIES.filter((c) => c.group === group);
 
   return (
     <div className="lp" id="top">
+      {/* Fixed behind every section, so the continents drift on while the page
+          scrolls over them. First in the DOM and z-index 0; everything else on
+          this page sits on a layer above it. */}
+      <WorldBackdrop />
       <BoardingAnimation />
+
+      <EnquiryDialog
+        open={enquiryOpen}
+        onClose={() => setEnquiryOpen(false)}
+        whatsappBase={`https://wa.me/${WHATSAPP}`}
+        tel={TEL}
+        email={EMAIL}
+      />
 
       {/* Reading progress. scaleX on a fixed bar — no layout, no repaint. */}
       <div className="lp-progress" aria-hidden="true">
@@ -401,7 +425,20 @@ export default function LandingPage() {
                   </span>
                 ))}
               </div>
-              <div className="lp-hero-globe"><GlobeScene /></div>
+              {/* A face, not a diagram. The wireframe globe that was here read as
+                  a second world map on a page that already has one drifting
+                  behind it; a photograph is the one warm, human thing in the
+                  hero and gives the eye somewhere to land. The orbiting flags
+                  around it do the "global" work the globe was doing. */}
+              <div className="lp-hero-photo">
+                <img
+                  src={`${import.meta.env.BASE_URL || '/'}photos/hero-consultant.jpg`}
+                  alt="An NV Immigration consultant holding passports and boarding passes"
+                  width="700"
+                  height="700"
+                  fetchPriority="high"
+                />
+              </div>
 
               {/* Concrete outcomes beside an abstract graphic — what makes a
                   hero feel like a product rather than a poster. */}
@@ -457,12 +494,20 @@ export default function LandingPage() {
       <section className="lp-section" id="about">
         <div className="lp-wrap lp-about">
           <Reveal className="lp-about-media">
-            <div className="lp-scene lp-scene-a" role="img" aria-label="Flight routes from Surat to destinations worldwide">
-              <RouteMapScene />
-            </div>
-            <div className="lp-scene lp-scene-b" role="img" aria-label="An approved visa stamp">
-              <StampScene />
-            </div>
+            <figure className="lp-scene lp-scene-a lp-photo">
+              <img
+                src={`${import.meta.env.BASE_URL || '/'}photos/about-traveller.jpg`}
+                alt="A student traveller in Paris with her backpack"
+                width="660" height="880" loading="lazy"
+              />
+            </figure>
+            <figure className="lp-scene lp-scene-b lp-photo">
+              <img
+                src={`${import.meta.env.BASE_URL || '/'}photos/about-couple.jpg`}
+                alt="A couple travelling together with their bags"
+                width="560" height="460" loading="lazy"
+              />
+            </figure>
             <div className="lp-badge-round">
               <strong>100%</strong>
               <span>successful visa rate</span>
@@ -611,9 +656,13 @@ export default function LandingPage() {
           </div>
 
           <Reveal delay={120} className="lp-why-media">
-            <div className="lp-scene lp-scene-c" role="img" aria-label="A boarding pass from Surat to Toronto">
-              <BoardingPassScene />
-            </div>
+            <figure className="lp-scene lp-scene-c lp-photo">
+              <img
+                src={`${import.meta.env.BASE_URL || '/'}photos/consult-2.jpg`}
+                alt="A traveller setting out with her backpack"
+                width="560" height="420" loading="lazy"
+              />
+            </figure>
             <div className="lp-seal" aria-hidden="true">
               <SealRing />
               <span className="lp-seal-core">NV</span>
@@ -650,14 +699,20 @@ export default function LandingPage() {
             ))}
           </Reveal>
 
-          {/* Every border on this map is real coastline, drawn from the same
-              geometry an atlas uses. It is decorative: the grid underneath is
-              the accessible, crawlable, tappable copy of the same list. */}
-          <WorldMap
-            group={group}
-            selectedIso={selectedIso}
-            onSelect={(iso) => setSelectedIso((prev) => (prev === iso ? null : iso))}
-          />
+          {/* The outlined WorldMap that used to sit here is hidden: the dotted
+              world in WorldBackdrop now drifts behind every section, and two
+              world maps on one page compete rather than reinforce.
+
+              Removed from the render, NOT deleted — WorldMap.jsx and
+              worldmap.css are untouched, and restoring it is putting this
+              element back:
+
+                <WorldMap group={group} selectedIso={selectedIso}
+                  onSelect={(iso) => setSelectedIso((p) => (p === iso ? null : iso))} />
+
+              Nothing else depended on it. It was decorative; the country grid
+              below is the accessible, crawlable, tappable copy of the same
+              list, and it already shares `selectedIso`. */}
 
           <div className="lp-grid lp-grid-3">
             {shown.map((c, i) => (
@@ -807,9 +862,18 @@ export default function LandingPage() {
                 <Icon name="arrow" size={17} className="lp-method-arrow" />
               </a>
             </div>
-            <Link className="lp-btn lp-btn-primary lp-btn-block" to="/login">
-              Track your application
-            </Link>
+            {/* Was a "Track your application" link to /login. The student
+                portal behind it is real, but NV's clients do not have accounts
+                there — applications are filed for them — so it sent people to a
+                login for something they had never signed up to. The question
+                they meant to ask is asked directly instead. */}
+            <button
+              type="button"
+              className="lp-btn lp-btn-primary lp-btn-block"
+              onClick={() => setEnquiryOpen(true)}
+            >
+              Ask about your application
+            </button>
           </Reveal>
         </div>
       </section>

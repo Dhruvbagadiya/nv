@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Role } from '@prisma/client';
 
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -76,3 +77,32 @@ export const resetPasswordBody = z
       .max(200, 'Password must be at most 200 characters'),
   })
   .strict();
+
+
+// ---- admin user management ----
+
+/**
+ * The user list's query. It had no validation at all, so `role` was spread into
+ * the Prisma `where` exactly as typed: `?role=NOPE` reached the database as an
+ * invalid enum value and came back a 500, and Express's extended parser meant
+ * `?role[contains]=A` arrived as an object and was injected into the clause.
+ */
+export const listUsersQuery = z.object({
+  role: z.enum(Object.values(Role)).optional(),
+  search: z.string().trim().max(200).optional(),
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).default(20),
+});
+
+/**
+ * Replaces a hand-rolled `!newPassword || newPassword.length < 10` check, which
+ * a body of {"newPassword": {"length": 20}} or a 20-element array satisfied —
+ * bcrypt then threw on the non-string and the caller got a 500. Also bounds the
+ * upper end, which the check never did.
+ */
+export const adminResetPasswordBody = z
+  .object({ newPassword: z.string().min(10).max(200) })
+  .strict();
+
+/** Was checked by hand in the controller and accepted unknown keys. */
+export const setUserActiveBody = z.object({ isActive: z.boolean() }).strict();

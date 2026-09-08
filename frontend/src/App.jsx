@@ -6,7 +6,6 @@ import LandingPage from './features/landing/LandingPage.jsx';
 // ── Partner portal ─────────────────────────────────────────────────────
 import Header from './components/layout/Header.jsx';
 import Sidebar from './components/layout/Sidebar.jsx';
-import AnnouncementBar from './components/layout/AnnouncementBar.jsx';
 import CourseFinder from './features/courseFinder/CourseFinder.jsx';
 import CourseInquiryForm from './features/courseInquiries/CourseInquiryForm.jsx';
 import CourseInquiryHistory from './features/courseInquiries/CourseInquiryHistory.jsx';
@@ -49,7 +48,6 @@ import StudentProgramDetail from './features/student/StudentProgramDetail.jsx';
 import StudentApplyForm from './features/student/StudentApplyForm.jsx';
 import StudentApplications from './features/student/StudentApplications.jsx';
 import StudentApplicationDetail from './features/student/StudentApplicationDetail.jsx';
-import StudentProfile from './features/student/StudentProfile.jsx';
 
 import ProtectedRoute from './routes/ProtectedRoute.jsx';
 import NotFound from './routes/NotFound.jsx';

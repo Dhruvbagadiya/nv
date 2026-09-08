@@ -10,7 +10,7 @@ import {
   fetchUserDetail, updateUserAdmin, setUserActive, revokeUserSessions, adminResetPassword,
 } from '../../api/admin.js';
 import { formatDate } from '../../utils/format.js';
-import { applicationStageLabel, APPLICATION_STAGES } from '../../constants/referenceData.js';
+import { applicationStageLabel } from '../../constants/referenceData.js';
 import { toast } from '../../store/useToast.js';
 
 const FILTER_DEFAULTS = { role: '', search: '', page: 1 };

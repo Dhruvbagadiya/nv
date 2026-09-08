@@ -23,6 +23,8 @@ const resource = {
   list: fetchAllAnnouncements,
   create: createAnnouncement,
   update: updateAnnouncement,
+  // This is a hard delete, not an archive — say so on the button.
+  removeLabel: 'Delete',
   remove: deleteAnnouncement,
   confirmRemove: () => 'Delete this banner permanently? Use "Active" to hide it instead.',
 

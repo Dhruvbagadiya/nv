@@ -1,5 +1,6 @@
 import Modal from '../../components/ui/Modal.jsx';
 import { formatFee } from '../../utils/format.js';
+import { monthLabels, nextIntakes, formatIntake } from '../../utils/intakes.js';
 
 /*
  * The detail behind a course card's eye icon.
@@ -65,11 +66,12 @@ export default function CourseDetailModal({ program, onClose }) {
       : d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
   });
 
-  // Badges carry the intake months for feeds that publish a month without a
-  // year, which is why they are shown here when there are no dated intakes.
-  const intakeText = intakes.length
-    ? intakes.join(' · ')
-    : (attr.badges ?? []).filter((b) => /intake/i.test(b)).join(' · ') || null;
+  // A course that only publishes months gets its next dates derived, and the
+  // pattern stated alongside — "Runs every Feb, Sep" is the durable fact, the
+  // dates are this year's consequence of it.
+  const months = monthLabels(attr.intakeMonths);
+  const derived = nextIntakes(attr.intakeMonths, 4).map(formatIntake);
+  const intakeText = intakes.length ? intakes.join(' · ') : derived.join(' · ') || null;
 
   // Home Edition variants are separate acceptances, not alternative bands, so
   // they are listed as their own rows rather than folded into the test above.
@@ -109,7 +111,15 @@ export default function CourseDetailModal({ program, onClose }) {
       <div className="course-detail">
         <section className="cd-section">
           <h4 className="cd-heading">Course</h4>
-          <Row label="Tuition">{formatFee(attr.tuition, currency)}</Row>
+          <Row label="Tuition">
+            {req?.tuitionIsFrom && <span className="cd-prefix">from </span>}
+            {formatFee(attr.tuition, currency)}
+            {/* The provider's own wording, shown whenever it says more than the
+                number can: "$38,750 (180 Credits) @Hawke's Bay | $45,750 ...". */}
+            {req?.tuitionIsFrom && req?.tuitionText && (
+              <div className="cd-note">{req.tuitionText}</div>
+            )}
+          </Row>
           {/* Three distinct states, and collapsing any two of them misleads: a
               fee, no fee, and no published figure. null is the last of these --
               15,864 instantapply courses -- and rendering it as "None" would
@@ -124,7 +134,14 @@ export default function CourseDetailModal({ program, onClose }) {
             )}
           </Row>
           {duration && <Row label="Duration">{duration}</Row>}
-          {intakeText && <Row label="Intake">{intakeText}</Row>}
+          {intakeText && (
+            <Row label="Intake">
+              {intakeText}
+              {!intakes.length && months.length > 0 && (
+                <div className="cd-note">Runs every {months.join(', ')}</div>
+              )}
+            </Row>
+          )}
           {attr.commissionAmount != null && (
             <Row label="Commission">{formatFee(attr.commissionAmount, currency)}</Row>
           )}

@@ -7,6 +7,7 @@ import { useAuth } from '../../store/useAuth.js';
 import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
 import CourseCard from './CourseCard.jsx';
 import Pagination from '../../components/ui/Pagination.jsx';
+import { errorMessage } from '../../utils/format.js';
 import Page from '../../components/ui/Page.jsx';
 import { PROGRAM_LEVELS } from '../../constants/referenceData.js';
 
@@ -53,7 +54,7 @@ export default function CourseFinder() {
     }
   }
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['courses', selectedCountry, search, tag, institutionId, programLevel, page],
     queryFn: () =>
       fetchCourses({
@@ -154,7 +155,12 @@ export default function CourseFinder() {
       </div>
 
       {isError && (
-        <p className="empty-state">Couldn&rsquo;t load courses — check the API is running.</p>
+        // The API's own message, when it sent one. A page past the offset limit
+        // returns 400 with "the last reachable page is 834" — telling the user
+        // to check the API is running sends them to debug something healthy.
+        <p className="empty-state">
+          {errorMessage(error, 'Couldn\u2019t load courses. Please try again.')}
+        </p>
       )}
       {isLoading && <p className="empty-state">Loading courses...</p>}
 
@@ -178,6 +184,7 @@ export default function CourseFinder() {
               totalPages={meta.totalPages}
               total={meta.counts?.total}
               pageSize={meta.pageSize}
+              maxPage={meta.maxPage}
               onChange={setPage}
             />
           )}

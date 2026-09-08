@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { STATUS_VALUES } from '../../utils/softDelete.js';
 import { optionalUuid, optionalText } from '../../utils/queryTypes.js';
 
 export const DOCUMENT_CATEGORIES = [
@@ -10,6 +11,9 @@ export const DOCUMENT_CATEGORIES = [
 ];
 
 export const listDocumentsQuery = z.object({
+  // Lets an admin find a soft-deleted row again. Defaults to 'active', so a
+  // caller that omits it never sees archived rows by accident.
+  status: z.enum(STATUS_VALUES).default('active'),
   // Required. There is no combined view of all five categories, and defaulting to
   // one would make the other four look empty.
   category: z.enum(DOCUMENT_CATEGORIES),

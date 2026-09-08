@@ -1,7 +1,12 @@
 import * as institutionsService from './institutions.service.js';
+import { canSeeArchived } from '../../middleware/optionalAuth.js';
 
 export async function listInstitutionsHandler(req, res) {
-  const { page, pageSize, ...filters } = req.query;
+  const { page, pageSize, ...rest } = req.query;
+
+  // Public endpoint, so `includeArchived` cannot be taken on trust: it let any
+  // unauthenticated caller list institutions that had been archived.
+  const filters = canSeeArchived(req.user) ? rest : { ...rest, includeArchived: false };
 
   // Asking for a page opts into the paged shape, { items, meta }. Callers that
   // do not — every dropdown in the app — keep getting the bare { items } they

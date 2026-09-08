@@ -155,6 +155,7 @@ export default function DataTable({
           totalPages={meta.totalPages}
           total={meta.total}
           pageSize={meta.pageSize}
+          maxPage={meta.maxPage}
           onChange={onPageChange}
         />
       )}

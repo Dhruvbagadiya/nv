@@ -1,4 +1,5 @@
 import { prisma } from '../../utils/prisma.js';
+import { slugify } from '../../utils/slug.js';
 import { ConflictError } from '../../utils/httpErrors.js';
 import { paginateQuery } from '../../utils/pagination.js';
 
@@ -8,10 +9,6 @@ const INSTITUTION_INCLUDE = { country: true };
 const MAX_INSTITUTION_OPTIONS = 2000;
 
 // URL-safe slug derived from name when not explicitly provided.
-function slugify(str) {
-  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
-
 function institutionWhere({ country, search, blacklisted, trending, includeArchived }) {
   return {
     ...(includeArchived ? {} : { archivedAt: null }),

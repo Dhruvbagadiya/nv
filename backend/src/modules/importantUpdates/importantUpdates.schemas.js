@@ -1,8 +1,11 @@
 import { z } from 'zod';
+import { STATUS_VALUES } from '../../utils/softDelete.js';
 import { optionalUuid, optionalDate } from '../../utils/queryTypes.js';
 
 export const listUpdatesQuery = z
   .object({
+    // Lets an admin find a soft-deleted update again. Defaults to 'active'.
+    status: z.enum(STATUS_VALUES).default('active'),
     // The screen's "Publish Date From/To" inputs. Coerced to Date so the service
     // never has to parse strings.
     from: optionalDate(),

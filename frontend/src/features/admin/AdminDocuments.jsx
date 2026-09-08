@@ -122,7 +122,7 @@ function DocumentForm({ initial, onClose, onSaved, storage }) {
             </div>
           ) : (
             <div className="field-hint">
-              Saved to the server's local disk. Configure S3/R2 env vars to use cloud storage instead.
+              Saved to the server&rsquo;s local disk. Configure S3/R2 env vars to use cloud storage instead.
             </div>
           )}
           {upload.isPending && (

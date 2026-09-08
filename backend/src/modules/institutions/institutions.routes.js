@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.js';
+import { optionalAuth } from '../../middleware/optionalAuth.js';
 import { requireRole } from '../../middleware/rbac.js';
 import { validate } from '../../middleware/validate.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
@@ -33,7 +34,7 @@ const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
 // GET /api/institutions — public so the student programme browser can populate
 // its institution filters without requiring sign-in.
 router.get('/trending', asyncHandler(listTrendingHandler));
-router.get('/', validate(listInstitutionsQuery, 'query'), asyncHandler(listInstitutionsHandler));
+router.get('/', optionalAuth, validate(listInstitutionsQuery, 'query'), asyncHandler(listInstitutionsHandler));
 
 router.post('/', ...admin, validate(createInstitutionBody), asyncHandler(createInstitutionHandler));
 

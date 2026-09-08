@@ -10,7 +10,7 @@
  *   6. Role badge + account status
  */
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../store/useAuth.js';
 import Modal from '../../components/ui/Modal.jsx';

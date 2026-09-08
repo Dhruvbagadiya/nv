@@ -18,14 +18,28 @@
  */
 
 .lp {
-  /* ink */
-  --ink:      #14181F;
-  --ink-2:    #3D4653;
-  --ink-3:    #667085;
-  --line:     #E7EAF0;
-  --line-2:   #F1F3F7;
-  --surface:  #FFFFFF;
-  --tint:     #F7F9FC;
+  /* ink — DARK. This page is a dark console sitting over the drifting world
+     backdrop in WorldBackdrop.jsx; the three portals it links to stay light.
+     Every colour below is a token because the whole inversion happens here:
+     the 700-odd lines that follow reference these and did not have to change.
+
+     Text is warm off-white rather than pure #fff. Pure white on a near-black
+     ground vibrates and looks harsh at paragraph sizes; the warmth also keeps
+     it in the same family as the orange accent. */
+  --ink:      #F2EBE0;
+  --ink-2:    #B9AFA0;
+  --ink-3:    #9E9384;
+  /* Rules are the accent at low alpha, not grey. On a warm dark ground a
+     neutral grey line reads blue-ish and dead; carrying a trace of the accent
+     is what makes the borders look designed rather than defaulted. */
+  --line:     rgba(231,133,24,.20);
+  --line-2:   rgba(231,133,24,.10);
+  /* Translucent, NOT opaque — this is what lets the world drift behind the
+     cards instead of being covered by them. */
+  --surface:  rgba(22,18,12,.72);
+  --tint:     rgba(10,9,6,.55);
+  /* The page's own floor, behind the canvas. */
+  --bg-deep:  #0a0906;
 
   /* type scale — 1.25 major third, clamped for fluid sizing */
   --t-display: clamp(2.6rem, 1.3rem + 3.6vw, 4.4rem);
@@ -56,7 +70,9 @@
 
   color: var(--ink-2);
   font-family: var(--font-sans);
-  background: var(--surface);
+  /* The deep floor only. --surface is translucent now, so painting it here
+     would fog the canvas across the entire page. */
+  background: var(--bg-deep);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
@@ -793,4 +809,279 @@
    on a real pointer avoids that. */
 @media (hover: none) {
   .lp-card::after, .lp-quote::after { display: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DARK PORT — the world backdrop and the rules that assumed a light ground
+   ══════════════════════════════════════════════════════════════════════════
+
+   The palette inversion happens entirely in the token block at the top of this
+   file; almost all 700 lines above simply followed. What is left here is the
+   canvas layer, plus the handful of rules that hardcoded a light background or
+   used an ink token as a FILL rather than as text.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* `isolation` makes .lp a stacking context, which is what lets the canvas sit
+   at z-index -1: inside that context it paints above .lp's own background and
+   below every section, so not one section needed a z-index of its own. Without
+   the isolation a negative layer would fall behind the page entirely. */
+.lp { isolation: isolate; }
+
+.lp-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  /* Painted under the dots so the middle of the page glows and the corners
+     fall away — without it the dot field reads as evenly lit and flat. */
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 38%,
+      color-mix(in srgb, var(--accent-800) 12%, var(--bg-deep)) 0%,
+      var(--bg-deep) 62%),
+    var(--bg-deep);
+}
+
+/* ── Ink used as a FILL, not as text ──────────────────────────────────────
+   Both of these were dark bands carrying white text. --ink is now off-white,
+   so left alone they became a white band with white text on it. They stay dark
+   bands, but translucent, so the world drifts through them too. */
+.lp-stats { background: rgba(10,9,6,.78); }
+.lp-footer { background: rgba(10,9,6,.86); color: var(--ink-2); }
+
+/* ── Surfaces that hardcoded white ──────────────────────────────────────── */
+.lp-header { background: rgba(14,12,8,.62); border-bottom-color: var(--line-2); }
+.lp-header.is-scrolled { background: rgba(10,9,6,.86); border-bottom-color: var(--line); }
+.lp-float { background: rgba(22,18,12,.86); border-color: var(--line); }
+.lp-nav-scrim { background: rgba(6,5,3,.62); }
+
+/* ── Pale accent/status tints ─────────────────────────────────────────────
+   --accent-50 and --success-100 are near-white washes built for a light page;
+   each one was a bright chip punched into the dark. They become the same hue
+   held at low alpha, which is the dark-UI equivalent of a tint. */
+.lp-nav a:hover { background: color-mix(in srgb, var(--accent-700) 16%, transparent); color: var(--ink); }
+.lp-card-icon,
+.lp-reason-icon,
+.lp-float-icon--accent {
+  background: color-mix(in srgb, var(--accent-700) 16%, transparent);
+  color: var(--accent-600);
+}
+.lp-float-icon--ok {
+  background: color-mix(in srgb, var(--success-600) 20%, transparent);
+  color: var(--success-600);
+}
+
+/* ── Elevation ────────────────────────────────────────────────────────────
+   A shadow is the absence of light, and there is no light here for it to take
+   away — the light-page shadow family is simply invisible on this ground. On
+   dark, depth comes from the surface being lighter than what surrounds it and
+   from a hairline catching the "light", so the family is rebuilt that way.
+   Keeping the same four names means nothing above had to change. */
+.lp {
+  --e-1: 0 0 0 1px rgba(231,133,24,.07);
+  --e-2: 0 0 0 1px rgba(231,133,24,.10), 0 6px 18px rgba(0,0,0,.45);
+  --e-3: 0 0 0 1px rgba(231,133,24,.13), 0 14px 34px rgba(0,0,0,.55);
+  --e-4: 0 0 0 1px rgba(231,133,24,.16), 0 26px 60px rgba(0,0,0,.65);
+}
+
+/* The globe keeps its drop shadow, but a light-page shadow under it on this
+   ground just muddies the dots behind it. */
+.lp-hero-globe { filter: drop-shadow(0 18px 40px rgba(0,0,0,.55)); }
+
+/* Cards sit ON the moving map. A little blur separates their text from the
+   dots travelling underneath without hiding the map behind them. */
+.lp-card, .lp-quote, .lp-faq, .lp-trust { backdrop-filter: blur(6px); }
+
+@media (prefers-reduced-motion: reduce) {
+  /* The canvas already draws a single static frame; this stops the blur cost
+     on machines that asked for less work. */
+  .lp-card, .lp-quote, .lp-faq, .lp-trust { backdrop-filter: none; }
+}
+
+/* The hero's decorative wash carried a cool blue bloom, which was a pleasant
+   counterweight on a white page and reads as a grey smudge on a warm dark one.
+   The dark gradient over the map is kept — it dims the dot field just enough
+   for the headline to sit on it — but both blooms are now warm. */
+.lp-hero::before {
+  background:
+    radial-gradient(46% 58% at 82% 18%, color-mix(in srgb, var(--accent-700) 15%, transparent) 0%, transparent 70%),
+    radial-gradient(40% 50% at 8% 78%, color-mix(in srgb, var(--accent-800) 12%, transparent) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(10,9,6,.20) 0%, rgba(10,9,6,.42) 78%);
+}
+
+/* ── The globe ────────────────────────────────────────────────────────────
+   On the light page this was a solid orange sphere and it worked. Over the
+   dotted world it became a flat beach ball punching a hole through the map —
+   the single loudest thing on the page, and opaque exactly where the backdrop
+   is most interesting.
+
+   It becomes a GLASS sphere instead: the body drops to a tint the map reads
+   through, while the graticule, rim and landmasses are pushed the other way so
+   the form still resolves as a sphere rather than dissolving into the dots. A
+   sphere is legible from its meridians and its terminator, not from its fill. */
+.lp-globe-body { opacity: .34; }
+.lp-globe-sheen { opacity: .30; }
+.lp-globe-grat { opacity: .5 !important; }
+.lp-globe-land { opacity: .16 !important; }
+.lp-globe-rim { stroke: var(--accent-600); stroke-opacity: .75; }
+/* A soft outer glow does the work the removed fill used to: it separates the
+   sphere from the dot field without covering it. */
+.lp-hero-globe { filter: drop-shadow(0 0 26px color-mix(in srgb, var(--accent-700) 42%, transparent)); }
+
+/* ── Contact methods ──────────────────────────────────────────────────────
+   The hover state set `background: var(--accent-50)` — a near-WHITE #FFF8F0 —
+   while the label stayed var(--ink), which the dark port turned off-white. So
+   hovering the WhatsApp row painted white text onto a cream card and the label
+   vanished. The other two rows looked fine only because nobody was hovering
+   them; this was one rule away from hiding every contact method on the page.
+
+   The tint becomes the accent at low alpha, which is what "a slightly warmer
+   surface" means on a dark ground. */
+.lp-method:hover {
+  background: color-mix(in srgb, var(--accent-700) 18%, transparent);
+  border-color: var(--accent-600);
+}
+/* Same near-white tint, same fix — this one was missed when the other icon
+   tiles were converted, so cream chips sat on the dark contact card. */
+.lp-method-icon {
+  background: color-mix(in srgb, var(--accent-700) 16%, transparent);
+  color: var(--accent-600);
+}
+/* WhatsApp keeps its brand green, but as a wash rather than a pale chip, and
+   the glyph goes light enough to read against it. #128C4A on a dark tile is
+   almost invisible. */
+.lp-method-icon--wa {
+  background: color-mix(in srgb, #25D366 18%, transparent);
+  color: #4FE08B;
+}
+
+/* Same near-white hover tint as .lp-method had. This one stays legible — it
+   pairs the cream with dark-orange text — but a bright cream pill flashing on
+   and off in a dark tab strip is still wrong, and it is the last instance of
+   the pattern on the page. */
+.lp-tab:hover { background: color-mix(in srgb, var(--accent-700) 16%, transparent); color: var(--ink); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PHOTOGRAPHY
+   ══════════════════════════════════════════════════════════════════════════
+   The page shipped no raster assets by design. That is now traded, knowingly,
+   for faces: an immigration consultancy sells trust, and an abstract diagram
+   cannot carry that the way a photograph of a person can.
+
+   Every file is cropped and resized to the size it actually renders at (see
+   public/photos), so the whole set is ~344 KB rather than the ~976 KB the
+   originals weigh. Each <img> carries width/height so nothing reflows as they
+   arrive, and everything below the fold is lazy.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Hero portrait — fills the circle the globe used to occupy. */
+.lp-hero-photo {
+  position: absolute;
+  inset: 11%;
+  border-radius: 50%;
+  overflow: hidden;
+  /* A ring in the accent, so the photo belongs to the page rather than being
+     pasted onto it, plus a glow that lifts it off the drifting dot field. */
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent-700) 55%, transparent),
+    0 0 44px color-mix(in srgb, var(--accent-700) 34%, transparent),
+    0 24px 60px rgba(0,0,0,.6);
+}
+.lp-hero-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* A photograph shot for a white page is brighter than everything around it
+   here. A warm multiply pass pulls it into the palette instead of leaving it
+   glowing like a hole cut in the page. */
+.lp-hero-photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(160deg,
+    color-mix(in srgb, var(--accent-800) 26%, transparent) 0%,
+    rgba(10,9,6,.30) 100%);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* About collage — the two photographs replacing the abstract scenes. */
+/* NO `position` here. .lp-scene-a and .lp-scene-b already place the collage
+   with `position: absolute`, and this rule is later in the file at equal
+   specificity — setting `position: relative` here silently overrode them, put
+   both photographs into normal flow, and dropped the 100% badge on top of the
+   second one. They are already positioned, so ::after has its containing block.
+   `margin: 0` is still needed: these are <figure>s, which arrive with one. */
+.lp-photo { overflow: hidden; margin: 0; }
+.lp-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lp-photo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(165deg,
+    color-mix(in srgb, var(--accent-800) 20%, transparent) 0%,
+    rgba(10,9,6,.34) 100%);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* ── Enquiry dialog ───────────────────────────────────────────────────────
+   Lives inside .lp rather than being portalled to <body>, so it inherits the
+   landing palette. `position: fixed` still resolves against the viewport here:
+   .lp sets `isolation`, which makes a stacking context but NOT a containing
+   block for fixed children — only transform/filter/perspective/contain do that.
+   The backdrop canvas relies on the same thing. */
+.lp-dialog-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(6,5,3,.72);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: var(--s-3);
+  overflow-y: auto;
+}
+.lp-dialog {
+  position: relative;
+  width: min(560px, 100%);
+  background: #14110C;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: var(--s-4);
+  box-shadow: var(--e-4);
+  /* Opaque, unlike the page's cards: this is a form, and the drifting dot field
+     behind translucent inputs would make the text in them hard to read. */
+}
+.lp-dialog h2 { font-size: 1.4rem; font-weight: 800; letter-spacing: -.025em; color: var(--ink); margin: 0 0 6px; }
+.lp-dialog-sub { font-size: var(--t-small); color: var(--ink-3); margin: 0 0 var(--s-3); }
+.lp-dialog-x {
+  position: absolute; top: 12px; right: 14px;
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--line); background: transparent; color: var(--ink-2);
+  font-size: 20px; line-height: 1; cursor: pointer;
+}
+.lp-dialog-x:hover { color: var(--ink); border-color: var(--accent-600); }
+
+.lp-enq-form { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.lp-enq-form label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lp-enq-form label > span { font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.lp-enq-form label em { font-style: normal; font-weight: 600; color: var(--ink-3); }
+.lp-enq-wide, .lp-enq-actions, .lp-enq-note { grid-column: 1 / -1; }
+.lp-enq-form input, .lp-enq-form select, .lp-enq-form textarea {
+  width: 100%; background: #0C0A07; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; font-family: var(--font-sans); font-size: var(--t-body);
+}
+.lp-enq-form textarea { resize: vertical; }
+.lp-enq-form :is(input, select, textarea):focus {
+  outline: none; border-color: var(--accent-600);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-700) 24%, transparent);
+}
+.lp-enq-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.lp-enq-actions .lp-btn-primary { flex: 1 1 auto; justify-content: center; }
+.lp-enq-form button[disabled] { opacity: .5; cursor: not-allowed; }
+.lp-enq-note { font-size: 11.5px; color: var(--ink-3); margin: 2px 0 0; }
+
+@media (max-width: 560px) {
+  .lp-enq-form { grid-template-columns: 1fr; }
 }

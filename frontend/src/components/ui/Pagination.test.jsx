@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import Pagination from './Pagination.jsx';
 
 describe('Pagination', () => {
@@ -51,5 +51,40 @@ describe('Pagination', () => {
   it('clamps the row range on a partial last page', () => {
     render(<Pagination page={3} totalPages={3} total={45} pageSize={20} onChange={() => {}} />);
     expect(screen.getByText('Showing 41–45 of 45')).toBeTruthy();
+  });
+});
+
+describe('Pagination beyond the servable depth', () => {
+  // These assert on document.body, so a previous render left in place would be
+  // counted as part of this one.
+  afterEach(cleanup);
+
+  // The API refuses offsets past a limit, so 93,076 courses report 7,757 pages
+  // while only ~834 can actually be fetched. Offering the rest is a control
+  // that always fails.
+  it('does not offer a page the server will refuse', () => {
+    render(<Pagination page={1} totalPages={7757} maxPage={834} onChange={() => {}} />);
+    expect(screen.queryByRole('button', { name: 'Page 7757' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Page 834' })).toBeTruthy();
+  });
+
+  it('says why the rest is out of reach', () => {
+    const { container } = render(
+      <Pagination page={1} totalPages={7757} maxPage={834} total={93076} pageSize={12} onChange={() => {}} />
+    );
+    expect(container.textContent).toContain('browsable to page 834');
+  });
+
+  it('disables Next on the last reachable page', () => {
+    const onChange = vi.fn();
+    render(<Pagination page={834} totalPages={7757} maxPage={834} onChange={onChange} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('is unaffected when every page is reachable', () => {
+    const { container } = render(<Pagination page={1} totalPages={3} maxPage={3} onChange={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Page 3' })).toBeTruthy();
+    expect(container.textContent).not.toContain('browsable to page');
   });
 });

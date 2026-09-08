@@ -58,6 +58,15 @@ export default function AdminResourcePage({ resource }) {
 
   const rows = data?.items ?? [];
 
+  // The button said "Archive" on every screen, but two of them map `remove` to a
+
+  // real delete — the confirm text said "permanently" while the button next to
+
+  // it promised the row was only being filed away. The label follows the effect.
+
+  const removeLabel = resource.removeLabel ?? 'Archive';
+
+
   const columns = [
     ...resource.columns,
     {
@@ -74,13 +83,16 @@ export default function AdminResourcePage({ resource }) {
               className="btn btn-ghost"
               // Destructive and not undoable from this screen, so it asks first.
               onClick={() => {
-                if (window.confirm(resource.confirmRemove?.(row) ?? 'Archive this item?')) {
+                if (window.confirm(resource.confirmRemove?.(row) ?? `${removeLabel} this item?`)) {
                   removeMutation.mutate(idOf(row));
                 }
               }}
               disabled={removeMutation.isPending}
+              // Twenty identical buttons per page otherwise, with nothing to tell
+              // a screen reader which row this one belongs to.
+              aria-label={`${removeLabel} ${resource.rowLabel?.(row) ?? 'item'}`}
             >
-              Archive
+              {removeLabel}
             </button>
           )}
         </div>

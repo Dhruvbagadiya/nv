@@ -3,29 +3,19 @@ import { Link } from 'react-router-dom';
 import Icon from '../../components/ui/Icon.jsx';
 import CourseDetailModal from './CourseDetailModal.jsx';
 import { formatFee } from '../../utils/format.js';
+import { monthLabels, nextIntakes, formatIntake } from '../../utils/intakes.js';
+import { programLevelLabel as levelLabel } from '../../constants/referenceData.js';
 
 // Props shape matches the program resource returned by the backend:
 //   { id, type: "program", attributes: { name, programLevel, school, programIntakes,
 //     tuition, applicationFee, minLength, maxLength, tags, badges, commission, ... } }
 
-// Convert ProgramLevel enum value to a human-readable label.
-const PROGRAM_LEVEL_LABELS = {
-  MASTERS_DEGREE:            "Master's Degree",
-  POST_GRADUATE_CERTIFICATE: 'Postgraduate Certificate',
-  BACHELORS_DEGREE:          "Bachelor's Degree",
-  THREE_YEAR_BACHELORS:      '3-Year Bachelor\'s',
-  FOUR_YEAR_BACHELORS:       '4-Year Bachelor\'s',
-  DIPLOMA:                   'Diploma',
-  CERTIFICATE:               'Certificate',
-  FOUNDATION:                'Foundation',
-  OTHER:                     'Program',
-};
-
+// Labels come from the shared list, which is asserted against the database enum
+// by constants/programLevels.test.js. A third private copy lived here and had
+// nine of seventeen values, so a doctorate rendered as its raw enum name.
 function programLevelLabel(level) {
-  if (!level) return 'Program';
-  // API returns snake_case slugs (e.g. "masters_degree"); DB enum is UPPER_SNAKE.
-  const key = level.toUpperCase();
-  return PROGRAM_LEVEL_LABELS[key] ?? level;
+  // The API emits snake_case slugs ("masters_degree"); the enum is UPPER_SNAKE.
+  return levelLabel(level ? String(level).toUpperCase() : undefined);
 }
 
 // Format duration from min/max month integers.
@@ -44,13 +34,19 @@ export default function CourseCard({ program }) {
   const currency = attr.currency ?? 'USD';
   const duration = formatDuration(attr.minLength, attr.maxLength);
 
-  // Intake display: show the startDate of each intake, formatted as "Jan 2027".
-  const intakeLabels = (attr.programIntakes ?? []).map((i) => {
+  // Dated intakes are shown as published. Where a course only states which
+  // months it runs in, the next few dates are derived from today instead --
+  // that is the whole reason the months are stored without a year.
+  const datedLabels = (attr.programIntakes ?? []).map((i) => {
     const d = new Date(i.startDate);
     return Number.isNaN(d.getTime())
       ? i.startDate
       : d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
   });
+  const intakeLabels = datedLabels.length
+    ? datedLabels
+    : nextIntakes(attr.intakeMonths, 3).map(formatIntake);
+  const recurring = !datedLabels.length && monthLabels(attr.intakeMonths).length > 0;
 
   // Badges are human-readable pill strings (e.g. "Instant Offer").
   // Tags are machine slugs (e.g. "top_programs") — convert for display.
@@ -118,7 +114,14 @@ export default function CourseCard({ program }) {
           </div>
           <div className="info-tile">
             <div className="i-label">Tuition (1st yr)</div>
-            <div className="i-value mono">{formatFee(attr.tuition, currency)}</div>
+            {/* Some providers quote a range, or a different fee per campus. The
+                stored number is the lowest of them, so it is labelled "from"
+                rather than presented as the price — the full text is in the
+                detail view. */}
+            <div className="i-value mono">
+              {attr.entryRequirements?.tuitionIsFrom && <span className="i-prefix">from </span>}
+              {formatFee(attr.tuition, currency)}
+            </div>
           </div>
           <div className="info-tile">
             <div className="i-label">Application fee</div>
@@ -148,7 +151,11 @@ export default function CourseCard({ program }) {
 
         {intakeLabels.length > 0 && (
           <div className="intakes">
-            <div className="intakes-label">Available intakes</div>
+            <div className="intakes-label">
+              {recurring
+                ? 'Runs every ' + monthLabels(attr.intakeMonths).join(', ')
+                : 'Available intakes'}
+            </div>
             <div className="intake-list">
               {intakeLabels.map((label) => (
                 <span key={label}>{label}</span>

@@ -178,6 +178,9 @@
   /* For a cell whose value is an absence -- "Unknown", "Manual" -- so it does
      not read as data at a glance. */
   .cell-muted { color: var(--ink-400); font-style: italic; font-size: var(--fs-xs); }
+  /* Qualifier before a figure on a card, e.g. "from £12,800". Lighter than the
+     amount so the number still reads first. */
+  .i-prefix { color: var(--ink-500); font-family: var(--font-sans, inherit); font-weight: 400; }
   .cell-flag { display: inline-flex; align-items: center; gap: var(--sp-1); color: var(--ink-950); font-weight: 600; }
   .status-line { font-size: var(--fs-xs); margin-bottom: 2px; color: var(--ink-500); }
   .status-line b { color: var(--ink-950); font-weight: 700; }

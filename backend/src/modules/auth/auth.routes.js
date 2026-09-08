@@ -12,6 +12,9 @@ import {
   idParam,
   forgotPasswordBody,
   resetPasswordBody,
+  listUsersQuery,
+  adminResetPasswordBody,
+  setUserActiveBody,
 } from './auth.schemas.js';
 import {
   loginHandler,
@@ -66,13 +69,13 @@ router.get('/sub-agents', requireAuth, requireRole('AGENT'), asyncHandler(listSu
 router.post('/sub-agents', requireAuth, requireRole('AGENT'), validate(createSubAgentBody), asyncHandler(createSubAgentHandler));
 // Remove a sub-agent — detaches them from the agency (sets parentAgentId null).
 // The sub-agent's own applications and account are preserved.
-router.delete('/sub-agents/:id', requireAuth, requireRole('AGENT'), asyncHandler(removeSubAgentHandler));
+router.delete('/sub-agents/:id', requireAuth, requireRole('AGENT'), validate(idParam, 'params'), asyncHandler(removeSubAgentHandler));
 
 // ---- privileged: creating a user with an explicit role ----
 router.post('/users', requireAuth, requireRole('SUPER_ADMIN'), validate(createUserSchema), asyncHandler(createUserHandler));
 
 // SUPER_ADMIN only — full user list for the admin panel.
-router.get('/users', requireAuth, requireRole('SUPER_ADMIN'), asyncHandler(listAllUsersHandler));
+router.get('/users', requireAuth, requireRole('SUPER_ADMIN'), validate(listUsersQuery, 'query'), asyncHandler(listAllUsersHandler));
 
 // User management — SUPER_ADMIN, matching POST/GET /users above.
 //
@@ -86,8 +89,8 @@ router.get('/users', requireAuth, requireRole('SUPER_ADMIN'), asyncHandler(listA
 const superAdminAuth = [requireAuth, requireRole('SUPER_ADMIN')];
 router.get('/users/:id',                  ...superAdminAuth, validate(idParam, 'params'), asyncHandler(getUserDetailHandler));
 router.put('/users/:id',                  ...superAdminAuth, validate(idParam, 'params'), validate(updateUserBody), asyncHandler(updateUserHandler));
-router.patch('/users/:id/active',         ...superAdminAuth, validate(idParam, 'params'), asyncHandler(setUserActiveHandler));
+router.patch('/users/:id/active',         ...superAdminAuth, validate(idParam, 'params'), validate(setUserActiveBody), asyncHandler(setUserActiveHandler));
 router.post('/users/:id/revoke-sessions', ...superAdminAuth, validate(idParam, 'params'), asyncHandler(revokeUserSessionsHandler));
-router.post('/users/:id/reset-password',  ...superAdminAuth, validate(idParam, 'params'), asyncHandler(adminResetPasswordHandler));
+router.post('/users/:id/reset-password',  ...superAdminAuth, validate(idParam, 'params'), validate(adminResetPasswordBody), asyncHandler(adminResetPasswordHandler));
 
 export default router;

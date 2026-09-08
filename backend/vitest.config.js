@@ -8,5 +8,10 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.js', 'tests/**/*.test.js'],
+    // Replaces DATABASE_URL with an unreachable local one before any module is
+    // imported. Services share a PrismaClient singleton and .env points at
+    // production, so one forgotten vi.mock would otherwise be enough to write
+    // to live data from a test.
+    setupFiles: ['./tests/setup.js'],
   },
 });

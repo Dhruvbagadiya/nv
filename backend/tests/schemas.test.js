@@ -197,3 +197,25 @@ describe('write-body schemas', () => {
     expect(uploadUrlBody.safeParse({ filename: '', contentType: 'application/pdf' }).success).toBe(false);
   });
 });
+
+
+describe('ProgramLevel parity', () => {
+  // The API schema carried a hand-written nine-value copy while the database
+  // enum had seventeen. The eight it omitted could not be created, filtered or
+  // edited -- a PUT echoing a course's own level returned 400 -- and 4,907 live
+  // courses were on one of them. Deriving the list from Prisma makes drift
+  // impossible; this asserts nobody reintroduces a literal.
+  it('accepts exactly the levels the database defines', async () => {
+    const { ProgramLevel } = await import('@prisma/client');
+    const { PROGRAM_LEVELS } = await import('../src/modules/courses/courses.schemas.js');
+    expect(new Set(PROGRAM_LEVELS)).toEqual(new Set(Object.values(ProgramLevel)));
+  });
+
+  it.each(['DOCTORAL_PHD', 'POST_GRADUATE_DIPLOMA', 'ADVANCED_DIPLOMA', 'SECONDARY_SCHOOL'])(
+    'lets %s through the list filter',
+    async (level) => {
+      const { listCoursesQuery } = await import('../src/modules/courses/courses.schemas.js');
+      expect(listCoursesQuery.safeParse({ programLevel: level }).success).toBe(true);
+    }
+  );
+});

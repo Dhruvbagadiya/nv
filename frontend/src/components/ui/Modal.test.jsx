@@ -88,6 +88,38 @@ describe('CourseCard eye button', () => {
     expect(text).not.toContain('None');
   });
 
+  it('labels a multi-figure fee as "from" and shows what the provider wrote', () => {
+    // The stored number is the lowest of several quoted figures, so presenting
+    // it unqualified would tell a student a per-campus minimum is the price.
+    const ranged = {
+      ...program,
+      attributes: {
+        ...program.attributes,
+        tuition: 15000,
+        entryRequirements: {
+          ...program.attributes.entryRequirements,
+          tuitionIsFrom: true,
+          tuitionText: '15000-16500',
+        },
+      },
+    };
+    render(
+      <MemoryRouter>
+        <CourseCard program={ranged} />
+      </MemoryRouter>
+    );
+    fireEvent.click(screen.getByRole('button', { name: /view details/i }));
+    const text = screen.getByRole('dialog').textContent;
+    expect(text).toContain('from');
+    expect(text).toContain('15000-16500');
+  });
+
+  it('does not say "from" when a single fee is published', () => {
+    renderCard();
+    fireEvent.click(screen.getByRole('button', { name: /view details/i }));
+    expect(screen.getByRole('dialog').textContent).not.toContain('from');
+  });
+
   it('shows a published application fee as money', () => {
     const withFee = {
       ...program,

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { STATUS_VALUES } from '../../utils/softDelete.js';
 
 export const createContactBody = z
   .object({
@@ -16,3 +17,12 @@ export const updateContactBody = createContactBody
   .refine((v) => Object.keys(v).length > 0, 'Provide at least one field to update');
 
 export const idParam = z.object({ id: z.string().uuid() });
+
+/**
+ * The list had no query schema, so GET / took whatever it was handed. It now
+ * accepts one thing: the status filter that makes an archived contact
+ * reachable again.
+ */
+export const listContactsQuery = z.object({
+  status: z.enum(STATUS_VALUES).default('active'),
+});

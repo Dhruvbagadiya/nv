@@ -5,7 +5,7 @@ import { login } from '../../api/auth.js';
 import { useAuth } from '../../store/useAuth.js';
 import { homePathFor } from '../../routes/homePath.js';
 
-const PARTNER_ROLES = ['AGENT', 'ADMIN', 'SUPER_ADMIN'];
+const _PARTNER_ROLES = ['AGENT', 'ADMIN', 'SUPER_ADMIN'];
 
 export default function PartnerLoginPage() {
   const navigate   = useNavigate();

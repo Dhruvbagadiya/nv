@@ -24,6 +24,7 @@ import {
   createDocumentHandler,
   updateDocumentHandler,
   archiveDocumentHandler,
+  restoreDocumentHandler,
 } from './documents.controller.js';
 
 const router = Router();
@@ -98,5 +99,9 @@ router.put(
 );
 
 router.delete('/:id', ...admin, validate(idParam, 'params'), asyncHandler(archiveDocumentHandler));
+
+// Archiving is reversible, but only if something can restore it. Without this
+// the row stayed in the table and no endpoint could reach it again.
+router.post('/:id/restore', ...admin, validate(idParam, 'params'), asyncHandler(restoreDocumentHandler));
 
 export default router;

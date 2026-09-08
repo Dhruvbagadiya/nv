@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.js';
+import { optionalAuth } from '../../middleware/optionalAuth.js';
 import { requireRole } from '../../middleware/rbac.js';
 import { validate } from '../../middleware/validate.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
@@ -26,7 +27,7 @@ const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
 // GET /api/courses — public so unauthenticated students can browse the programme
 // catalogue without signing in first. Individual course detail is also public.
 // Writes remain admin-only.
-router.get('/', validate(listCoursesQuery, 'query'), asyncHandler(listCoursesHandler));
+router.get('/', optionalAuth, validate(listCoursesQuery, 'query'), asyncHandler(listCoursesHandler));
 
 router.get('/:id', validate(idParam, 'params'), asyncHandler(getCourseHandler));
 

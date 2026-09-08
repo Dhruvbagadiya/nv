@@ -9,7 +9,7 @@ const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN'];
 
 export default function AdminLoginPage() {
   const navigate    = useNavigate();
-  const location    = useLocation();
+  const _location    = useLocation();
   const setSession  = useAuth((s) => s.setSession);
   const status      = useAuth((s) => s.status);
   const user        = useAuth((s) => s.user);
