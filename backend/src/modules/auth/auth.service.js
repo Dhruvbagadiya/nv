@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'node:crypto';
 import { prisma } from '../../utils/prisma.js';
+import { evictAuthState } from '../../utils/userCache.js';
 import { config } from '../../config.js';
 import {
   BadRequestError,
@@ -365,9 +366,43 @@ export async function getUserDetail(id) {
 }
 
 /** Update a user's name and/or role. */
-export async function updateUser(id, { name, role }) {
+/**
+ * Refuse a change that would leave nobody able to administer the system, or
+ * that would lock the actor out of their own account.
+ *
+ * There was no guard at all: a SUPER_ADMIN could demote themselves to AGENT, or
+ * deactivate the only remaining SUPER_ADMIN, and the only way back was editing
+ * the database by hand. Both are one careless click in a list of users.
+ */
+async function assertAdminRemains(target, { nextRole, nextActive, actorId }) {
+  if (target.role !== 'SUPER_ADMIN') return;
+
+  const losingAdmin = (nextRole !== undefined && nextRole !== 'SUPER_ADMIN') || nextActive === false;
+  if (!losingAdmin) return;
+
+  if (target.id === actorId && nextRole !== undefined && nextRole !== 'SUPER_ADMIN') {
+    throw new BadRequestError('You cannot change your own role.');
+  }
+  if (target.id === actorId && nextActive === false) {
+    throw new BadRequestError('You cannot deactivate your own account.');
+  }
+
+  const remaining = await prisma.user.count({
+    where: { role: 'SUPER_ADMIN', isActive: true, id: { not: target.id } },
+  });
+  if (remaining === 0) {
+    throw new ConflictError('At least one active Super Admin must remain.');
+  }
+}
+
+export async function updateUser(id, { name, role }, actorId) {
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) throw new NotFoundError('User not found');
+
+  await assertAdminRemains(user, { nextRole: role, actorId });
+
+  // The middleware caches role/isActive for 30s; a role change must bind now.
+  evictAuthState(id);
 
   return prisma.user.update({
     where: { id },
@@ -380,9 +415,12 @@ export async function updateUser(id, { name, role }) {
 }
 
 /** Flip isActive. Deactivating also revokes every active session immediately. */
-export async function setUserActive(id, isActive) {
+export async function setUserActive(id, isActive, actorId) {
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) throw new NotFoundError('User not found');
+
+  await assertAdminRemains(user, { nextActive: isActive, actorId });
+  evictAuthState(id);
 
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id }, data: { isActive } });

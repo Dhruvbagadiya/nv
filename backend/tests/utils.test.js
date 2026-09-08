@@ -93,15 +93,38 @@ describe('errorHandler', () => {
 
   // F-13: deleting a course with applications raised a raw FK violation that
   // surfaced as a 500 — a client-fixable conflict reported as a server fault.
+  // P2003 is deliberately absent: its meaning depends on the request method, so
+  // it has its own test below rather than a single row here.
   it.each([
     ['P2002', 409],
-    ['P2003', 409],
     ['P2025', 404],
     ['P2014', 409],
   ])('maps Prisma %s onto %i', (code, status) => {
     const res = mockRes();
     errorHandler({ code }, req, res, () => {});
     expect(res.statusCode).toBe(status);
+  });
+
+  // P2003 fires both when a delete is blocked by a child row and when a create
+  // names a parent that does not exist. One message cannot serve both: six
+  // endpoints told admins a brand-new record was "still referenced by other
+  // data" when the truth was "that country does not exist".
+  it.each([
+    ['DELETE', 409, /still referenced/],
+    ['POST', 400, /references something that does not exist/],
+    ['PUT', 400, /references something that does not exist/],
+  ])('reads a foreign key failure on %s as %i', (method, expected, pattern) => {
+    const res = mockRes();
+    errorHandler({ code: 'P2003' }, { ...req, method }, res, () => {});
+    expect(res.statusCode).toBe(expected);
+    expect(res.body.error).toMatch(pattern);
+  });
+
+  // Carries no `.code`, so it fell through to 500 despite being caller-fixable.
+  it('reports a malformed query as 400, not 500', () => {
+    const res = mockRes();
+    errorHandler({ name: 'PrismaClientValidationError', message: 'Argument slug is missing' }, req, res, () => {});
+    expect(res.statusCode).toBe(400);
   });
 
   it('falls back to 500 for an unknown error and never leaks its message', () => {

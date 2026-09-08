@@ -136,3 +136,25 @@ describe('updateCourse — intake handling', () => {
     expect(created.scoreDetails).toEqual([{ test: 'IELTS', band: '6.5' }]);
   });
 });
+
+describe('createCourse', () => {
+  beforeEach(() => {
+    prismaMock.course.create.mockResolvedValue(courseRow());
+  });
+
+  // Course.slug is required with no default, but the request schema makes it
+  // optional. Prisma then raised a validation error with no `.code`, which the
+  // error handler could not map, so a create without a slug was a guaranteed 500.
+  it('derives a slug when the caller omits one', async () => {
+    await service.createCourse({ institutionId: 'i1', title: 'MSc Data Science', tuitionFee: 1 });
+
+    const { slug } = prismaMock.course.create.mock.calls[0][0].data;
+    expect(slug).toMatch(/^msc-data-science-/);
+  });
+
+  it('keeps an explicit slug untouched', async () => {
+    await service.createCourse({ institutionId: 'i1', title: 'X', slug: 'chosen-slug', tuitionFee: 1 });
+
+    expect(prismaMock.course.create.mock.calls[0][0].data.slug).toBe('chosen-slug');
+  });
+});

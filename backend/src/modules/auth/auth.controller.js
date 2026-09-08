@@ -106,15 +106,13 @@ export async function getUserDetailHandler(req, res) {
 }
 
 export async function updateUserHandler(req, res) {
-  res.json(await authService.updateUser(req.params.id, req.body));
+  res.json(await authService.updateUser(req.params.id, req.body, req.user.sub));
 }
 
 export async function setUserActiveHandler(req, res) {
-  const { isActive } = req.body;
-  if (typeof isActive !== 'boolean') {
-    return res.status(400).json({ error: 'isActive must be a boolean' });
-  }
-  res.json(await authService.setUserActive(req.params.id, isActive));
+  // Validated by setUserActiveBody on the route; the actor is passed so the
+  // service can refuse a self-deactivation or the removal of the last admin.
+  res.json(await authService.setUserActive(req.params.id, req.body.isActive, req.user.sub));
 }
 
 export async function revokeUserSessionsHandler(req, res) {
@@ -122,11 +120,8 @@ export async function revokeUserSessionsHandler(req, res) {
 }
 
 export async function adminResetPasswordHandler(req, res) {
-  const { newPassword } = req.body;
-  if (!newPassword || newPassword.length < 10) {
-    return res.status(400).json({ error: 'New password must be at least 10 characters.' });
-  }
-  res.json(await authService.adminResetPassword(req.params.id, newPassword));
+  // Length and type are enforced by adminResetPasswordBody on the route.
+  res.json(await authService.adminResetPassword(req.params.id, req.body.newPassword));
 }
 
 // Always 200, and always the same body. Whether the address is registered is

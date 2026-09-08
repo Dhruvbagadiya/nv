@@ -1,6 +1,7 @@
 import { prisma } from '../../utils/prisma.js';
 import { NotFoundError } from '../../utils/httpErrors.js';
 import { toSkipTake, maxReachablePage } from '../../utils/pagination.js';
+import { slugify } from '../../utils/slug.js';
 
 // ============================================================================
 // Helpers
@@ -292,9 +293,19 @@ export async function getCourse(id) {
 
 export async function createCourse(data) {
   const { intakes, ...rest } = data;
+
+  // Course.slug is required with no database default, but the request schema
+  // makes it optional — so a create without one raised a
+  // PrismaClientValidationError, which carries no `.code` and surfaced as a 500.
+  // Derived here the way institutions have always done it. The uniqueness
+  // suffix keeps two courses of the same name at different institutions from
+  // colliding on a constraint the caller cannot see.
+  const slug = rest.slug || `${slugify(rest.title)}-${Date.now().toString(36)}`;
+
   const course = await prisma.course.create({
     data: {
       ...rest,
+      slug,
       ...(intakes?.length && {
         intakes: {
           create: intakes,

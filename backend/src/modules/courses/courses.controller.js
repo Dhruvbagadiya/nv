@@ -1,4 +1,5 @@
 import * as coursesService from './courses.service.js';
+import { canSeeArchived } from '../../middleware/optionalAuth.js';
 
 // No try/catch here: asyncHandler in the routes file forwards rejections to the
 // error middleware. Express 4 does not do that on its own, which is why every
@@ -8,7 +9,13 @@ export async function listCoursesHandler(req, res) {
   // Already validated and coerced by `validate(listCoursesQuery, 'query')`.
   // The service returns { data, meta: { counts, page, pageSize, totalPages } }
   // which matches the target API shape directly.
-  res.json(await coursesService.searchCourses(req.query));
+  //
+  // `status` decides whether soft-deleted courses are visible, and this endpoint
+  // is public so students can browse without signing in. Anyone could therefore
+  // pass status=archived and enumerate rows an admin had deliberately hidden.
+  // Non-admins now get the default regardless of what they asked for.
+  const query = canSeeArchived(req.user) ? req.query : { ...req.query, status: 'active' };
+  res.json(await coursesService.searchCourses(query));
 }
 
 export async function getCourseHandler(req, res) {
