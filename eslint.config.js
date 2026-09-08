@@ -53,6 +53,17 @@ export default [
     },
   },
 
+  // Frontend files that run in Node rather than the browser: the build scripts,
+  // and any test that reads a file off disk. They were linted with browser
+  // globals only, which produced 12 `no-undef` errors for `console`, `process`,
+  // `fetch` and `Buffer` — noise that made the real errors harder to see.
+  {
+    files: ['frontend/scripts/**/*.{js,mjs}', 'frontend/**/*.test.{js,jsx}'],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+  },
+
   // Must stay last so it can switch off stylistic rules Prettier owns.
   prettier,
 ];

@@ -4,29 +4,18 @@ import Icon from '../../components/ui/Icon.jsx';
 import CourseDetailModal from './CourseDetailModal.jsx';
 import { formatFee } from '../../utils/format.js';
 import { monthLabels, nextIntakes, formatIntake } from '../../utils/intakes.js';
+import { programLevelLabel as levelLabel } from '../../constants/referenceData.js';
 
 // Props shape matches the program resource returned by the backend:
 //   { id, type: "program", attributes: { name, programLevel, school, programIntakes,
 //     tuition, applicationFee, minLength, maxLength, tags, badges, commission, ... } }
 
-// Convert ProgramLevel enum value to a human-readable label.
-const PROGRAM_LEVEL_LABELS = {
-  MASTERS_DEGREE:            "Master's Degree",
-  POST_GRADUATE_CERTIFICATE: 'Postgraduate Certificate',
-  BACHELORS_DEGREE:          "Bachelor's Degree",
-  THREE_YEAR_BACHELORS:      '3-Year Bachelor\'s',
-  FOUR_YEAR_BACHELORS:       '4-Year Bachelor\'s',
-  DIPLOMA:                   'Diploma',
-  CERTIFICATE:               'Certificate',
-  FOUNDATION:                'Foundation',
-  OTHER:                     'Program',
-};
-
+// Labels come from the shared list, which is asserted against the database enum
+// by constants/programLevels.test.js. A third private copy lived here and had
+// nine of seventeen values, so a doctorate rendered as its raw enum name.
 function programLevelLabel(level) {
-  if (!level) return 'Program';
-  // API returns snake_case slugs (e.g. "masters_degree"); DB enum is UPPER_SNAKE.
-  const key = level.toUpperCase();
-  return PROGRAM_LEVEL_LABELS[key] ?? level;
+  // The API emits snake_case slugs ("masters_degree"); the enum is UPPER_SNAKE.
+  return levelLabel(level ? String(level).toUpperCase() : undefined);
 }
 
 // Format duration from min/max month integers.

@@ -4,7 +4,6 @@ import CountryStrip from './CountryStrip.jsx';
 import NotificationDropdown from './NotificationDropdown.jsx';
 import SubAgentButton from './SubAgentButton.jsx';
 import { useAuth } from '../../store/useAuth.js';
-import { homePathFor } from '../../routes/homePath.js';
 
 const ROLE_LABEL = {
   SUPER_ADMIN: 'Super Admin',

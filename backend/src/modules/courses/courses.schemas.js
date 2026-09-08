@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ProgramLevel } from '@prisma/client';
 import { optionalUuid, optionalText, optionalEnum } from '../../utils/queryTypes.js';
 
 // Shared pagination coercion. Query strings arrive as text so `coerce` is
@@ -10,17 +11,13 @@ export const paginationQuery = {
 };
 
 // Machine-readable program level values the API accepts on input.
-const PROGRAM_LEVELS = [
-  'MASTERS_DEGREE',
-  'POST_GRADUATE_CERTIFICATE',
-  'DIPLOMA',
-  'CERTIFICATE',
-  'BACHELORS_DEGREE',
-  'THREE_YEAR_BACHELORS',
-  'FOUR_YEAR_BACHELORS',
-  'FOUNDATION',
-  'OTHER',
-];
+// Derived from the database enum, never hand-listed. This was a nine-value copy
+// while the schema had seventeen, so the eight it omitted -- among them
+// DOCTORAL_PHD, POST_GRADUATE_DIPLOMA and ADVANCED_DIPLOMA -- could not be
+// created, could not be filtered, and could not be edited at all: a PUT echoing
+// a course's own level came back 400. 4,907 live courses were on one of them.
+// Prisma exports the enum at runtime, so drift is now impossible by construction.
+export const PROGRAM_LEVELS = Object.values(ProgramLevel);
 
 export const listCoursesQuery = z.object({
   country: optionalText(8),

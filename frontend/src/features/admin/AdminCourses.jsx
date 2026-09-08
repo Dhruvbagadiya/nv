@@ -161,7 +161,10 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
     // course is free to apply to -- so the two must stay distinguishable here,
     // not collapsed the way Number('') === 0 would.
     applicationFee:        attr.applicationFee ?? '',
-    currencyCode:          attr.currency          ?? '',
+    // The raw override, not attr.currency (which falls back to the country).
+    // Seeding from the resolved value wrote the inherited currency back as an
+    // explicit override, so the course silently stopped following its country.
+    currencyCode:          attr.currencyCode      ?? '',
     externalUrl:           attr.externalUrl       ?? '',
     // Held as an object now. It used to be a JSON string an admin had to type
     // by hand, which meant knowing the key names and getting the punctuation
@@ -172,10 +175,15 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
     intakeMonths:          attr.intakeMonths      ?? [],
     tags:                  attr.tags              ?? [],
     badges:                attr.badges            ?? [],
+    // overallScore and scoreDetails have no input here, but they are carried so
+    // a save preserves them. Mapping only the three dates discarded the score an
+    // admissions decision rests on, on every save.
     intakes:               (attr.programIntakes ?? []).map((i) => ({
       startDate:          i.startDate          ?? '',
       openDate:           i.openDate           ?? '',
       submissionDeadline: i.submissionDeadline ?? '',
+      overallScore:       i.overallScore       ?? null,
+      scoreDetails:       i.scoreDetails       ?? [],
     })),
   });
 
@@ -247,6 +255,8 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
           startDate:          new Date(i.startDate),
           openDate:           i.openDate           ? new Date(i.openDate)           : null,
           submissionDeadline: i.submissionDeadline ? new Date(i.submissionDeadline) : null,
+          overallScore:       i.overallScore ?? null,
+          scoreDetails:       Array.isArray(i.scoreDetails) ? i.scoreDetails : [],
         })),
     });
   };

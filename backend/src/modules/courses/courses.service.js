@@ -119,6 +119,11 @@ function toProgramResource(course) {
     // default cannot express De Montfort University Dubai, a UK institution
     // quoting AED, or Lincoln University (New Zealand) quoting NZD.
     currency: course.currencyCode ?? country.currencyCode,
+    // The raw override, for callers that must tell "inherits its country's
+    // currency" from "is explicitly priced in it". An editor seeded from
+    // `currency` above would write the inherited value back as an override and
+    // silently stop the course inheriting.
+    currencyCode: course.currencyCode ?? null,
     id: course.id,
     languageOfInstructionCode: course.languageOfInstruction,
     maxLength: course.maxLength,
@@ -138,6 +143,10 @@ function toProgramResource(course) {
       ? { intent: course.successScoreIntent, label: course.successScoreLabel ?? null }
       : null,
     tags: course.tags ?? [],
+    // The admin form reads this on open and posts it back on save. While the
+    // serializer omitted it, the form read [] and wrote [] — quietly destroying
+    // the badges on 55,446 courses one unrelated edit at a time.
+    badges: course.badges ?? [],
     tuition: Number(course.tuitionFee),
     // The admin table branches on this to offer Restore instead of Archive. It
     // was read there before it was ever sent, so the button could not appear
@@ -308,7 +317,13 @@ export async function updateCourse(id, data) {
     where: { id },
     data: {
       ...rest,
-      ...(intakes && {
+      // `intakes?.length`, not `intakes`: [] is truthy, and the admin form sends
+      // the key on every save filtered to rows that have a start date. A course
+      // whose intake rows were never filled in therefore had every CourseIntake
+      // row deleted by an unrelated edit. An empty array now means "nothing to
+      // say about intakes", the same as omitting the key; clearing them is a
+      // deliberate act that belongs behind its own endpoint.
+      ...(intakes?.length && {
         intakes: {
           deleteMany: {},
           create: intakes,

@@ -73,7 +73,7 @@ export default function Sidebar() {
   // Resolve display name and logo — agency profile wins over the NV default.
   const agencyName    = agencyProfile?.agencyName ?? 'NV Immigration';
   const logoUrl       = agencyProfile?.logoUrl    ?? null;
-  const initials      = agencyName.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+  const _initials      = agencyName.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
   // A section with no `roles` field is visible to everyone; a section with `roles`
   // only renders if the current user's role is in that list.

@@ -234,7 +234,7 @@ export default function StudentProgramBrowser() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 {debouncedSearch && (
                   <span className="student-filter-pill">
-                    "{debouncedSearch}"
+                    &ldquo;{debouncedSearch}&rdquo;
                     <button onClick={() => handleSearchChange('')}>×</button>
                   </span>
                 )}
@@ -277,7 +277,7 @@ export default function StudentProgramBrowser() {
           {isError && (
             <div className="student-empty-state">
               <div className="student-empty-icon"><Icon name="alert" size={22} /></div>
-              <h3>Couldn't load programs</h3>
+              <h3>Couldn&rsquo;t load programs</h3>
               <p>Please check your connection and try again.</p>
             </div>
           )}

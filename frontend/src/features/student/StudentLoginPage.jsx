@@ -8,7 +8,7 @@ import { homePathFor } from '../../routes/homePath.js';
 
 export default function StudentLoginPage() {
   const navigate   = useNavigate();
-  const location   = useLocation();
+  const _location   = useLocation();
   const setSession = useAuth((s) => s.setSession);
   const status     = useAuth((s) => s.status);
   const user       = useAuth((s) => s.user);

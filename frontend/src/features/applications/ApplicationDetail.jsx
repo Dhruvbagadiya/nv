@@ -14,7 +14,6 @@ import { fetchApplication, advanceApplicationStage } from '../../api/application
 import { APPLICATION_STAGES, applicationStageLabel } from '../../constants/referenceData.js';
 import { useAuth } from '../../store/useAuth.js';
 import { formatDate } from '../../utils/format.js';
-import { formatFee } from '../../utils/format.js';
 import Flag from '../../components/ui/Flag.jsx';
 import Icon from '../../components/ui/Icon.jsx';
 
@@ -207,7 +206,7 @@ export default function ApplicationDetail({ applicationId, onClose }) {
                     value={stageForm.deadlineAt}
                     onChange={(e) => setStageForm((f) => ({ ...f, deadlineAt: e.target.value }))}
                   />
-                  <div className="field-hint">Appears in the agent's "Upcoming Deadlines" panel.</div>
+                  <div className="field-hint">Appears in the agent&rsquo;s &ldquo;Upcoming Deadlines&rdquo; panel.</div>
                 </div>
                 {advanceError && <p className="form-error">{advanceError}</p>}
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>

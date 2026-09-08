@@ -133,7 +133,7 @@ export default function AgencySettings() {
           borderRadius: 'var(--radius)', padding: 24, maxWidth: 560,
         }}>
           <p style={{ color: 'var(--ink-600)', fontSize: 13, margin: 0 }}>
-            You are a sub-agent. Your portal uses your agency owner's branding.
+            You are a sub-agent. Your portal uses your agency owner&rsquo;s branding.
             {agencyProfile
               ? <> Currently showing <strong>{agencyProfile.agencyName}</strong>.</>
               : ' No custom branding is set — NV Immigration branding is shown.'}
