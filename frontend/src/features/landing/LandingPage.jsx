@@ -310,11 +310,16 @@ export default function LandingPage() {
       <header className={`lp-header ${scrolled ? 'is-scrolled' : ''}`}>
         <div className="lp-wrap lp-header-inner">
           <a href="#top" className="lp-brand">
-            <span className="lp-brand-mark">NV</span>
-            <span className="lp-brand-text">
-              <strong>NV Immigration</strong>
-              <small>Visa &amp; Travel Consultants</small>
-            </span>
+            {/* The real mark, served from our own CDN. It carries the wordmark
+                itself, so it stands alone — a lettered square and a repeated
+                company name were both standing in for this. */}
+            <img
+              className="lp-brand-logo"
+              src="https://cdn.nvimmigrationpvtltd.com/brand/nv-immigration-logo.png"
+              alt="NV Immigration"
+              width="639"
+              height="391"
+            />
           </a>
 
           <nav className={`lp-nav ${menuOpen ? 'is-open' : ''}`} aria-label="Primary">
