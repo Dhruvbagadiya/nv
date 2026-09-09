@@ -219,6 +219,7 @@ model Institution {
   importantUpdates  ImportantUpdate[]
   documents         Document[]
   photos            SchoolPhoto[]
+  aliases           InstitutionAlias[]
 
   @@unique([source, externalId])
   @@index([countryId])
@@ -257,6 +258,37 @@ enum SuccessScoreIntent {
   positive
   negative
   neutral
+}
+
+// A feed identity that has been merged into another institution.
+//
+// The catalogue carries the same university under two rows whenever both feeds
+// list it — one (catalogue_a, 269) and one (catalogue_b, 169) for Acadia, say.
+// Merging them deletes one row, but the importer resolves a school by
+// (source, externalId) and CREATES when that misses, so the next sync of the
+// losing feed simply rebuilt the duplicate and moved its courses back. Merges
+// silently undid themselves.
+//
+// A merge now leaves this forwarding address behind: the importer looks here
+// before creating, finds the surviving institution, and attaches that feed's
+// courses and photos to it. The row is the feed's identity, so the primary key
+// is the same (source, externalId) pair the importer searches on.
+//
+// Cascade: if the surviving institution is later deleted, its forwarding
+// addresses are meaningless and go with it — the next import then re-creates a
+// row from the feed, which is the correct fallback.
+model InstitutionAlias {
+  source        String
+  externalId    Int
+  institutionId String
+  // Why the merge happened, for whoever reads this table in a year.
+  note          String?
+  createdAt     DateTime @default(now())
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@id([source, externalId])
+  @@index([institutionId])
 }
 
 model Course {
