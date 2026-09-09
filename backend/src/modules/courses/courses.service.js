@@ -160,7 +160,7 @@ function toProgramResource(course) {
     // Without this an admin has no way to tell which edits will survive.
     source: course.source ?? 'manual',
     externalId: course.externalId ?? null,
-    // Published by instantapply only; ApplyBoard rows carry null for both.
+    // Published by Catalogue B only; Catalogue A rows carry null for both.
     // entryRequirements is free-form per provider, so it is passed through as
     // stored rather than flattened into columns the next feed would not fit.
     entryRequirements: course.entryRequirements ?? null,

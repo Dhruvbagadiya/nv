@@ -198,8 +198,8 @@ model Institution {
   // have one upstream.
   bannerUrl     String?
   // Upstream id, scoped by `source`. Nullable so hand-created rows stay valid.
-  // Unique on its own is wrong once there is more than one feed: instantapply
-  // university 116 is Otago Polytechnic while ApplyBoard 116 is SUNY
+  // Unique on its own is wrong once there is more than one feed: Catalogue B
+  // university 116 is Otago Polytechnic while Catalogue A 116 is SUNY
   // Fulton-Montgomery, so the pair is what identifies a row. See @@unique below.
   externalId    Int?
   // Which feed a row came from. "manual" means a human created it and no
@@ -239,7 +239,7 @@ enum ProgramLevel {
   THREE_YEAR_BACHELORS
   FOUR_YEAR_BACHELORS
   FOUNDATION
-  // Added for the ApplyBoard import: these are real categories students filter
+  // Added for the Catalogue A import: these are real categories students filter
   // on, and without them ~4,800 programs would collapse into OTHER.
   INTEGRATED_MASTERS
   POST_GRADUATE_DIPLOMA
@@ -267,8 +267,8 @@ model Course {
   externalId Int?
   source     String @default("manual")
 
-  // The provider's own link to the university's course page. ApplyBoard does
-  // not publish one; instantapply does, and agents use it to check details the
+  // The provider's own link to the university's course page. Catalogue A does
+  // not publish one; Catalogue B does, and agents use it to check details the
   // feed does not carry.
   externalUrl String?
 
@@ -299,7 +299,7 @@ model Course {
   tuitionFee     Decimal
   // Nullable because "no fee published" and "no fee charged" are different
   // answers, and an agent acting on the wrong one quotes a student the wrong
-  // price. instantapply publishes a fee on about 4% of its courses; ApplyBoard
+  // price. Catalogue B publishes a fee on about 4% of its courses; Catalogue A
   // publishes one on all of its, including genuine zeroes.
   applicationFee Decimal?
 
@@ -314,7 +314,7 @@ model Course {
   // the structured commission object so the card can show it without a join.
   commissionAmount Decimal?
 
-  // Whether this program supports AB (ApplyBoard) app creation flow.
+  // Whether this program supports the aggregator app creation flow.
   abAppCreationEnabled Boolean @default(false)
 
   // Success score shown on the program card.

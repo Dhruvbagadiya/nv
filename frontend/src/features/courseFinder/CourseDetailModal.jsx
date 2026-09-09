@@ -8,7 +8,7 @@ import { monthLabels, nextIntakes, formatIntake } from '../../utils/intakes.js';
  * Everything shown here is already in the list payload, so opening is instant
  * and needs no request — the same approach Important Updates takes.
  *
- * Only instantapply publishes entry requirements; ApplyBoard courses carry
+ * Only Catalogue B publishes entry requirements; Catalogue A courses carry
  * none. Rather than render an empty shell for those, each section is omitted
  * when it has nothing in it, and a course with no requirements at all says so
  * plainly instead of implying the requirements are "none".
@@ -122,7 +122,7 @@ export default function CourseDetailModal({ program, onClose }) {
           </Row>
           {/* Three distinct states, and collapsing any two of them misleads: a
               fee, no fee, and no published figure. null is the last of these --
-              15,864 instantapply courses -- and rendering it as "None" would
+              15,864 Catalogue B courses -- and rendering it as "None" would
               tell an agent a fee-charging course is free to apply to. */}
           <Row label="Application fee">
             {attr.applicationFee == null ? (

@@ -129,7 +129,7 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
               onChange={(e) => set('bannerUrl', e.target.value)}
               placeholder="https://…/banner.png" />
             <p className="field-hint">
-              Wide header image. Set by the ApplyBoard import; instantapply publishes none.
+              Wide header image. Set by the Catalogue A import; Catalogue B publishes none.
             </p>
             {form.bannerUrl && (
               <img src={form.bannerUrl} alt="banner preview"

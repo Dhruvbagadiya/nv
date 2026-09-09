@@ -23,8 +23,8 @@ export const createInstitutionBody = z
     city:         z.string().trim().max(120).nullable().optional(),
     province:     z.string().trim().max(120).nullable().optional(),
     logoUrl:      z.string().url().max(500).nullable().optional(),
-    // Wide header image for the institution page. Populated by the ApplyBoard
-    // import; instantapply publishes no banners, so it stays null for those.
+    // Wide header image for the institution page. Populated by the Catalogue A
+    // import; Catalogue B publishes no banners, so it stays null for those.
     bannerUrl:    z.string().url().max(500).nullable().optional(),
     isTrending:   z.boolean().optional(),
     isBlacklisted: z.boolean().optional(),
