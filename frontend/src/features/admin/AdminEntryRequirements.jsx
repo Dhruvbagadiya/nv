@@ -2,7 +2,7 @@ import { useState } from 'react';
 import AdminResourcePage from '../../components/admin/AdminResourcePage.jsx';
 import { fetchEntryRequirements } from '../../api/referenceScreens.js';
 import { upsertEntryRequirement } from '../../api/admin.js';
-import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
+import { useCountries } from '../../hooks/useReferenceData.js';
 
 const FILTER_DEFAULTS = { country: '', institutionId: '', page: 1 };
 
@@ -11,7 +11,6 @@ export default function AdminEntryRequirements() {
   // choice rather than pretending UG and PG are one list.
   const [level, setLevel] = useState('UG');
   const { options: countryOptions } = useCountries();
-  const { options: institutionOptions } = useInstitutions();
 
   const resource = {
     title: 'Entry requirements',
@@ -32,9 +31,7 @@ export default function AdminEntryRequirements() {
       {
         name: 'institutionId',
         label: 'Institution',
-        type: 'select',
-        placeholder: 'Any institution',
-        options: institutionOptions,
+        type: 'institution',
       },
     ],
 
@@ -58,8 +55,7 @@ export default function AdminEntryRequirements() {
       {
         name: 'institutionId',
         label: 'Institution',
-        type: 'select',
-        options: institutionOptions,
+        type: 'institution',
         required: true,
         hint: `Saves against the ${level} level. Existing ${level} requirements for this institution are replaced.`,
       },

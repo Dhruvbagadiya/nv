@@ -163,7 +163,13 @@ describe('admin resource pages', () => {
     fireEvent.click(screen.getByText('Set commission'));
     await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy());
 
-    fireEvent.change(screen.getByLabelText(/^Institution/), { target: { value: 'i1' } });
+    // Institution is a searched picker now, not a 1,255-option <select>: type a
+    // name, then choose the match. Setting a value on the input would only set
+    // the search text.
+    fireEvent.change(screen.getByLabelText(/^Institution/), { target: { value: 'Hert' } });
+    await waitFor(() => expect(screen.getByText('University of Hertfordshire')).toBeTruthy());
+    fireEvent.mouseDown(screen.getByText('University of Hertfordshire'));
+
     fireEvent.change(screen.getByLabelText('Tier 1 label'), { target: { value: '1-5 students' } });
     fireEvent.change(screen.getByLabelText('Tier 1 rate'), { target: { value: '15%' } });
     // Add a second tier and leave it blank.

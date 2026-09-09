@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Modal from '../ui/Modal.jsx';
 import Icon from '../ui/Icon.jsx';
 import FileField from '../ui/FileField.jsx';
+import InstitutionPicker from '../ui/InstitutionPicker.jsx';
 
 // Config-driven form used by every admin editor. Same reasoning as FilterBar: six
 // reference resources need create/edit forms that differ only in their fields, so
@@ -91,6 +92,23 @@ function Field({ field, value, onChange }) {
         hint={field.hint}
         value={value ?? ''}
         onChange={(url) => onChange(field.name, url)}
+      />
+    );
+  }
+
+  // Same reason as the filter: a form asking for one institution out of 1,255
+  // should let you type its name.
+  if (field.type === 'institution') {
+    return (
+      <InstitutionPicker
+        id={id}
+        label={field.label}
+        value={value ?? ''}
+        selectedLabel={field.selectedLabel}
+        countryCode={field.countryCode}
+        required={field.required}
+        hint={field.hint}
+        onChange={(next) => onChange(field.name, next)}
       />
     );
   }

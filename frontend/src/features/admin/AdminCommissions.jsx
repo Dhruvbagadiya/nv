@@ -1,13 +1,12 @@
 import AdminResourcePage from '../../components/admin/AdminResourcePage.jsx';
 import { fetchCommissions } from '../../api/referenceScreens.js';
 import { upsertCommission } from '../../api/admin.js';
-import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
+import { useCountries } from '../../hooks/useReferenceData.js';
 
 const FILTER_DEFAULTS = { country: '', search: '', page: 1 };
 
 export default function AdminCommissions() {
   const { options: countryOptions } = useCountries();
-  const { options: institutionOptions } = useInstitutions();
 
   const resource = {
     title: 'Universities commission',
@@ -51,8 +50,7 @@ export default function AdminCommissions() {
       {
         name: 'institutionId',
         label: 'Institution',
-        type: 'select',
-        options: institutionOptions,
+        type: 'institution',
         required: true,
         hint: 'Saving over an institution that already has rates replaces them.',
       },

@@ -5,7 +5,7 @@ import {
   updateImportantUpdate,
   archiveImportantUpdate,
 } from '../../api/admin.js';
-import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
+import { useCountries } from '../../hooks/useReferenceData.js';
 import { formatDate } from '../../utils/format.js';
 
 // A date input needs yyyy-mm-dd; the API returns a full ISO timestamp.
@@ -15,7 +15,6 @@ const FILTER_DEFAULTS = { countryId: '', institutionId: '', page: 1 };
 
 export default function AdminUpdates() {
   const { countries } = useCountries();
-  const { options: institutionOptions } = useInstitutions();
 
   const countryOptions = countries.map((c) => ({ value: c.id, label: c.name }));
 
@@ -37,9 +36,7 @@ export default function AdminUpdates() {
       {
         name: 'institutionId',
         label: 'Institution',
-        type: 'select',
-        placeholder: 'Any institution',
-        options: institutionOptions,
+        type: 'institution',
       },
     ],
 
@@ -83,9 +80,7 @@ export default function AdminUpdates() {
       {
         name: 'institutionId',
         label: 'Institution',
-        type: 'select',
-        placeholder: 'All institutions',
-        options: institutionOptions,
+        type: 'institution',
       },
       {
         name: 'attachmentUrl',

@@ -1,13 +1,12 @@
 import AdminResourcePage from '../../components/admin/AdminResourcePage.jsx';
 import Flag from '../../components/ui/Flag.jsx';
 import { fetchMoiAcceptances, createMoiAcceptance, updateMoiAcceptance, deleteMoiAcceptance } from '../../api/admin.js';
-import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
+import { useCountries } from '../../hooks/useReferenceData.js';
 
 const FILTER_DEFAULTS = { country: '', institutionId: '', courseType: '', page: 1 };
 
 export default function AdminMoiAcceptances() {
   const { options: countryOptions } = useCountries();
-  const { options: institutionOptions } = useInstitutions();
 
   const resource = {
     title: 'MOI Acceptances',
@@ -27,7 +26,7 @@ export default function AdminMoiAcceptances() {
     filterDefaults: FILTER_DEFAULTS,
     filterFields: [
       { name: 'country',       label: 'Country',     type: 'select', placeholder: 'Any country',     options: countryOptions },
-      { name: 'institutionId', label: 'Institution',  type: 'select', placeholder: 'Any institution', options: institutionOptions },
+      { name: 'institutionId', label: 'Institution',  type: 'institution' },
       { name: 'courseType',    label: 'Course type',  type: 'text',   placeholder: 'e.g. Masters' },
     ],
 
@@ -65,8 +64,7 @@ export default function AdminMoiAcceptances() {
       {
         name: 'institutionId',
         label: 'Institution',
-        type: 'select',
-        options: institutionOptions,
+        type: 'institution',
         required: true,
       },
       {

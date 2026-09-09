@@ -7,8 +7,9 @@ import Modal from '../../components/ui/Modal.jsx';
 import Icon from '../../components/ui/Icon.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useInvalidateResource } from '../../hooks/useInvalidateResource.js';
-import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
+import { useCountries } from '../../hooks/useReferenceData.js';
 import { fetchDocuments, fetchDocumentFacets } from '../../api/referenceScreens.js';
+import InstitutionPicker from '../../components/ui/InstitutionPicker.jsx';
 import {
   createDocument,
   updateDocument,
@@ -34,7 +35,6 @@ const FILTER_DEFAULTS = { countryId: '', institutionId: '', search: '', status: 
 function DocumentForm({ initial, onClose, onSaved, storage }) {
   const isEdit = Boolean(initial?.id);
   const { countries } = useCountries();
-  const { options: institutionOptions } = useInstitutions();
 
   const [values, setValues] = useState({
     category: initial?.category ?? 'VISA_DOCUMENT',
@@ -188,23 +188,13 @@ function DocumentForm({ initial, onClose, onSaved, storage }) {
           </select>
         </div>
 
-        <div className="form-field">
-          <label className="flabel" htmlFor="doc-institution">
-            Institution
-          </label>
-          <select
-            id="doc-institution"
-            value={values.institutionId}
-            onChange={(e) => set('institutionId', e.target.value)}
-          >
-            <option value="">All institutions</option>
-            {institutionOptions.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <InstitutionPicker
+          id="doc-institution"
+          value={values.institutionId}
+          selectedLabel={initial?.institution?.name}
+          onChange={(next) => set('institutionId', next)}
+          hint="Optional. Leave blank for a document that applies to every institution."
+        />
 
         <div className="form-field">
           <label className="flabel" htmlFor="doc-sort">

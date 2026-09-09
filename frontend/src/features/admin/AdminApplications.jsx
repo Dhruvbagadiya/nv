@@ -16,7 +16,7 @@ import FilterBar from '../../components/ui/FilterBar.jsx';
 import ApplicationDetail from '../applications/ApplicationDetail.jsx';
 import Flag from '../../components/ui/Flag.jsx';
 import { fetchApplications } from '../../api/applications.js';
-import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
+import { useCountries } from '../../hooks/useReferenceData.js';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { APPLICATION_STAGES, applicationStageLabel } from '../../constants/referenceData.js';
 import { formatDate } from '../../utils/format.js';
@@ -41,9 +41,6 @@ export default function AdminApplications() {
   const [selectedId, setSelectedId] = useState(null);
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
   const { options: countryOptions } = useCountries();
-  const { options: institutionOptions } = useInstitutions(
-    applied.country ? { country: applied.country } : {}
-  );
 
   const { data, isLoading, isError, isFetching } = useQuery({
     queryKey: ['admin-applications', applied],
@@ -53,7 +50,10 @@ export default function AdminApplications() {
 
   const filterFields = [
     { name: 'country',      label: 'Country',      type: 'select', placeholder: 'All countries',    options: countryOptions },
-    { name: 'institutionId',label: 'Institution',   type: 'select', placeholder: 'All institutions', options: institutionOptions },
+    // countryCode narrows the search to the chosen destination, which is what
+    // the country-scoped institution list used to do before this became a
+    // server-side search.
+    { name: 'institutionId',label: 'Institution',   type: 'institution', countryCode: applied.country || undefined },
     {
       name: 'stage', label: 'Stage', type: 'select', placeholder: 'Any stage',
       options: APPLICATION_STAGES,

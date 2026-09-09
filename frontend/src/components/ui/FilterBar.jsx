@@ -15,6 +15,8 @@
 //     { name: 'dateFrom', label: 'Publish date from', type: 'date' },
 //   ];
 //
+import InstitutionPicker from './InstitutionPicker.jsx';
+
 export default function FilterBar({
   fields,
   values,
@@ -38,6 +40,23 @@ export default function FilterBar({
         {fields.map((field) => {
           const id = `filter-${field.name}`;
           const value = values[field.name] ?? '';
+
+          // Searched on the server rather than listed: the institution filter
+          // used to render every one of ~1,255 rows as an <option>.
+          if (field.type === 'institution') {
+            return (
+              <div className="filter-field" key={field.name}>
+                <InstitutionPicker
+                  id={id}
+                  label={field.label}
+                  value={value}
+                  selectedLabel={field.selectedLabel}
+                  countryCode={field.countryCode}
+                  onChange={(next) => onChange(field.name, next)}
+                />
+              </div>
+            );
+          }
 
           return (
             <div className="filter-field" key={field.name}>
