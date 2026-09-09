@@ -47,7 +47,11 @@
   .country-active-tag { font-size: 11px; font-weight: 700; color: var(--accent-700); background: var(--accent-50); border: 1px solid var(--accent-100); border-radius: var(--radius-pill); padding: 2px 9px; }
 
   /* ===================== COURSE CARDS ===================== */
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 9px; }
+  /* Column counts are divisors of the 12-card page size, never auto-fill.
+     auto-fill picks whatever fits — 5 columns around 1400px, 7 above 1900 —
+     and neither divides 12, so the last row came up short and the grid looked
+     broken on a wide screen. 6 / 4 / 3 / 2 / 1 always fill every row. */
+  .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
   .card {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); 
     padding: 0; display: flex; flex-direction: column; overflow: hidden;
