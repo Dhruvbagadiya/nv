@@ -1,8 +1,14 @@
 import * as service from './documents.service.js';
+import { canSeeArchived } from '../../middleware/optionalAuth.js';
 import { createUploadUrl, storageStatus } from '../../utils/storage.js';
 
 export async function listDocumentsHandler(req, res) {
-  res.json(await service.listDocuments(req.query));
+  // `status` reaches the query schema from anyone the route lets in, and this
+  // route admits AGENT. Archiving is how an admin retires a template, so an
+  // agent asking for status=archived would be handed the retired ones back —
+  // the same hole that let anyone enumerate soft-deleted courses.
+  const query = canSeeArchived(req.user) ? req.query : { ...req.query, status: 'active' };
+  res.json(await service.listDocuments(query));
 }
 
 export async function facetsHandler(req, res) {
