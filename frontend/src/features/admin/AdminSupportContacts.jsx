@@ -4,7 +4,12 @@ import {
   createSupportContact,
   updateSupportContact,
   archiveSupportContact,
+  restoreSupportContact,
 } from '../../api/admin.js';
+
+// Stable reference: useUrlFilters treats `defaults` as the schema and memoises
+// on its identity.
+const FILTER_DEFAULTS = { status: 'active' };
 
 const resource = {
   title: 'Support contacts',
@@ -12,11 +17,19 @@ const resource = {
   queryKey: 'admin-support-contacts',
   createLabel: 'Add contact',
   emptyMessage: 'No support contacts published.',
-  list: async () => ({ items: await fetchSupportContacts() }),
+  list: async (filters) => ({ items: await fetchSupportContacts(filters) }),
   create: createSupportContact,
   update: updateSupportContact,
   remove: archiveSupportContact,
+  restore: restoreSupportContact,
   confirmRemove: (c) => `Remove ${c.name} from Help & Support?`,
+  rowLabel: (c) => c.name,
+
+  // This screen had no filters, so there was nowhere to list archived contacts
+  // and the Restore button could never appear. The status control is appended by
+  // AdminResourcePage; filterFields only has to exist for it to render.
+  filterDefaults: FILTER_DEFAULTS,
+  filterFields: [],
 
   columns: [
     { key: 'name', header: 'Name', className: 'cell-strong' },
@@ -25,7 +38,11 @@ const resource = {
   ],
 
   formFields: [
-    { name: 'name', label: 'Name', type: 'text', required: true },
+    {
+      name: 'name', label: 'Name', type: 'text', required: true,
+      placeholder: 'e.g. Priya Shah',
+      hint: 'The person or desk an agent will be calling. Shown on the Help & Support card.',
+    },
     {
       name: 'phone',
       label: 'Phone',
@@ -36,7 +53,10 @@ const resource = {
       // so a country code is what makes WhatsApp work.
       hint: 'Include the country code — the WhatsApp link is built from these digits.',
     },
-    { name: 'sortOrder', label: 'Sort order', type: 'number', defaultValue: 0 },
+    {
+      name: 'sortOrder', label: 'Sort order', type: 'number', defaultValue: 0,
+      hint: 'Lowest number appears first. Put the main contact at 0.',
+    },
   ],
 
   toPayload: (v) => ({

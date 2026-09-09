@@ -49,8 +49,16 @@ const resource = {
   ],
 
   formFields: [
-    { name: 'variant', label: 'Style', type: 'select', options: VARIANTS, required: true, defaultValue: 'INFO' },
-    { name: 'message', label: 'Message', type: 'textarea', required: true, rows: 3 },
+    {
+      name: 'variant', label: 'Style', type: 'select', options: VARIANTS,
+      required: true, defaultValue: 'INFO',
+      hint: 'Sets the banner colour. Warning is for something an agent must act on; Info is for news.',
+    },
+    {
+      name: 'message', label: 'Message', type: 'textarea', required: true, rows: 3,
+      placeholder: 'e.g. Declaration form is mandatory with every application.',
+      hint: 'Shown across the top of every agent screen, so keep it to one or two sentences.',
+    },
     {
       name: 'ctaLabel',
       label: 'Button label',
@@ -66,8 +74,14 @@ const resource = {
       // The API enforces this too; saying it here avoids a round trip to find out.
       hint: 'Required if a button label is set. A path stays inside the app; a full URL opens in a new tab.',
     },
-    { name: 'isActive', label: 'Active (visible to agents)', type: 'checkbox', defaultValue: true },
-    { name: 'sortOrder', label: 'Sort order', type: 'number', defaultValue: 0 },
+    {
+      name: 'isActive', label: 'Active (visible to agents)', type: 'checkbox', defaultValue: true,
+      hint: 'Untick to take the banner down without deleting it — useful for a notice that comes back each intake.',
+    },
+    {
+      name: 'sortOrder', label: 'Sort order', type: 'number', defaultValue: 0,
+      hint: 'Lowest number shows first when several banners are active. Leave at 0 if order does not matter.',
+    },
   ],
 
   toPayload: (v) => ({

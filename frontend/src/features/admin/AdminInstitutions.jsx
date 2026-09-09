@@ -80,14 +80,23 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
           <div className="form-field">
             <label className="flabel" htmlFor="inst-name">Institution name *</label>
             <input id="inst-name" type="text" value={form.name}
-              onChange={(e) => set('name', e.target.value)} required />
+              onChange={(e) => set('name', e.target.value)}
+              placeholder="e.g. University of Hertfordshire" required />
+            <div className="field-hint">
+              The name agents search by. Include the campus if you keep campuses as separate
+              rows — &ldquo;University of Law - Leeds&rdquo; rather than two rows both called
+              &ldquo;University of Law&rdquo;.
+            </div>
           </div>
           <div className="form-field">
             <label className="flabel" htmlFor="inst-slug">Slug *</label>
             <input id="inst-slug" type="text" value={form.slug}
               onChange={(e) => set('slug', e.target.value)}
               placeholder="auto-derived from name" required />
-            <div className="field-hint">Used in deep-links. Auto-filled from the name.</div>
+            <div className="field-hint">
+              The address of this school&apos;s page. Auto-filled from the name; changing it later
+              breaks any link already shared.
+            </div>
           </div>
           <div className="form-field">
             <label className="flabel" htmlFor="inst-country">Country *</label>
@@ -107,11 +116,15 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
             <label className="flabel" htmlFor="inst-city">City</label>
             <input id="inst-city" type="text" value={form.city}
               onChange={(e) => set('city', e.target.value)} placeholder="e.g. London" />
+            <div className="field-hint">
+              Shown under the institution name on every course card, and courses inherit it.
+            </div>
           </div>
           <div className="form-field">
             <label className="flabel" htmlFor="inst-province">Province / State</label>
             <input id="inst-province" type="text" value={form.province}
               onChange={(e) => set('province', e.target.value)} placeholder="e.g. England" />
+            <div className="field-hint">Optional. Shown beside the city on the school page.</div>
           </div>
           <div style={{ gridColumn: '1 / -1' }}>
             <FileField
@@ -142,6 +155,10 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
                 onChange={(e) => set('isTrending', e.target.checked)} />
               <span>Show in Trending Universities carousel</span>
             </label>
+            <div className="field-hint">
+              Puts this school in the carousel on the Report screen. Meant for a handful at a
+              time — everything ticked is the same as nothing ticked.
+            </div>
           </div>
           <div className="form-field">
             <label className="checkbox-row">
@@ -149,6 +166,10 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
                 onChange={(e) => set('isBlacklisted', e.target.checked)} />
               <span>Blacklisted (hidden from agents)</span>
             </label>
+            <div className="field-hint">
+              Hides the school and its courses from agents without deleting anything. Use this
+              for a university you have stopped accepting applications for.
+            </div>
           </div>
         </div>
 

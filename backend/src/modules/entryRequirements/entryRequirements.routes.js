@@ -7,11 +7,14 @@ import {
   listEntryRequirementsQuery,
   englishTestsQuery,
   upsertEntryRequirementBody,
+  idParam,
 } from './entryRequirements.schemas.js';
 import {
   listEntryRequirementsHandler,
   listEnglishTestsHandler,
   upsertEntryRequirementHandler,
+  archiveEntryRequirementHandler,
+  restoreEntryRequirementHandler,
 } from './entryRequirements.controller.js';
 
 const router = Router();
@@ -42,5 +45,12 @@ router.put(
   validate(upsertEntryRequirementBody),
   asyncHandler(upsertEntryRequirementHandler)
 );
+
+const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
+
+router.delete('/:id', ...admin, validate(idParam, 'params'), asyncHandler(archiveEntryRequirementHandler));
+
+// Archiving is reversible, but only if something can restore it.
+router.post('/:id/restore', ...admin, validate(idParam, 'params'), asyncHandler(restoreEntryRequirementHandler));
 
 export default router;

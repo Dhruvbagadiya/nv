@@ -1,5 +1,6 @@
 import { prisma } from '../../utils/prisma.js';
 import { paginateQuery } from '../../utils/pagination.js';
+import { archiveWhere } from '../../utils/softDelete.js';
 
 // Reference images 3-4. /entry-requirements/ug and /pg are the same screen with a
 // different `level`, so this is one query with a required level parameter rather
@@ -10,12 +11,13 @@ export async function listEntryRequirements({
   institutionId,
   englishRequirement,
   credibilityInterview,
+  status,
   page,
   pageSize,
 }) {
   const where = {
     level,
-    archivedAt: null,
+    ...archiveWhere(status),
     institution: {
       archivedAt: null,
       ...(institutionId && { id: institutionId }),
@@ -71,4 +73,14 @@ export async function upsertEntryRequirement({ institutionId, level, ...rest }) 
     create: { institutionId, level, ...rest },
     include: { institution: { include: { country: true } } },
   });
+}
+
+export async function archiveEntryRequirement(id) {
+  return prisma.entryRequirement.update({ where: { id }, data: { archivedAt: new Date() } });
+}
+
+// Archiving without this is a one-way door: the row stays in the table and no
+// endpoint can reach it again.
+export async function restoreEntryRequirement(id) {
+  return prisma.entryRequirement.update({ where: { id }, data: { archivedAt: null } });
 }

@@ -365,12 +365,19 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
               onChange={(e) => set('commissionAmount', e.target.value)}
               placeholder="Optional" />
           </div>
-          <div className="form-field" style={{ display: 'flex', alignItems: 'center' }}>
+          {/* Was labelled "AB app creation enabled" — the upstream vendor's
+              initials, which meant nothing to anyone reading this form. The
+              column keeps its name; the label says what the flag does. */}
+          <div className="form-field">
             <label className="checkbox-row">
               <input type="checkbox" checked={form.abAppCreationEnabled}
                 onChange={(e) => set('abAppCreationEnabled', e.target.checked)} />
-              <span>AB app creation enabled</span>
+              <span>Agents can apply through the portal</span>
             </label>
+            <div className="field-hint">
+              Off means the student must apply on the university&apos;s own site. Agents see this
+              on the course card before they start an application.
+            </div>
           </div>
         </div>
 

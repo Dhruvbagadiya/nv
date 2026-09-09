@@ -3,8 +3,13 @@ import { requireAuth } from '../../middleware/auth.js';
 import { requireRole } from '../../middleware/rbac.js';
 import { validate } from '../../middleware/validate.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
-import { listCommissionsQuery, upsertCommissionBody } from './commissions.schemas.js';
-import { listCommissionsHandler, upsertCommissionHandler } from './commissions.controller.js';
+import { listCommissionsQuery, upsertCommissionBody, idParam } from './commissions.schemas.js';
+import {
+  listCommissionsHandler,
+  upsertCommissionHandler,
+  archiveCommissionHandler,
+  restoreCommissionHandler,
+} from './commissions.controller.js';
 
 const router = Router();
 // Partner-side only — commission rates are the agency margin. Adding STUDENT to the Role
@@ -28,5 +33,12 @@ router.put(
   validate(upsertCommissionBody),
   asyncHandler(upsertCommissionHandler)
 );
+
+const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
+
+router.delete('/:id', ...admin, validate(idParam, 'params'), asyncHandler(archiveCommissionHandler));
+
+// Archiving is reversible, but only if something can restore it.
+router.post('/:id/restore', ...admin, validate(idParam, 'params'), asyncHandler(restoreCommissionHandler));
 
 export default router;

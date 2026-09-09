@@ -42,6 +42,12 @@ const ROUTES = [
   ['delete', '/api/institutions/11111111-1111-1111-1111-111111111111', ADMIN_ONLY],
   ['put',    '/api/commissions',                            ADMIN_ONLY],
   ['put',    '/api/entry-requirements',                     ADMIN_ONLY],
+  // Archive/restore was missing on these two entirely, so archiving them was a
+  // one-way door — the row stayed in the table and nothing could reach it.
+  ['delete', '/api/entry-requirements/11111111-1111-1111-1111-111111111111', ADMIN_ONLY],
+  ['post',   '/api/entry-requirements/11111111-1111-1111-1111-111111111111/restore', ADMIN_ONLY],
+  ['delete', '/api/commissions/11111111-1111-1111-1111-111111111111', ADMIN_ONLY],
+  ['post',   '/api/commissions/11111111-1111-1111-1111-111111111111/restore', ADMIN_ONLY],
   ['post',   '/api/moi-institutions',                       ADMIN_ONLY],
   // One shared uploader replaced the "paste a URL" boxes; it writes into the
   // bucket, so the guard on it matters as much as any write endpoint.

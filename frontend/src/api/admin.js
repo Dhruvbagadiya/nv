@@ -13,16 +13,25 @@ export const fetchAllAnnouncements = ()      =>
 export const createSupportContact  = (b)     => api.post('/support-contacts', b).then((r) => r.data);
 export const updateSupportContact  = (id, b) => api.put(`/support-contacts/${id}`, b).then((r) => r.data);
 export const archiveSupportContact = (id)    => api.delete(`/support-contacts/${id}`);
+export const restoreSupportContact = (id)    => api.post(`/support-contacts/${id}/restore`).then((r) => r.data);
 
 // ---- important updates ----
 export const createImportantUpdate  = (b)    => api.post('/important-updates', b).then((r) => r.data);
 export const updateImportantUpdate  = (id, b) => api.put(`/important-updates/${id}`, b).then((r) => r.data);
 export const archiveImportantUpdate = (id)   => api.delete(`/important-updates/${id}`);
+export const restoreImportantUpdate = (id)   => api.post(`/important-updates/${id}/restore`).then((r) => r.data);
 
 export const createDocument     = (b)     => api.post('/documents', b).then((r) => r.data);
 export const updateDocument     = (id, b) => api.put(`/documents/${id}`, b).then((r) => r.data);
 export const archiveDocument    = (id)    => api.delete(`/documents/${id}`);
 export const restoreDocument    = (id)    => api.post(`/documents/${id}/restore`).then((r) => r.data);
+
+// Entry requirements and commissions had no archive path at all: the list
+// hard-coded `archivedAt: null` and nothing could set or clear it.
+export const archiveEntryRequirement = (id)  => api.delete(`/entry-requirements/${id}`);
+export const restoreEntryRequirement = (id)  => api.post(`/entry-requirements/${id}/restore`).then((r) => r.data);
+export const archiveCommission       = (id)  => api.delete(`/commissions/${id}`);
+export const restoreCommission       = (id)  => api.post(`/commissions/${id}/restore`).then((r) => r.data);
 export const fetchStorageStatus = ()      => api.get('/documents/storage-status').then((r) => r.data);
 export const createUploadUrl    = (b)     => api.post('/documents/upload-url', b).then((r) => r.data);
 

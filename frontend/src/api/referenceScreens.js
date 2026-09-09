@@ -51,8 +51,10 @@ export async function fetchAnnouncements() {
   return data.items;
 }
 
-export async function fetchSupportContacts() {
-  const { data } = await api.get('/support-contacts');
+export async function fetchSupportContacts(params) {
+  // params carries `status` from the admin screen; the agent-facing screen calls
+  // this with nothing and the endpoint defaults to active.
+  const { data } = await api.get('/support-contacts', { params });
   return data.items;
 }
 

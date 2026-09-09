@@ -4,6 +4,7 @@ import {
   createImportantUpdate,
   updateImportantUpdate,
   archiveImportantUpdate,
+  restoreImportantUpdate,
 } from '../../api/admin.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 import { formatDate } from '../../utils/format.js';
@@ -11,7 +12,7 @@ import { formatDate } from '../../utils/format.js';
 // A date input needs yyyy-mm-dd; the API returns a full ISO timestamp.
 const toDateInput = (iso) => (iso ? new Date(iso).toISOString().slice(0, 10) : '');
 
-const FILTER_DEFAULTS = { countryId: '', institutionId: '', page: 1 };
+const FILTER_DEFAULTS = { countryId: '', institutionId: '', status: 'active', page: 1 };
 
 export default function AdminUpdates() {
   const { countries } = useCountries();
@@ -28,6 +29,7 @@ export default function AdminUpdates() {
     create: createImportantUpdate,
     update: updateImportantUpdate,
     remove: archiveImportantUpdate,
+    restore: restoreImportantUpdate,
     confirmRemove: (u) => `Archive "${u.title}"? Agents will stop seeing it.`,
 
     filterDefaults: FILTER_DEFAULTS,
@@ -37,6 +39,7 @@ export default function AdminUpdates() {
         name: 'institutionId',
         label: 'Institution',
         type: 'institution',
+        hint: 'Leave blank unless the update is about one university only.',
       },
     ],
 
@@ -60,14 +63,22 @@ export default function AdminUpdates() {
     ],
 
     formFields: [
-      { name: 'title', label: 'Title', type: 'text', required: true },
-      { name: 'body', label: 'Update text', type: 'textarea', required: true, rows: 6 },
+      {
+        name: 'title', label: 'Title', type: 'text', required: true,
+        placeholder: 'e.g. UKVI raises maintenance funds from January',
+        hint: 'The headline agents scan in the list. Say what changed, not just the topic.',
+      },
+      {
+        name: 'body', label: 'Update text', type: 'textarea', required: true, rows: 6,
+        hint: 'The full notice, shown when an agent opens the row. Include what changed, who it affects and from when.',
+      },
       {
         name: 'publishDate',
         label: 'Publish date',
         type: 'date',
         required: true,
         defaultValue: new Date().toISOString().slice(0, 10),
+        hint: 'Sorts the list and drives the date filter. A future date does not hide the update — untick nothing, archive it instead.',
       },
       {
         name: 'countryId',

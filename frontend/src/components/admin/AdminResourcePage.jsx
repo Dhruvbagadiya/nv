@@ -27,6 +27,10 @@ export default function AdminResourcePage({ resource }) {
   const [editing, setEditing] = useState(null); // row being edited, or 'new'
   const filtersEnabled = Boolean(resource.filterDefaults);
   const idOf = resource.idOf ?? ((row) => row.id);
+  // Commissions identify a row by institutionId, because the save is an upsert
+  // keyed on the institution — but archive and restore address the commission's
+  // own id, like every other module. One accessor cannot serve both.
+  const removeIdOf = resource.removeIdOf ?? idOf;
 
   // useUrlFilters needs a stable defaults reference; resources with no filters get a
   // frozen empty object rather than a fresh literal each render.
@@ -56,6 +60,7 @@ export default function AdminResourcePage({ resource }) {
   });
 
   const removeMutation = useMutation({ mutationFn: resource.remove, onSuccess: invalidate });
+  const restoreMutation = useMutation({ mutationFn: resource.restore, onSuccess: invalidate });
 
   const rows = data?.items ?? [];
 
@@ -70,6 +75,11 @@ export default function AdminResourcePage({ resource }) {
 
   const columns = [
     ...resource.columns,
+    // Only meaningful where archiving is reversible; a column that appears and
+    // disappears between screens is more confusing than one that reads "Active".
+    ...(resource.restore
+      ? [{ key: 'archivedAt', header: 'Status', render: (row) => (row.archivedAt ? 'Archived' : 'Active') }]
+      : []),
     {
       key: '__actions',
       header: 'Actions',
@@ -78,23 +88,36 @@ export default function AdminResourcePage({ resource }) {
           <button type="button" className="btn btn-outline" onClick={() => setEditing(row)}>
             Edit
           </button>
-          {resource.remove && (
+          {/* An archived row offers the way back rather than a second archive. */}
+          {resource.restore && row.archivedAt ? (
             <button
               type="button"
               className="btn btn-ghost"
-              // Destructive and not undoable from this screen, so it asks first.
-              onClick={() => {
-                if (window.confirm(resource.confirmRemove?.(row) ?? `${removeLabel} this item?`)) {
-                  removeMutation.mutate(idOf(row));
-                }
-              }}
-              disabled={removeMutation.isPending}
-              // Twenty identical buttons per page otherwise, with nothing to tell
-              // a screen reader which row this one belongs to.
-              aria-label={`${removeLabel} ${resource.rowLabel?.(row) ?? 'item'}`}
+              onClick={() => restoreMutation.mutate(removeIdOf(row))}
+              disabled={restoreMutation.isPending}
+              aria-label={`Restore ${resource.rowLabel?.(row) ?? 'item'}`}
             >
-              {removeLabel}
+              Restore
             </button>
+          ) : (
+            resource.remove && (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                // Destructive and not undoable from this screen, so it asks first.
+                onClick={() => {
+                  if (window.confirm(resource.confirmRemove?.(row) ?? `${removeLabel} this item?`)) {
+                    removeMutation.mutate(removeIdOf(row));
+                  }
+                }}
+                disabled={removeMutation.isPending}
+                // Twenty identical buttons per page otherwise, with nothing to tell
+                // a screen reader which row this one belongs to.
+                aria-label={`${removeLabel} ${resource.rowLabel?.(row) ?? 'item'}`}
+              >
+                {removeLabel}
+              </button>
+            )
           )}
         </div>
       ),
@@ -121,7 +144,24 @@ export default function AdminResourcePage({ resource }) {
     >
       {filtersEnabled && resource.filterFields && (
         <FilterBar
-          fields={resource.filterFields}
+          // Appended rather than asked of every resource: the option only makes
+          // sense where archiving is reversible, and without a way to LIST the
+          // archived rows the Restore button could never be reached.
+          fields={
+            resource.restore
+              ? [...resource.filterFields, {
+                  name: 'status',
+                  label: 'Status',
+                  type: 'select',
+                  placeholder: 'Active',
+                  options: [
+                    { value: 'active', label: 'Active' },
+                    { value: 'archived', label: 'Archived' },
+                    { value: 'all', label: 'All' },
+                  ],
+                }]
+              : resource.filterFields
+          }
           values={draft}
           onChange={setField}
           onApply={apply}

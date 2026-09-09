@@ -1,9 +1,9 @@
 import AdminResourcePage from '../../components/admin/AdminResourcePage.jsx';
 import { fetchCommissions } from '../../api/referenceScreens.js';
-import { upsertCommission } from '../../api/admin.js';
+import { upsertCommission, archiveCommission, restoreCommission } from '../../api/admin.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 
-const FILTER_DEFAULTS = { country: '', search: '', page: 1 };
+const FILTER_DEFAULTS = { country: '', search: '', status: 'active', page: 1 };
 
 export default function AdminCommissions() {
   const { options: countryOptions } = useCountries();
@@ -20,6 +20,12 @@ export default function AdminCommissions() {
     create: upsertCommission,
     // The row's id is the commission's, but the upsert keys on the institution.
     idOf: (c) => c.institutionId,
+    // Archive and restore address the commission row itself.
+    removeIdOf: (c) => c.id,
+    remove: archiveCommission,
+    restore: restoreCommission,
+    confirmRemove: (c) => `Archive the commission for ${c.institution?.name ?? 'this institution'}?`,
+    rowLabel: (c) => c.institution?.name ?? 'commission',
 
     filterDefaults: FILTER_DEFAULTS,
     filterFields: [
@@ -61,7 +67,11 @@ export default function AdminCommissions() {
         // Explains the irregular data this Json column exists to hold.
         defaultValue: [{ label: 'All students', rate: '' }],
       },
-      { name: 'notes', label: 'Notes', type: 'textarea', rows: 2 },
+      {
+        name: 'notes', label: 'Notes', type: 'textarea', rows: 2,
+        placeholder: 'e.g. Paid 60 days after enrolment. No commission on scholarship students.',
+        hint: 'Conditions the rate depends on — payment timing, exclusions, anything an agent should know before quoting.',
+      },
     ],
 
     toForm: (c) => ({ institutionId: c.institutionId, tiers: c.tiers, notes: c.notes ?? '' }),

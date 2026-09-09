@@ -41,6 +41,15 @@ export const RELATED_KEYS = {
   announcements: [['announcements']],
   'moi-institutions': [['moi-institutions'], ['moi-course-types']],
   'course-inquiries': [['course-inquiries']],
+
+  // The config-driven screens pass their own queryKey straight through, so the
+  // admin key is what arrives here. Each also clears the agent-facing cache that
+  // reads the same rows.
+  'admin-commissions': [['admin-commissions'], ['commissions'], ['courses'], ['course']],
+  'admin-support-contacts': [['admin-support-contacts'], ['support-contacts']],
+  'admin-important-updates': [['admin-important-updates'], ['important-updates']],
+  'admin-moi': [['admin-moi'], ['moi-institutions'], ['moi-course-types']],
+  'admin-announcements': [['admin-announcements'], ['announcements']],
 };
 
 /**

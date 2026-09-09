@@ -66,6 +66,7 @@ export default function AdminMoiAcceptances() {
         label: 'Institution',
         type: 'institution',
         required: true,
+        hint: 'The university that accepts a Medium of Instruction letter in place of IELTS.',
       },
       {
         name: 'courseType',
@@ -73,6 +74,9 @@ export default function AdminMoiAcceptances() {
         type: 'text',
         required: true,
         placeholder: "e.g. Master's Degree",
+        // The agent screen filters on this exact string, so two spellings of the
+        // same award split the dropdown into two options.
+        hint: 'Match the wording already used for this award — a second spelling creates a second filter option.',
       },
       {
         name: 'years',
@@ -80,13 +84,14 @@ export default function AdminMoiAcceptances() {
         type: 'number',
         required: true,
         defaultValue: 3,
+        hint: 'How old the qualification may be and still be accepted. Enter 0 if the university sets no limit.',
       },
       {
         name: 'documentUrl',
-        label: 'Document URL',
-        type: 'text',
-        placeholder: 'https://… or /files/…',
-        hint: 'Optional. Agents see a View link when this is set.',
+        label: 'Document',
+        type: 'file',
+        category: 'moi-documents',
+        hint: 'Optional. The university\'s MOI letter or policy — agents get a View link when this is set.',
       },
     ],
 
