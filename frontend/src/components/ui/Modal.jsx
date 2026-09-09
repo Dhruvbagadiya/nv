@@ -22,6 +22,15 @@ export default function Modal({ title, subtitle, onClose, children, footer, wide
   const panelRef = useRef(null);
   const previouslyFocused = useRef(null);
 
+  // Callers pass an inline arrow — `onClose={() => setEditing(null)}` — so
+  // onClose is a new function on every parent render. With it in the dependency
+  // list the setup below re-ran each time: focus was yanked back to the panel
+  // mid-keystroke, the body-overflow value was re-captured from an already
+  // hidden body, and the focus trap was torn down and rebuilt. Held in a ref so
+  // the effect runs once per open and still calls the current callback.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
   useEffect(() => {
     previouslyFocused.current = document.activeElement;
     // Move focus into the dialog so the next Tab lands inside it rather than back
@@ -30,7 +39,7 @@ export default function Modal({ title, subtitle, onClose, children, footer, wide
 
     const onKeyDown = (e) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -63,7 +72,9 @@ export default function Modal({ title, subtitle, onClose, children, footer, wide
       document.body.style.overflow = previousOverflow;
       previouslyFocused.current?.focus?.();
     };
-  }, [onClose]);
+    // Deliberately empty: this is open/close lifecycle, not a subscription to
+    // the callback's identity.
+  }, []);
 
   return createPortal(
     <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>

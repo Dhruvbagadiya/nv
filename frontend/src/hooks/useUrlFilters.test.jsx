@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { renderHook, cleanup, act } from '@testing-library/react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import { useUrlFilters } from './useUrlFilters.js';
 
 // Must be a module-level constant: the hook documents `defaults` as a stable
@@ -11,13 +11,50 @@ const DEFAULTS = { country: '', search: '', page: 1 };
 // assigning to external state during render is impure, and the lint rule that
 // flags it is right.
 function setup(url = '/') {
-  return renderHook(() => ({ ...useUrlFilters(DEFAULTS), url: useLocation().search }), {
+  return renderHook(() => ({
+    ...useUrlFilters(DEFAULTS),
+    url: useLocation().search,
+    navigate: useNavigate(),
+  }), {
     wrapper: ({ children }) => <MemoryRouter initialEntries={[url]}>{children}</MemoryRouter>,
   });
 }
 
 describe('useUrlFilters', () => {
   afterEach(cleanup);
+
+  // The draft was seeded from `applied` once, at mount. Pressing Back changed
+  // the URL and the results but left the inputs showing the filters you had
+  // just moved away from.
+  it('resyncs the inputs when the URL changes underneath it', () => {
+    const { result } = setup('/');
+
+    act(() => result.current.setField('country', 'UK'));
+    act(() => result.current.apply());
+    expect(result.current.applied.country).toBe('UK');
+    expect(result.current.draft.country).toBe('UK');
+
+    act(() => result.current.navigate(-1));
+
+    expect(result.current.applied.country).toBe('');
+    // The input follows the URL rather than showing a filter that is no longer
+    // being applied.
+    expect(result.current.draft.country).toBe('');
+  });
+
+  // Paging rebuilt the draft from `applied`, so anything typed but not yet
+  // applied was silently thrown away by clicking page 2.
+  it('keeps a half-typed filter when you change page', () => {
+    const { result } = setup('/');
+
+    act(() => result.current.setField('search', 'nursing'));
+    act(() => result.current.setPage(2));
+
+    expect(result.current.applied.page).toBe(2);
+    expect(result.current.draft.search).toBe('nursing');
+    // Still uncommitted: paging must not apply a filter that was never applied.
+    expect(result.current.applied.search).toBe('');
+  });
 
   it('falls back to defaults with no query string', () => {
     const { result } = setup('/');

@@ -46,6 +46,34 @@ export function useUrlFilters(defaults) {
   // firing a request per keystroke.
   const [draft, setDraft] = useState(applied);
 
+  // Keyed on the committed values, in the fixed order `defaults` declares, so
+  // two equivalent states compare equal regardless of how the URL was written.
+  const appliedKey = useMemo(
+    () => JSON.stringify(Object.keys(defaults).map((k) => applied[k])),
+    [applied, defaults]
+  );
+  // The last state this hook itself put in the URL. Anything else that shows up
+  // there came from outside — Back/forward, or a pasted link. Held in state
+  // rather than a ref because it is read during render, and a ref read there is
+  // not safe under concurrent rendering.
+  const [lastWritten, setLastWritten] = useState(appliedKey);
+  const [syncedKey, setSyncedKey] = useState(appliedKey);
+
+  // Adjusting state during render rather than in an effect: this is the
+  // documented pattern for "derive state from a prop change", and it means the
+  // inputs never paint one frame showing the previous filters.
+  if (appliedKey !== syncedKey) {
+    setSyncedKey(appliedKey);
+    if (lastWritten !== appliedKey) {
+      // Came from outside. The draft was seeded once at mount, so pressing Back
+      // left the inputs showing filters that no longer matched the results.
+      setDraft(applied);
+    } else {
+      // Our own write. Keep whatever is half-typed and only follow the page.
+      setDraft((d) => ({ ...d, ...('page' in defaults ? { page: applied.page } : {}) }));
+    }
+  }
+
   const setField = useCallback((key, value) => {
     setDraft((d) => ({ ...d, [key]: value }));
   }, []);
@@ -61,6 +89,10 @@ export function useUrlFilters(defaults) {
           params.set(key, String(value));
         }
       }
+      setLastWritten(JSON.stringify(Object.keys(defaults).map((k) => {
+        const v = next[k];
+        return v === '' || v == null ? defaults[k] : v;
+      })));
       setSearchParams(params, { replace: false });
     },
     [setSearchParams, defaults]
@@ -83,8 +115,12 @@ export function useUrlFilters(defaults) {
   // navigate immediately, not wait for "Apply Filter".
   const setPage = useCallback(
     (page) => {
+      // Only the page is committed. Paging used to overwrite the draft with the
+      // applied values, so half-typed filters vanished when you clicked page 2 —
+      // but it must not commit them either, which would apply a filter the user
+      // had not asked for yet.
       const next = { ...applied, page };
-      setDraft(next);
+      setDraft((d) => ({ ...d, page }));
       writeToUrl(next);
     },
     [applied, writeToUrl]

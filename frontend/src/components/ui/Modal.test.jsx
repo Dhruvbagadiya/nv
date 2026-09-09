@@ -1,4 +1,5 @@
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, it, expect, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Modal from './Modal.jsx';
@@ -132,5 +133,30 @@ describe('CourseCard eye button', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /view details/i }));
     expect(screen.getByRole('dialog').textContent).toContain('95');
+  });
+
+  // Callers pass an inline arrow, so onClose is a new function every parent
+  // render. While it was in the effect's dependency list the whole setup re-ran:
+  // focus jumped back to the panel mid-keystroke.
+  it('does not grab focus back when the parent re-renders', () => {
+    function Harness() {
+      const [, tick] = useState(0);
+      return (
+        <Modal title="Edit" onClose={() => {}}>
+          <input aria-label="Name" />
+          <button type="button" onClick={() => tick((n) => n + 1)}>Re-render</button>
+        </Modal>
+      );
+    }
+    render(<Harness />);
+
+    const input = screen.getByLabelText('Name');
+    input.focus();
+    expect(document.activeElement).toBe(input);
+
+    // A parent re-render with a fresh onClose identity.
+    fireEvent.click(screen.getByText('Re-render'));
+
+    expect(document.activeElement).toBe(input);
   });
 });
