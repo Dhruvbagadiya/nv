@@ -96,7 +96,10 @@ export default function BoardingAnimation() {
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Optional-chained like every other reduced-motion check on this page:
+    // matchMedia is absent in some embedded webviews and in jsdom, and an
+    // unguarded call throws before the animation is even reached.
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
 
     let cancelled = false;
     // Fires whether the art arrives late or not at all; both mean "no intro".

@@ -22,6 +22,7 @@ vi.mock('../../api/admin.js', () => ({
   createDocument: vi.fn(),
   updateDocument: vi.fn(),
   archiveDocument: vi.fn(),
+  restoreDocument: vi.fn(),
   fetchStorageStatus: vi.fn(),
   createUploadUrl: vi.fn(),
   upsertCommission: vi.fn(),
@@ -41,6 +42,7 @@ vi.mock('../../api/referenceScreens.js', () => ({
   fetchImportantUpdates: vi.fn(),
   fetchImportantUpdate: vi.fn(),
   fetchDocuments: vi.fn(),
+  fetchDocumentFacets: vi.fn(),
   fetchDocumentCounts: vi.fn(),
   fetchAnnouncements: vi.fn(),
   fetchSupportContacts: vi.fn(),
@@ -81,6 +83,10 @@ describe('admin resource pages', () => {
   beforeEach(() => {
     countriesApi.fetchCountries.mockResolvedValue([COUNTRY]);
     institutionsApi.fetchInstitutions.mockResolvedValue([INSTITUTION]);
+    // Omitting this left fetchDocumentFacets undefined, so the query threw and
+    // react-query swallowed it — the filters were absent for the wrong reason
+    // and the assertion below would have passed against a broken screen.
+    refApi.fetchDocumentFacets.mockResolvedValue({ countries: [], institutions: [] });
   });
 
   afterEach(() => {
@@ -192,6 +198,82 @@ describe('admin resource pages', () => {
     expect(document.querySelector('input[type="file"]')).toBeTruthy();
     // Saving by URL still works.
     expect(screen.getByLabelText(/^File URL/)).toBeTruthy();
+  });
+
+  it('lists documents with the file link and an Archive action', async () => {
+    refApi.fetchDocuments.mockResolvedValue({
+      items: [{
+        id: 'd1', title: 'Bar Code Document', category: 'VISA_DOCUMENT',
+        fileUrl: 'https://cdn.example.com/doc-bank/visa_document/bar-code.pdf',
+        sortOrder: 1, archivedAt: null, country: null, institution: null,
+      }],
+      meta: meta(1),
+    });
+    adminApi.fetchStorageStatus.mockResolvedValue({ enabled: true, maxBytes: 1, allowedContentTypes: [] });
+
+    renderScreen(<AdminDocuments />);
+    await waitFor(() => expect(screen.getByText('Bar Code Document')).toBeTruthy());
+    expect(screen.getByText('Open').getAttribute('href'))
+      .toBe('https://cdn.example.com/doc-bank/visa_document/bar-code.pdf');
+    // Scoped to the table: the Status filter offers options with these same
+    // labels, so a bare text match hits the dropdown too.
+    expect(document.querySelector('table').textContent).toContain('Active');
+    expect(screen.getByText('Archive')).toBeTruthy();
+    expect(screen.queryByText('Restore')).toBeNull();
+  });
+
+  // Documents have had a restore endpoint all along, but nothing on this screen
+  // listed archived rows, so the button could never be reached and every
+  // Archive was permanent as far as an admin could tell.
+  it('offers Restore instead of Archive on an archived document', async () => {
+    refApi.fetchDocuments.mockResolvedValue({
+      items: [{
+        id: 'd9', title: 'Retired Template', category: 'VISA_DOCUMENT',
+        fileUrl: 'https://cdn.example.com/x.pdf', sortOrder: 3,
+        archivedAt: '2026-09-09T15:43:57.704Z', country: null, institution: null,
+      }],
+      meta: meta(1),
+    });
+    adminApi.fetchStorageStatus.mockResolvedValue({ enabled: true, maxBytes: 1, allowedContentTypes: [] });
+    adminApi.restoreDocument.mockResolvedValue({});
+
+    renderScreen(<AdminDocuments />);
+    await waitFor(() => expect(screen.getByText('Retired Template')).toBeTruthy());
+    expect(document.querySelector('table').textContent).toContain('Archived');
+    expect(screen.queryByText('Archive')).toBeNull();
+
+    fireEvent.click(screen.getByText('Restore'));
+    // First argument only: react-query hands the mutationFn a context object as
+    // its second, so an exact-arguments match never holds here.
+    await waitFor(() => expect(adminApi.restoreDocument.mock.calls[0]?.[0]).toBe('d9'));
+  });
+
+  // Every imported document is unscoped, so the full institution list offered
+  // ~1,255 options that each returned an empty table. The filter now follows
+  // what the category actually has.
+  it('hides the scope filters when no document in the category is scoped', async () => {
+    refApi.fetchDocuments.mockResolvedValue({ items: [], meta: meta(0) });
+    adminApi.fetchStorageStatus.mockResolvedValue({ enabled: true, maxBytes: 1, allowedContentTypes: [] });
+
+    renderScreen(<AdminDocuments />);
+    await waitFor(() => expect(screen.getByText('Add document')).toBeTruthy());
+    expect(screen.queryByLabelText('Institution')).toBeNull();
+    expect(screen.queryByLabelText('Country')).toBeNull();
+    // The always-useful ones stay.
+    expect(screen.getByLabelText('Search')).toBeTruthy();
+    expect(screen.getByLabelText('Status')).toBeTruthy();
+  });
+
+  it('shows an Institution filter once a document in the category is scoped', async () => {
+    refApi.fetchDocuments.mockResolvedValue({ items: [], meta: meta(0) });
+    refApi.fetchDocumentFacets.mockResolvedValue({
+      countries: [], institutions: [{ id: 'i1', name: 'Anglia Ruskin University' }],
+    });
+    adminApi.fetchStorageStatus.mockResolvedValue({ enabled: true, maxBytes: 1, allowedContentTypes: [] });
+
+    renderScreen(<AdminDocuments />);
+    await waitFor(() => expect(screen.getByLabelText('Institution')).toBeTruthy());
+    expect(screen.queryByLabelText('Country')).toBeNull();
   });
 
   it('offers a file input when storage IS configured', async () => {

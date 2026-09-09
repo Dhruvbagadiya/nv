@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import Page from '../../components/ui/Page.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
@@ -7,11 +7,12 @@ import Modal from '../../components/ui/Modal.jsx';
 import Icon from '../../components/ui/Icon.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
-import { fetchDocuments } from '../../api/referenceScreens.js';
+import { fetchDocuments, fetchDocumentFacets } from '../../api/referenceScreens.js';
 import {
   createDocument,
   updateDocument,
   archiveDocument,
+  restoreDocument,
   fetchStorageStatus,
   uploadFile,
 } from '../../api/admin.js';
@@ -24,7 +25,7 @@ const CATEGORIES = [
   { value: 'LOR', label: 'LOR documents' },
 ];
 
-const FILTER_DEFAULTS = { countryId: '', institutionId: '', search: '', page: 1 };
+const FILTER_DEFAULTS = { countryId: '', institutionId: '', search: '', status: 'active', page: 1 };
 
 // Hand-written rather than using AdminResourcePage, because the form needs a file
 // upload with its own progress and failure modes, which the generic config-driven
@@ -240,8 +241,6 @@ export default function AdminDocuments() {
   const [category, setCategory] = useState('VISA_DOCUMENT');
   const [editing, setEditing] = useState(null);
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
-  const { countries } = useCountries();
-  const { options: institutionOptions } = useInstitutions();
 
   // Checked up front so the form can say uploads are unavailable before someone
   // picks a file and waits for a failure.
@@ -252,13 +251,29 @@ export default function AdminDocuments() {
     retry: false,
   });
 
+  // SOP alone runs to 58 documents over two pages, and without this the table
+  // empties to its loading state on every page change.
   const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ['admin-documents', category, applied],
     queryFn: () => fetchDocuments({ ...applied, category }),
+    placeholderData: keepPreviousData,
+  });
+
+  // Filter options come from what this category actually has, not the full
+  // country and institution lists. Every imported document is unscoped, so the
+  // full lists offered ~1,255 institutions that each returned an empty table —
+  // which reads as a broken filter rather than an empty one. Same endpoint the
+  // agent-facing Document Bank uses; if documents get scoped later the
+  // dropdowns come back on their own.
+  const { data: facets } = useQuery({
+    queryKey: ['document-facets', category],
+    queryFn: () => fetchDocumentFacets(category),
+    staleTime: 10 * 60 * 1000,
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin-documents'] });
   const archive = useMutation({ mutationFn: archiveDocument, onSuccess: invalidate });
+  const restore = useMutation({ mutationFn: restoreDocument, onSuccess: invalidate });
 
   const columns = [
     { key: 'title', header: 'Title', className: 'cell-strong' },
@@ -277,6 +292,13 @@ export default function AdminDocuments() {
       render: (d) => d.institution?.name ?? d.country?.name ?? 'All',
     },
     { key: 'sortOrder', header: 'Order', className: 'cell-mono' },
+    // Only meaningful under Archived/All, but a column that appears and
+    // disappears is more confusing than one that reads "Active".
+    {
+      key: 'archivedAt',
+      header: 'Status',
+      render: (d) => (d.archivedAt ? 'Archived' : 'Active'),
+    },
     {
       key: '__actions',
       header: 'Actions',
@@ -285,14 +307,25 @@ export default function AdminDocuments() {
           <button type="button" className="btn btn-outline" onClick={() => setEditing(d)}>
             Edit
           </button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => window.confirm(`Archive "${d.title}"?`) && archive.mutate(d.id)}
-            disabled={archive.isPending}
-          >
-            Archive
-          </button>
+          {d.archivedAt ? (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => restore.mutate(d.id)}
+              disabled={restore.isPending}
+            >
+              Restore
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => window.confirm(`Archive "${d.title}"?`) && archive.mutate(d.id)}
+              disabled={archive.isPending}
+            >
+              Archive
+            </button>
+          )}
         </div>
       ),
     },
@@ -326,21 +359,40 @@ export default function AdminDocuments() {
 
       <FilterBar
         fields={[
-          {
-            name: 'countryId',
-            label: 'Country',
-            type: 'select',
-            placeholder: 'Any country',
-            options: countries.map((c) => ({ value: c.id, label: c.name })),
-          },
-          {
-            name: 'institutionId',
-            label: 'Institution',
-            type: 'select',
-            placeholder: 'Any institution',
-            options: institutionOptions,
-          },
+          // A dropdown with nothing behind it is hidden rather than shown empty.
+          ...(facets?.countries?.length
+            ? [{
+                name: 'countryId',
+                label: 'Country',
+                type: 'select',
+                placeholder: 'Any country',
+                options: facets.countries.map((c) => ({ value: c.id, label: c.name })),
+              }]
+            : []),
+          ...(facets?.institutions?.length
+            ? [{
+                name: 'institutionId',
+                label: 'Institution',
+                type: 'select',
+                placeholder: 'Any institution',
+                options: facets.institutions.map((i) => ({ value: i.id, label: i.name })),
+              }]
+            : []),
           { name: 'search', label: 'Search', type: 'text', placeholder: 'Document title' },
+          // Archiving is a soft delete with a restore endpoint, but nothing
+          // listed archived rows, so the Restore button could never be reached
+          // and every Archive was effectively permanent from this screen.
+          {
+            name: 'status',
+            label: 'Status',
+            type: 'select',
+            placeholder: 'Active',
+            options: [
+              { value: 'active', label: 'Active' },
+              { value: 'archived', label: 'Archived' },
+              { value: 'all', label: 'All' },
+            ],
+          },
         ]}
         values={draft}
         onChange={setField}

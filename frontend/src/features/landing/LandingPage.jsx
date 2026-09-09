@@ -256,10 +256,25 @@ export default function LandingPage() {
   useEffect(() => {
     const els = NAV.map((n) => document.getElementById(n.id)).filter(Boolean);
     if (!els.length) return undefined;
+
+    // An IntersectionObserver callback receives only the entries whose state
+    // CHANGED, not every observed element. Picking the winner from that batch
+    // meant a section entering the band overrode the one already in it, and
+    // nothing fired again to correct it — so the nav highlighted "About Us"
+    // while the page sat at the top. The current state of every section is
+    // tracked here and the winner recomputed from all of them.
+    const visible = new Map();
+
     const io = new IntersectionObserver(
       (entries) => {
-        const hit = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (hit) setActive(hit.target.id);
+        for (const e of entries) {
+          if (e.isIntersecting) visible.set(e.target.id, e.boundingClientRect.top);
+          else visible.delete(e.target.id);
+        }
+        if (!visible.size) return;
+        // Topmost section still crossing the band.
+        const [id] = [...visible.entries()].sort((a, b) => a[1] - b[1])[0];
+        setActive(id);
       },
       { rootMargin: '-45% 0px -50% 0px' },
     );
@@ -286,7 +301,7 @@ export default function LandingPage() {
   const shown = group === 'All' ? COUNTRIES : COUNTRIES.filter((c) => c.group === group);
 
   return (
-    <div className="lp" id="top">
+    <div className="lp">
       {/* Fixed behind every section, so the continents drift on while the page
           scrolls over them. First in the DOM and z-index 0; everything else on
           this page sits on a layer above it. */}
@@ -310,11 +325,16 @@ export default function LandingPage() {
       <header className={`lp-header ${scrolled ? 'is-scrolled' : ''}`}>
         <div className="lp-wrap lp-header-inner">
           <a href="#top" className="lp-brand">
-            <span className="lp-brand-mark">NV</span>
-            <span className="lp-brand-text">
-              <strong>NV Immigration</strong>
-              <small>Visa &amp; Travel Consultants</small>
-            </span>
+            {/* The real mark, served from our own CDN. It carries the wordmark
+                itself, so it stands alone — a lettered square and a repeated
+                company name were both standing in for this. */}
+            <img
+              className="lp-brand-logo"
+              src="https://cdn.nvimmigrationpvtltd.com/brand/nv-immigration-logo.png"
+              alt="NV Immigration"
+              width="639"
+              height="391"
+            />
           </a>
 
           <nav className={`lp-nav ${menuOpen ? 'is-open' : ''}`} aria-label="Primary">
@@ -358,7 +378,11 @@ export default function LandingPage() {
       {menuOpen && <div className="lp-nav-scrim" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
-      <section className="lp-hero">
+      {/* id="top" lives here rather than on the page wrapper. On the wrapper it
+          spanned the whole document, so it intersected the scroll spy's band at
+          every position and the highlighted link was whichever section happened
+          to fire last. */}
+      <section className="lp-hero" id="top">
         <div className="lp-wrap lp-hero-inner">
           <div className="lp-hero-copy">
             <Reveal>

@@ -38,7 +38,7 @@ function courseRow(overrides = {}) {
     intakeMonths: [2, 9],
     entryRequirements: null,
     externalUrl: null,
-    source: 'applyboard',
+    source: 'catalogue_a',
     externalId: 42,
     archivedAt: null,
     intakes: [],

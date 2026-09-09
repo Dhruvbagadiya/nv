@@ -4,8 +4,9 @@
    in sequence, so do not reorder the @import list. */
 
   /* ===================== RESPONSIVE ===================== */
+  /* 6 is the widest count that still divides the 12-card page. 7 fitted, but
+     left the second row 5 short with a gap where the missing cards were. */
   @media (min-width: 1500px) { .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
-  @media (min-width: 1900px) { .grid { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
   @media (max-width: 1080px) {
     .header-search { width: 150px; }
   }
@@ -44,7 +45,7 @@
   }
 
   @media (max-width: 900px) {
-    .grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+    .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
   @media (max-width: 640px) {
     .grid { grid-template-columns: 1fr 1fr; gap: 7px; }

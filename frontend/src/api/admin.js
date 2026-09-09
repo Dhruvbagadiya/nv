@@ -22,6 +22,7 @@ export const archiveImportantUpdate = (id)   => api.delete(`/important-updates/$
 export const createDocument     = (b)     => api.post('/documents', b).then((r) => r.data);
 export const updateDocument     = (id, b) => api.put(`/documents/${id}`, b).then((r) => r.data);
 export const archiveDocument    = (id)    => api.delete(`/documents/${id}`);
+export const restoreDocument    = (id)    => api.post(`/documents/${id}/restore`).then((r) => r.data);
 export const fetchStorageStatus = ()      => api.get('/documents/storage-status').then((r) => r.data);
 export const createUploadUrl    = (b)     => api.post('/documents/upload-url', b).then((r) => r.data);
 

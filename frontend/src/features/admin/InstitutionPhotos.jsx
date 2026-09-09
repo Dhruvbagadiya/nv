@@ -12,7 +12,7 @@ import Icon from '../../components/ui/Icon.jsx';
 /*
  * Gallery management for one institution.
  *
- * 4,985 photos arrived with the ApplyBoard import and until now there was no way
+ * 4,985 photos arrived with the Catalogue A import and until now there was no way
  * to see, reorder or remove any of them — a broken or wrong image could only be
  * fixed by editing the database. This is that missing screen.
  *

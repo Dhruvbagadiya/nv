@@ -198,8 +198,8 @@ model Institution {
   // have one upstream.
   bannerUrl     String?
   // Upstream id, scoped by `source`. Nullable so hand-created rows stay valid.
-  // Unique on its own is wrong once there is more than one feed: instantapply
-  // university 116 is Otago Polytechnic while ApplyBoard 116 is SUNY
+  // Unique on its own is wrong once there is more than one feed: Catalogue B
+  // university 116 is Otago Polytechnic while Catalogue A 116 is SUNY
   // Fulton-Montgomery, so the pair is what identifies a row. See @@unique below.
   externalId    Int?
   // Which feed a row came from. "manual" means a human created it and no
@@ -219,6 +219,7 @@ model Institution {
   importantUpdates  ImportantUpdate[]
   documents         Document[]
   photos            SchoolPhoto[]
+  aliases           InstitutionAlias[]
 
   @@unique([source, externalId])
   @@index([countryId])
@@ -239,7 +240,7 @@ enum ProgramLevel {
   THREE_YEAR_BACHELORS
   FOUR_YEAR_BACHELORS
   FOUNDATION
-  // Added for the ApplyBoard import: these are real categories students filter
+  // Added for the Catalogue A import: these are real categories students filter
   // on, and without them ~4,800 programs would collapse into OTHER.
   INTEGRATED_MASTERS
   POST_GRADUATE_DIPLOMA
@@ -259,6 +260,37 @@ enum SuccessScoreIntent {
   neutral
 }
 
+// A feed identity that has been merged into another institution.
+//
+// The catalogue carries the same university under two rows whenever both feeds
+// list it — one (catalogue_a, 269) and one (catalogue_b, 169) for Acadia, say.
+// Merging them deletes one row, but the importer resolves a school by
+// (source, externalId) and CREATES when that misses, so the next sync of the
+// losing feed simply rebuilt the duplicate and moved its courses back. Merges
+// silently undid themselves.
+//
+// A merge now leaves this forwarding address behind: the importer looks here
+// before creating, finds the surviving institution, and attaches that feed's
+// courses and photos to it. The row is the feed's identity, so the primary key
+// is the same (source, externalId) pair the importer searches on.
+//
+// Cascade: if the surviving institution is later deleted, its forwarding
+// addresses are meaningless and go with it — the next import then re-creates a
+// row from the feed, which is the correct fallback.
+model InstitutionAlias {
+  source        String
+  externalId    Int
+  institutionId String
+  // Why the merge happened, for whoever reads this table in a year.
+  note          String?
+  createdAt     DateTime @default(now())
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@id([source, externalId])
+  @@index([institutionId])
+}
+
 model Course {
   id            String @id @default(uuid())
   institutionId String
@@ -267,8 +299,8 @@ model Course {
   externalId Int?
   source     String @default("manual")
 
-  // The provider's own link to the university's course page. ApplyBoard does
-  // not publish one; instantapply does, and agents use it to check details the
+  // The provider's own link to the university's course page. Catalogue A does
+  // not publish one; Catalogue B does, and agents use it to check details the
   // feed does not carry.
   externalUrl String?
 
@@ -299,7 +331,7 @@ model Course {
   tuitionFee     Decimal
   // Nullable because "no fee published" and "no fee charged" are different
   // answers, and an agent acting on the wrong one quotes a student the wrong
-  // price. instantapply publishes a fee on about 4% of its courses; ApplyBoard
+  // price. Catalogue B publishes a fee on about 4% of its courses; Catalogue A
   // publishes one on all of its, including genuine zeroes.
   applicationFee Decimal?
 
@@ -314,7 +346,7 @@ model Course {
   // the structured commission object so the card can show it without a join.
   commissionAmount Decimal?
 
-  // Whether this program supports AB (ApplyBoard) app creation flow.
+  // Whether this program supports the aggregator app creation flow.
   abAppCreationEnabled Boolean @default(false)
 
   // Success score shown on the program card.
