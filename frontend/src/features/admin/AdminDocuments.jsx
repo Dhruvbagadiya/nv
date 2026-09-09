@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query';
 import Page from '../../components/ui/Page.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Icon from '../../components/ui/Icon.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
+import { useInvalidateResource } from '../../hooks/useInvalidateResource.js';
 import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
 import { fetchDocuments, fetchDocumentFacets } from '../../api/referenceScreens.js';
 import {
@@ -237,7 +238,6 @@ function DocumentForm({ initial, onClose, onSaved, storage }) {
 }
 
 export default function AdminDocuments() {
-  const queryClient = useQueryClient();
   const [category, setCategory] = useState('VISA_DOCUMENT');
   const [editing, setEditing] = useState(null);
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
@@ -271,7 +271,7 @@ export default function AdminDocuments() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin-documents'] });
+  const invalidate = useInvalidateResource('documents');
   const archive = useMutation({ mutationFn: archiveDocument, onSuccess: invalidate });
   const restore = useMutation({ mutationFn: restoreDocument, onSuccess: invalidate });
 

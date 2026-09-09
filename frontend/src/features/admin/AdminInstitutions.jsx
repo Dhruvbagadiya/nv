@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query';
 import Flag from '../../components/ui/Flag.jsx';
 import Page from '../../components/ui/Page.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
@@ -7,6 +7,7 @@ import FilterBar from '../../components/ui/FilterBar.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import InstitutionPhotos from './InstitutionPhotos.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
+import { useInvalidateResource } from '../../hooks/useInvalidateResource.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 import {
   fetchInstitutionsPage,
@@ -176,7 +177,6 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
 }
 
 export default function AdminInstitutions() {
-  const queryClient = useQueryClient();
   const [editing, setEditing] = useState(null);
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
   const { countries } = useCountries();
@@ -197,7 +197,7 @@ export default function AdminInstitutions() {
 
   const institutions = data?.items ?? [];
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin-institutions'] });
+  const invalidate = useInvalidateResource('institutions');
 
   const blacklistMutation = useMutation({
     mutationFn: ({ id, isBlacklisted }) => setBlacklist(id, isBlacklisted),

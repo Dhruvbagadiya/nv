@@ -170,6 +170,7 @@ export default function StudentApplications() {
           <Pagination
             page={meta.page}
             totalPages={meta.totalPages}
+            maxPage={meta.maxPage}
             total={meta.total}
             pageSize={meta.pageSize}
             onChange={setPage}

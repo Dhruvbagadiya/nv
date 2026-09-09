@@ -137,6 +137,20 @@ describe('student portal', () => {
     expect(screen.getByText(/Sault Ste\. Marie/)).toBeTruthy();
   });
 
+  // The public browser offered all 7,757 pages while the API refuses any offset
+  // past page 834, so the last-page button led straight to an error. The partner
+  // course finder already passed maxPage; this screen did not.
+  it('caps the pager at the last page the API will actually serve', async () => {
+    coursesApi.fetchCourses.mockResolvedValue({
+      data: [PROGRAM],
+      meta: { counts: { total: 93076 }, page: 1, pageSize: 12, totalPages: 7757, maxPage: 834 },
+    });
+
+    renderAt(<StudentProgramBrowser />, '/programs-list');
+    await waitFor(() => expect(screen.getByLabelText('Page 834')).toBeTruthy());
+    expect(screen.queryByLabelText('Page 7757')).toBeNull();
+  });
+
   it('program detail renders fees in the program currency', async () => {
     renderAt(<StudentProgramDetail />, '/programs/p1', '/programs/:id');
     await waitFor(() => expect(screen.getByText(/Bachelor of Computer Science/)).toBeTruthy());

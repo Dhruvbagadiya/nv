@@ -317,6 +317,11 @@ export default function StudentProgramBrowser() {
               totalPages={meta.totalPages}
               total={total}
               pageSize={meta.pageSize}
+              // Without this the pager offered all 7,757 pages, but the API
+              // refuses an offset past page 834 — so the last-page button led
+              // to an error. maxPage is what is actually navigable; Pagination
+              // caps at it and explains how to reach the rest.
+              maxPage={meta.maxPage}
               onChange={setPage}
             />
           )}

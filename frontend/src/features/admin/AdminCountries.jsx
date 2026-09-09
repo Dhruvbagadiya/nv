@@ -7,6 +7,7 @@ import Flag from '../../components/ui/Flag.jsx';
 import { fetchCountriesPage } from '../../api/countries.js';
 import { createCountry, updateCountry, deleteCountry } from '../../api/admin.js';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
+import { invalidateResource } from '../../hooks/useInvalidateResource.js';
 
 // This screen has no filter bar, so `page` is the only URL-backed state — but it
 // goes through useUrlFilters anyway so paging is linkable and back/forward-aware,
@@ -140,8 +141,7 @@ export default function AdminCountries() {
 
   const invalidate = () => {
     // The header strip and every country dropdown read the same query.
-    queryClient.invalidateQueries({ queryKey: ['admin-countries'] });
-    queryClient.invalidateQueries({ queryKey: ['countries'] });
+    invalidateResource(queryClient, 'countries');
   };
 
   const remove = useMutation({

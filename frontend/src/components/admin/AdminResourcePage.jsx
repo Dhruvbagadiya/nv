@@ -5,6 +5,7 @@ import DataTable from '../ui/DataTable.jsx';
 import FilterBar from '../ui/FilterBar.jsx';
 import ResourceForm from './ResourceForm.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
+import { invalidateResource } from '../../hooks/useInvalidateResource.js';
 
 // Six reference resources need the same admin screen: a table, a create button, and
 // per-row edit and archive actions. Rather than six copies, each screen supplies a
@@ -39,7 +40,7 @@ export default function AdminResourcePage({ resource }) {
     placeholderData: keepPreviousData,
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: [resource.queryKey] });
+  const invalidate = () => invalidateResource(queryClient, resource.queryKey);
 
   const saveMutation = useMutation({
     mutationFn: ({ id, values }) => {

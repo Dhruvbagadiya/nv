@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query';
 import Page from '../../components/ui/Page.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
@@ -8,6 +8,7 @@ import EntryRequirementsFields, { cleanRequirements } from './EntryRequirementsF
 import { MONTH_NAMES, MONTH_FULL, nextIntakes, formatIntake } from '../../utils/intakes.js';
 import Icon from '../../components/ui/Icon.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
+import { useInvalidateResource } from '../../hooks/useInvalidateResource.js';
 import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
 import { fetchCourses, createCourse, updateCourse, archiveCourse, restoreCourse } from '../../api/courses.js';
 import { formatFee } from '../../utils/format.js';
@@ -440,7 +441,6 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
 const FILTER_DEFAULTS = { country: '', institutionId: '', programLevel: '', search: '', status: '', page: 1 };
 
 export default function AdminCourses() {
-  const queryClient = useQueryClient();
   const [editing, setEditing] = useState(null);
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
   const { options: countryOptions } = useCountries();
@@ -454,7 +454,7 @@ export default function AdminCourses() {
     placeholderData: keepPreviousData,
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
+  const invalidate = useInvalidateResource('courses');
 
   const archiveMutation = useMutation({ mutationFn: archiveCourse, onSuccess: invalidate });
   const restoreMutation = useMutation({ mutationFn: restoreCourse, onSuccess: invalidate });
