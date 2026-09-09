@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Modal from '../ui/Modal.jsx';
 import Icon from '../ui/Icon.jsx';
+import FileField from '../ui/FileField.jsx';
 
 // Config-driven form used by every admin editor. Same reasoning as FilterBar: six
 // reference resources need create/edit forms that differ only in their fields, so
@@ -74,6 +75,23 @@ function Field({ field, value, onChange }) {
         </label>
         <TierEditor value={value} onChange={(next) => onChange(field.name, next)} />
       </>
+    );
+  }
+
+  // 'file' / 'image' give the config-driven screens an uploader instead of a
+  // box asking for a URL the admin had no way to produce. FileField renders its
+  // own label and hint, so this returns before the shared label below.
+  if (field.type === 'file' || field.type === 'image') {
+    return (
+      <FileField
+        id={id}
+        label={field.label}
+        kind={field.type === 'image' ? 'image' : 'file'}
+        category={field.category}
+        hint={field.hint}
+        value={value ?? ''}
+        onChange={(url) => onChange(field.name, url)}
+      />
     );
   }
 

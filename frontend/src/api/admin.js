@@ -26,16 +26,32 @@ export const restoreDocument    = (id)    => api.post(`/documents/${id}/restore`
 export const fetchStorageStatus = ()      => api.get('/documents/storage-status').then((r) => r.data);
 export const createUploadUrl    = (b)     => api.post('/documents/upload-url', b).then((r) => r.data);
 
-// Upload a document file to the server (local disk or S3).
-// Used by AdminDocuments when the user picks a file from the file input.
-export async function uploadFile(file, _category) {
+// One uploader for the whole admin panel. `/api/uploads` replaced the three
+// near-identical endpoints (documents, agency logo, profile avatar) and the
+// "paste a URL" boxes that existed because nothing in the product could produce
+// a link. Where the bytes land — R2 or the server's disk — is the server's
+// decision, so callers only deal in the returned URL.
+//
+// `category` is a folder hint for the object key, sanitised server-side. It used
+// to be accepted and then dropped here, so every upload landed in one flat
+// prefix regardless of what it was.
+async function upload(path, file, category) {
   const form = new FormData();
   form.append('file', file, file.name);
-  const { data } = await api.post('/documents/upload', form, {
+  if (category) form.append('category', category);
+  const { data } = await api.post(path, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return data.fileUrl;
 }
+
+/** Logos, banners — anything that ends up in an <img>. PNG/JPEG/WebP, 5 MB. */
+export const uploadImage = (file, category) => upload('/uploads/image', file, category);
+
+/** Documents, forms, attachments. The document allow-list, 25 MB. */
+export const uploadFile = (file, category) => upload('/uploads/file', file, category);
+
+export const fetchUploadStatus = () => api.get('/uploads/status').then((r) => r.data);
 
 // ---- commissions (upsert keyed on institutionId) ----
 export const upsertCommission = (b) => api.put('/commissions', b).then((r) => r.data);

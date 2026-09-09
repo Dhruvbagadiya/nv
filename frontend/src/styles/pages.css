@@ -306,6 +306,33 @@
   }
   .form-field .flabel { display: block; margin-bottom: 4px; }
   .field-hint { font-size: 11px; color: var(--ink-500); margin-top: 4px; line-height: 1.4; }
+
+  /* ===== FileField: pick a file, get a URL ===== */
+  /* The native input is the accessible control and stays in the accessibility
+     tree; it is visually replaced by the button, which is what gets clicked. */
+  .file-field__input {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0;
+  }
+  .file-field__row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .file-field__preview {
+    display: block; margin-top: 8px; max-width: 100%; object-fit: contain;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 4px; background: var(--canvas);
+  }
+  .file-field__name { display: inline-block; margin-top: 8px; font-size: 12px; word-break: break-all; }
+  /* A link, not a button: it reveals a field rather than performing an action. */
+  .file-field__toggle {
+    display: block; margin-top: 8px; padding: 0; border: 0; background: none;
+    color: var(--ink-500); font-size: 11px; font-family: var(--font-sans);
+    text-decoration: underline; cursor: pointer;
+  }
+  .file-field__toggle:hover { color: var(--ink-900); }
+  .file-field__url {
+    width: 100%; margin-top: 6px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 7px 9px; font-size: 12.5px;
+    background: var(--canvas); color: var(--ink-900); font-family: var(--font-sans);
+  }
   /* ===== Intake month picker (admin) ===== */
   .month-picker { display: flex; flex-direction: column; gap: 6px; }
   /* Four columns so the twelve months read as quarters, which is how intake

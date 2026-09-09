@@ -43,6 +43,11 @@ const ROUTES = [
   ['put',    '/api/commissions',                            ADMIN_ONLY],
   ['put',    '/api/entry-requirements',                     ADMIN_ONLY],
   ['post',   '/api/moi-institutions',                       ADMIN_ONLY],
+  // One shared uploader replaced the "paste a URL" boxes; it writes into the
+  // bucket, so the guard on it matters as much as any write endpoint.
+  ['post',   '/api/uploads/image',                          ADMIN_ONLY],
+  ['post',   '/api/uploads/file',                           ADMIN_ONLY],
+  ['get',    '/api/uploads/status',                         ADMIN_ONLY],
   ['post',   '/api/announcements',                          ADMIN_ONLY],
   ['post',   '/api/important-updates',                      ADMIN_ONLY],
   ['post',   '/api/support-contacts',                       ADMIN_ONLY],

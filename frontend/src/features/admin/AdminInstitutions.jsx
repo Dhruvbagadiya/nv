@@ -9,6 +9,7 @@ import InstitutionPhotos from './InstitutionPhotos.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useInvalidateResource } from '../../hooks/useInvalidateResource.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
+import FileField from '../../components/ui/FileField.jsx';
 import {
   fetchInstitutionsPage,
   createInstitution,
@@ -112,32 +113,28 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
             <input id="inst-province" type="text" value={form.province}
               onChange={(e) => set('province', e.target.value)} placeholder="e.g. England" />
           </div>
-          <div className="form-field" style={{ gridColumn: '1 / -1' }}>
-            <label className="flabel" htmlFor="inst-logo">Logo URL</label>
-            <input id="inst-logo" type="text" value={form.logoUrl}
-              onChange={(e) => set('logoUrl', e.target.value)}
-              placeholder="https://…/logo.png" />
-            {form.logoUrl && (
-              <img src={form.logoUrl} alt="logo preview"
-                style={{ marginTop: 6, height: 40, objectFit: 'contain',
-                  border: '1px solid var(--border)', borderRadius: 6, padding: 4 }}
-                onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-            )}
+          <div style={{ gridColumn: '1 / -1' }}>
+            <FileField
+              id="inst-logo"
+              label="Logo"
+              kind="image"
+              category="institution-logos"
+              value={form.logoUrl}
+              onChange={(url) => set('logoUrl', url)}
+              hint="Square works best. PNG, JPEG or WebP, up to 5 MB."
+            />
           </div>
-          <div className="form-field" style={{ gridColumn: '1 / -1' }}>
-            <label className="flabel" htmlFor="inst-banner">Banner URL</label>
-            <input id="inst-banner" type="text" value={form.bannerUrl}
-              onChange={(e) => set('bannerUrl', e.target.value)}
-              placeholder="https://…/banner.png" />
-            <p className="field-hint">
-              Wide header image. Set by the Catalogue A import; Catalogue B publishes none.
-            </p>
-            {form.bannerUrl && (
-              <img src={form.bannerUrl} alt="banner preview"
-                style={{ marginTop: 6, width: '100%', maxHeight: 90, objectFit: 'cover',
-                  border: '1px solid var(--border)', borderRadius: 6 }}
-                onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-            )}
+          <div style={{ gridColumn: '1 / -1' }}>
+            <FileField
+              id="inst-banner"
+              label="Banner"
+              kind="image"
+              category="institution-banners"
+              value={form.bannerUrl}
+              onChange={(url) => set('bannerUrl', url)}
+              previewHeight={90}
+              hint="Wide header image for the school page. One import supplies these; the other publishes none, so most rows have no banner until you add one."
+            />
           </div>
           <div className="form-field">
             <label className="checkbox-row">

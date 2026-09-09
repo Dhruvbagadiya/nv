@@ -89,9 +89,9 @@ export default function AdminUpdates() {
       },
       {
         name: 'attachmentUrl',
-        label: 'Attachment URL',
-        type: 'text',
-        placeholder: '/files/updates/circular.pdf',
+        label: 'Attachment',
+        type: 'file',
+        category: 'update-attachments',
         // The download icon on the agent-facing screen only renders when this is set.
         hint: 'Optional. When set, agents get a download button on this row.',
       },
