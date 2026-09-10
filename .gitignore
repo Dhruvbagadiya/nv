@@ -30,7 +30,7 @@ build/
 coverage/
 playwright-report/
 test-results/
-scripts/
+/backend/scripts/
 
 # …except the world-map generator. public/map/world.json is generated and
 # committed so the build stays offline; the script that produces it has to be
