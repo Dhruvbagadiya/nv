@@ -50,7 +50,7 @@ const slugify = (str) => String(str ?? '')
 
 /** Must stay identical to the scraper's, or nothing joins. */
 const nameKey = (s) => String(s == null ? '' : s)
-    .replace(/ /g, ' ')
+    .replace(/\u00a0/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase()

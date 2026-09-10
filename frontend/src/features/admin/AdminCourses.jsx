@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query';
 import Page from '../../components/ui/Page.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
@@ -9,13 +9,14 @@ import { MONTH_NAMES, MONTH_FULL, nextIntakes, formatIntake } from '../../utils/
 import Icon from '../../components/ui/Icon.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useInvalidateResource } from '../../hooks/useInvalidateResource.js';
-import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
+import { useCountries } from '../../hooks/useReferenceData.js';
 import { fetchCourses, createCourse, updateCourse, archiveCourse, restoreCourse } from '../../api/courses.js';
 import { formatFee } from '../../utils/format.js';
 import { PROGRAM_LEVELS } from '../../constants/referenceData.js';
 import SourceBadge, { ImportNotice } from '../../components/ui/SourceBadge.jsx';
 import BulkImportDialog from './BulkImportDialog.jsx';
 import { toast } from '../../store/useToast.js';
+import InstitutionPicker from '../../components/ui/InstitutionPicker.jsx';
 
 const LEVEL_LABEL = Object.fromEntries(PROGRAM_LEVELS.map((l) => [l.value, l.label]));
 
@@ -146,7 +147,7 @@ function ChipEditor({ value, onChange, placeholder }) {
 }
 
 // ── Course modal form ─────────────────────────────────────────────────────────
-function CourseModal({ initial, onClose, onSaved, institutions }) {
+function CourseModal({ initial, onClose, onSaved }) {
   const isEdit = Boolean(initial?.id);
   // When editing, attributes live inside initial.attributes
   const attr = initial?.attributes ?? {};
@@ -192,24 +193,11 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
   });
 
   // For edit, find the institution by slug or name match.
-  // useState initializer runs once — if institutions loads after the modal opens,
-  // the match will be empty. useEffect re-runs when institutions arrives.
-  const [instId, setInstId] = useState(() => {
-    if (!isEdit) return '';
-    const match = institutions.find(
-      (i) => i.slug === attr.school?.slug || i.name === attr.school?.name
-    );
-    return match?.id ?? '';
-  });
-
-  // Re-run the match when the institutions list finishes loading.
-  useEffect(() => {
-    if (!isEdit || instId) return;
-    const match = institutions.find(
-      (i) => i.slug === attr.school?.slug || i.name === attr.school?.name
-    );
-    if (match) setInstId(match.id);
-  }, [institutions, isEdit, instId, attr.school?.slug, attr.school?.name]);
+  // The course response carries school.id, so there was never anything to match.
+  // This used to search a loaded list by slug-or-name, which needed an effect to
+  // re-run once that list arrived — and matching by name is how a course lands
+  // on the wrong campus when two share one.
+  const [instId, setInstId] = useState(attr.school?.id ?? '');
 
   const [error, setError] = useState(null);
   const set = (k, v) => setForm((f) => {
@@ -277,14 +265,14 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
         {/* Section: Basic info */}
         <div className="admin-section-label">Basic information</div>
         <div className="admin-form-grid">
-          <div className="form-field" style={{ gridColumn: '1 / -1' }}>
-            <label className="flabel" htmlFor="c-inst">Institution *</label>
-            <select id="c-inst" value={instId} onChange={(e) => setInstId(e.target.value)} required>
-              <option value="">Select institution</option>
-              {institutions.map((i) => (
-                <option key={i.id} value={i.id}>{i.name}</option>
-              ))}
-            </select>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <InstitutionPicker
+              id="c-inst"
+              value={instId}
+              selectedLabel={attr.school?.name}
+              onChange={(id) => setInstId(id)}
+              required
+            />
           </div>
           <div className="form-field" style={{ gridColumn: '1 / -1' }}>
             <label className="flabel" htmlFor="c-title">Course title *</label>
@@ -447,9 +435,6 @@ export default function AdminCourses() {
   const [editing, setEditing] = useState(null);
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
   const { options: countryOptions } = useCountries();
-  const { institutions, options: instOptions } = useInstitutions(
-    applied.country ? { country: applied.country } : {}
-  );
 
   const { data, isLoading, isError, isFetching } = useQuery({
     queryKey: ['admin-courses', applied],
@@ -468,7 +453,7 @@ export default function AdminCourses() {
 
   const filterFields = [
     { name: 'country',      label: 'Country',       type: 'select', placeholder: 'All countries',      options: countryOptions },
-    { name: 'institutionId',label: 'Institution',    type: 'select', placeholder: 'All institutions',   options: instOptions },
+    { name: 'institutionId',label: 'Institution',    type: 'institution', countryCode: applied.country || undefined },
     { name: 'programLevel', label: 'Level',          type: 'select', placeholder: 'All levels',
       options: PROGRAM_LEVELS },
     { name: 'search',       label: 'Search',         type: 'text',   placeholder: 'Title or institution' },
@@ -618,7 +603,6 @@ export default function AdminCourses() {
       {editing !== null && (
         <CourseModal
           initial={editing.id ? editing : null}
-          institutions={institutions}
           onClose={() => setEditing(null)}
           onSaved={() => { invalidate(); setEditing(null); }}
         />

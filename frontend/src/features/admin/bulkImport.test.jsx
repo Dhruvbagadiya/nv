@@ -60,6 +60,8 @@ describe('BulkImportDialog', () => {
     expect(rows[0].title).toBe('MSc Data Science');
     // Upper-cased for the API, which requires a 3-letter ISO code.
     expect(rows[0].currencyCode).toBe('GBP');
+    // The parent is told how many landed, so it can invalidate and say so.
+    await waitFor(() => expect(onImported).toHaveBeenCalledWith(1));
   });
 
   // A silent fallback to OTHER would land a whole prospectus unfilterable.

@@ -9,7 +9,7 @@
  *   5. Agent-only tab link → Agency Settings
  *   6. Role badge + account status
  */
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../store/useAuth.js';
@@ -106,10 +106,15 @@ function BasicInfoForm({ profile, onUpdated }) {
   const [form, setForm] = useState({ name: '', phone: '', bio: '' });
   const patchUser = useAuth((s) => s.patchUser);
 
-  useEffect(() => {
-    if (!profile) return;
+  // Seeded during render rather than from an effect. Setting state inside an
+  // effect renders twice and paints the empty form first, so the fields visibly
+  // fill in a beat after the page appears. react-query keeps a stable object
+  // while the data is unchanged, so this runs once per load.
+  const [seededFrom, setSeededFrom] = useState(null);
+  if (profile && profile !== seededFrom) {
+    setSeededFrom(profile);
     setForm({ name: profile.name ?? '', phone: profile.phone ?? '', bio: profile.bio ?? '' });
-  }, [profile]);
+  }
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -269,15 +274,17 @@ function StudentDetailsForm() {
   const [form, setForm] = useState({ nationality: '', dateOfBirth: '', passportNo: '', address: '' });
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  useEffect(() => {
-    if (!sp) return;
+  // Seeded during render — see BasicInfoForm above.
+  const [seededFrom, setSeededFrom] = useState(null);
+  if (sp && sp !== seededFrom) {
+    setSeededFrom(sp);
     setForm({
       nationality:  sp.nationality  ?? '',
       dateOfBirth:  sp.dateOfBirth ? new Date(sp.dateOfBirth).toISOString().slice(0, 10) : '',
       passportNo:   sp.passportNo   ?? '',
       address:      sp.address      ?? '',
     });
-  }, [sp]);
+  }
 
   const mutation = useMutation({
     mutationFn: () => updateStudentProfile({

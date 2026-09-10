@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchStudentProfile, updateStudentProfile } from '../../api/students.js';
@@ -25,11 +25,14 @@ export default function StudentProfile() {
 
   const [form, setForm] = useState(EMPTY_FORM);
 
-  // Seed form from API data once it arrives. useEffect is the correct pattern —
-  // the previous "setState during render" approach triggered React's warning and
-  // could cause double renders in StrictMode.
-  useEffect(() => {
-    if (!profile) return;
+  // Seeded during render rather than from an effect. An effect renders twice and
+  // paints the empty form first, so the fields visibly fill in a beat late.
+  // react-query keeps a stable object while the data is unchanged, so this runs
+  // once per load. (The older "setState during render" this replaced warned
+  // because it was unconditional; keyed on the data's identity it does not.)
+  const [seededFrom, setSeededFrom] = useState(null);
+  if (profile && profile !== seededFrom) {
+    setSeededFrom(profile);
     setForm({
       nationality: profile.nationality  ?? '',
       dateOfBirth: profile.dateOfBirth
@@ -39,7 +42,7 @@ export default function StudentProfile() {
       phone:       profile.phone       ?? '',
       address:     profile.address     ?? '',
     });
-  }, [profile]);
+  }
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 

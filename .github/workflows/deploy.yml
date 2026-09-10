@@ -66,16 +66,12 @@ jobs:
       - run: npm test
       - run: npm run build
 
-      # Lint is reported but does not block, because the repo currently has 38
-      # pre-existing errors across 19 files (unescaped entities, unused vars, a
-      # setState-in-effect). Blocking on them would reject every deploy from the
-      # day this pipeline is switched on, which would mean turning the pipeline
-      # off rather than fixing the lint.
-      #
-      # Once `npm run lint` is clean, delete continue-on-error so a regression
-      # cannot creep back in.
+      # A hard gate now. This used to be advisory because the repo carried 38
+      # pre-existing errors, and blocking on them would have rejected every
+      # deploy from the day the pipeline was switched on — which ends with the
+      # pipeline turned off rather than the lint fixed. Those are all cleared,
+      # so the exemption is gone and a regression cannot creep back in.
       - run: npm run lint
-        continue-on-error: true
 
   deploy:
     name: Release to production

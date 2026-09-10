@@ -8,20 +8,26 @@ import { useEffect, useRef, useState } from 'react';
 //
 // Each element unobserves itself once shown — these animations play once, and
 // leaving observers attached for the life of the page is pure overhead.
+/**
+ * Someone who has asked for reduced motion gets the content immediately rather
+ * than a fade they did not want.
+ *
+ * Read once, at initial state, rather than set from inside the effect: setting
+ * state synchronously in an effect renders twice, and the first of those two
+ * renders paints the hidden state — a flash of missing content for exactly the
+ * person who asked for less movement.
+ */
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' &&
+  Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+
 export function useReveal({ threshold = 0.15, rootMargin = '0px 0px -60px 0px' } = {}) {
   const ref = useRef(null);
-  const [shown, setShown] = useState(false);
+  const [shown, setShown] = useState(prefersReducedMotion);
 
   useEffect(() => {
     const el = ref.current;
     if (!el || shown) return;
-
-    // Someone who has asked for reduced motion gets the content immediately
-    // rather than a fade they did not want.
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-      setShown(true);
-      return;
-    }
 
     const io = new IntersectionObserver(
       ([entry]) => {
@@ -45,15 +51,12 @@ export function useReveal({ threshold = 0.15, rootMargin = '0px 0px -60px 0px' }
 // so a backgrounded page would finish its animation invisibly and show the final
 // number with no motion at all.
 export function useCountUp(target, { duration = 1600, start = false } = {}) {
-  const [value, setValue] = useState(0);
+  // Same reasoning as useReveal: reduced motion means the final number, decided
+  // before the first paint rather than corrected after it.
+  const [value, setValue] = useState(() => (prefersReducedMotion() ? target : 0));
 
   useEffect(() => {
-    if (!start) return;
-
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-      setValue(target);
-      return;
-    }
+    if (!start || prefersReducedMotion()) return;
 
     let raf;
     const t0 = performance.now();
