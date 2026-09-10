@@ -1,24 +1,47 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../../components/ui/Icon.jsx';
+import Flag from '../../components/ui/Flag.jsx';
 import CourseDetailModal from './CourseDetailModal.jsx';
 import { formatFee } from '../../utils/format.js';
+import { programLevelLabel } from '../../constants/referenceData.js';
 import { monthLabels, nextIntakes, formatIntake } from '../../utils/intakes.js';
-import { programLevelLabel as levelLabel } from '../../constants/referenceData.js';
 
-// Props shape matches the program resource returned by the backend:
-//   { id, type: "program", attributes: { name, programLevel, school, programIntakes,
-//     tuition, applicationFee, minLength, maxLength, tags, badges, commission, ... } }
+/**
+ * One program, as an agent scans it.
+ *
+ * The card used to print the same fact up to three times. Intakes arrived from
+ * three places — scraped `badges` ("Jan intake"), scraped `tags` ("Intake Jan")
+ * and the structured `intakeMonths` — and all three rendered, so a course
+ * running in January, May and September showed nine pills saying so. "Fee
+ * Unknown" came through as a tag as well, directly above the Application fee
+ * line already reading "Unknown".
+ *
+ * Structured data wins and the scraped restatements are dropped. What is left of
+ * badges and tags is the part that actually adds something: Instant Offer,
+ * Scholarships, Prime.
+ */
 
-// Labels come from the shared list, which is asserted against the database enum
-// by constants/programLevels.test.js. A third private copy lived here and had
-// nine of seventeen values, so a doctorate rendered as its raw enum name.
-function programLevelLabel(level) {
-  // The API emits snake_case slugs ("masters_degree"); the enum is UPPER_SNAKE.
-  return levelLabel(level ? String(level).toUpperCase() : undefined);
+// The two feeds word the same thing differently and neither is stable, so this
+// matches on shape rather than on a list of exact strings: anything mentioning an
+// intake, anything made of nothing but month names, and the fee placeholder.
+const MONTH_WORD = /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*$/i;
+
+function restatesStructuredData(label, showsIntakes) {
+  const text = label.trim();
+  if (/fee\s*unknown/i.test(text)) return true;
+  // Only worth dropping while the card is actually printing the months; on a
+  // course with neither dated intakes nor intake months, "January Intake" is the
+  // only intake information there is.
+  if (!showsIntakes) return false;
+  if (/\bintakes?\b/i.test(text)) return true;
+  // "Jan", "Jan / May / Sep" — a label that is nothing but months. Deliberately
+  // not a loose \bmay\b, which would also swallow "May apply without IELTS".
+  const words = text.split(/[\s,/&+-]+/).filter(Boolean);
+  return words.length > 0 && words.every((w) => MONTH_WORD.test(w));
 }
 
-// Format duration from min/max month integers.
+// Duration from min/max month integers.
 function formatDuration(min, max) {
   if (!min && !max) return null;
   if (min === max) return `${min} months`;
@@ -29,6 +52,10 @@ export default function CourseCard({ program }) {
   const { id, attributes: attr } = program;
   const { school } = attr;
   const [showDetail, setShowDetail] = useState(false);
+  // A broken logo URL falls back to initials through state, not by swapping the
+  // DOM node out from under React — the node belongs to React, and replacing it
+  // by hand breaks the next render of the card.
+  const [logoFailed, setLogoFailed] = useState(false);
 
   const initials = school.name.slice(0, 2).toUpperCase();
   const currency = attr.currency ?? 'USD';
@@ -48,142 +75,145 @@ export default function CourseCard({ program }) {
     : nextIntakes(attr.intakeMonths, 3).map(formatIntake);
   const recurring = !datedLabels.length && monthLabels(attr.intakeMonths).length > 0;
 
-  // Badges are human-readable pill strings (e.g. "Instant Offer").
-  // Tags are machine slugs (e.g. "top_programs") — convert for display.
-  const displayTags = (attr.tags ?? []).map((t) =>
-    t.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-  );
+  // Badges are human-readable ("Instant Offer"); tags are machine slugs
+  // ("top_programs"). Both are deduplicated against the structured fields above,
+  // then merged — the two feeds label the same thing in both places.
+  // Deduplicated case-insensitively and badges first: the same highlight arrives
+  // in both feeds with different casing — "Fast LOA" as a badge, "fast_loa" as a
+  // tag — and a Set of the raw strings keeps both.
+  const highlights = [
+    ...new Map(
+      [
+        ...(attr.badges ?? []),
+        ...(attr.tags ?? []).map((t) =>
+          t.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+        ),
+      ]
+        .filter((label) => !restatesStructuredData(label, intakeLabels.length > 0))
+        .map((label) => [label.toLowerCase(), label])
+    ).values(),
+  ];
+
+  const place = [school.city, school.countryName ?? school.countryCode]
+    .filter(Boolean)
+    .join(', ');
+
+  const applicationFee =
+    attr.applicationFee == null
+      ? null
+      : attr.applicationFee > 0
+        ? formatFee(attr.applicationFee, currency)
+        : 'Free';
 
   return (
-    <div className="card">
-      <div className="card-body">
-        <div className="card-top">
-          <div className="school-row">
-            {school.logoThumbnailUrl ? (
-              <img
-                className="school-logo"
-                src={school.logoThumbnailUrl}
-                alt={school.name}
-                onError={(e) => {
-                  e.currentTarget.replaceWith(
-                    Object.assign(document.createElement('div'), {
-                      className: 'school-logo',
-                      textContent: initials,
-                    })
-                  );
-                }}
-              />
-            ) : (
-              <div className="school-logo">{initials}</div>
-            )}
-            <div className="school-name">{school.name}</div>
-          </div>
-          <div className="status-stack">
-            {(attr.badges ?? []).map((s) => (
-              <span
-                key={s}
-                className={`status-pill ${s === 'Instant Offer' ? 'offer' : 'submission'}`}
-              >
-                {s}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="degree-label">{programLevelLabel(attr.programLevel)}</div>
-        <div className="course-title">{attr.name}</div>
-
-        {displayTags.length > 0 && (
-          <div className="tags">
-            {displayTags.map((t) => (
-              <span key={t} className="tag-pill green">
-                {t}
-              </span>
-            ))}
-          </div>
+    <article className="pcard">
+      {/* ── Who ───────────────────────────────────────────────────────────── */}
+      <header className="pcard__head">
+        {school.logoThumbnailUrl && !logoFailed ? (
+          <img
+            className="pcard__logo"
+            src={school.logoThumbnailUrl}
+            alt=""
+            loading="lazy"
+            onError={() => setLogoFailed(true)}
+          />
+        ) : (
+          <div className="pcard__logo pcard__logo--initials">{initials}</div>
         )}
 
-        <div className="info-grid">
-          <div className="info-tile">
-            <div className="i-label">Location</div>
-            <div className="i-value">{school.countryCode}</div>
+        <div className="pcard__who">
+          {/* Wraps to two lines rather than truncating to "Anglia…" — the
+              institution is how an agent recognises the row. */}
+          <div className="pcard__school" title={school.name}>{school.name}</div>
+          <div className="pcard__place">
+            <Flag isoCode={school.countryIso} code={school.countryCode} size={14} />
+            <span>{place}</span>
           </div>
-          <div className="info-tile">
-            <div className="i-label">Campus city</div>
-            <div className="i-value">{school.city ?? '—'}</div>
-          </div>
-          <div className="info-tile">
-            <div className="i-label">Tuition (1st yr)</div>
-            {/* Some providers quote a range, or a different fee per campus. The
-                stored number is the lowest of them, so it is labelled "from"
-                rather than presented as the price — the full text is in the
-                detail view. */}
-            <div className="i-value mono">
-              {attr.entryRequirements?.tuitionIsFrom && <span className="i-prefix">from </span>}
-              {formatFee(attr.tuition, currency)}
-            </div>
-          </div>
-          <div className="info-tile">
-            <div className="i-label">Application fee</div>
-            {/* Same three states as the detail view: null is "not published",
-                which must not read as a free one. */}
-            <div className="i-value mono">
-              {attr.applicationFee == null
-                ? 'Unknown'
-                : attr.applicationFee > 0
-                  ? formatFee(attr.applicationFee, currency)
-                  : 'None'}
-            </div>
-          </div>
-          {duration && (
-            <div className="info-tile">
-              <div className="i-label">Duration</div>
-              <div className="i-value">{duration}</div>
-            </div>
-          )}
-          {attr.commissionAmount != null && (
-            <div className="info-tile">
-              <div className="i-label">Commission</div>
-              <div className="i-value mono">{formatFee(attr.commissionAmount, currency)}</div>
-            </div>
-          )}
         </div>
+      </header>
 
-        {intakeLabels.length > 0 && (
-          <div className="intakes">
-            <div className="intakes-label">
-              {recurring
-                ? 'Runs every ' + monthLabels(attr.intakeMonths).join(', ')
-                : 'Available intakes'}
-            </div>
-            <div className="intake-list">
-              {intakeLabels.map((label) => (
-                <span key={label}>{label}</span>
-              ))}
-            </div>
-          </div>
-        )}
+      {/* ── What ──────────────────────────────────────────────────────────── */}
+      <div className="pcard__level">{programLevelLabel(attr.programLevel)}</div>
+      <h3 className="pcard__title">{attr.name}</h3>
 
-        <div className="card-actions">
-          <Link className="btn btn-primary" to={`/partner/add-application?courseId=${id}`}>
-            Create application
-          </Link>
-          {/* The whole payload is already here, so this opens with no request. */}
-          <button
-            type="button"
-            className="detail-btn"
-            onClick={() => setShowDetail(true)}
-            aria-label={`View details for ${attr.name}`}
-            title="View details"
-          >
-            <Icon name="eye" size={16} />
-          </button>
+      {highlights.length > 0 && (
+        <div className="pcard__highlights">
+          {highlights.map((h) => (
+            <span key={h} className="pcard__highlight">{h}</span>
+          ))}
         </div>
+      )}
+
+      {/* ── What it costs ─────────────────────────────────────────────────
+          Tuition is the number an agent is comparing, so it carries the weight
+          on the card; everything else is secondary text beside it. */}
+      <div className="pcard__price">
+        <div className="pcard__tuition">
+          {attr.entryRequirements?.tuitionIsFrom && <span className="pcard__from">from </span>}
+          {formatFee(attr.tuition, currency)}
+        </div>
+        <div className="pcard__tuition-note">tuition · first year</div>
       </div>
+
+      <dl className="pcard__facts">
+        {duration && (
+          <div className="pcard__fact">
+            <dt>Duration</dt>
+            <dd>{duration}</dd>
+          </div>
+        )}
+        <div className="pcard__fact">
+          <dt>Application fee</dt>
+          {/* Three states, and null is "not published" — it must not read as a
+              free application. */}
+          <dd className={applicationFee == null ? 'pcard__unknown' : undefined}>
+            {applicationFee ?? 'Not published'}
+          </dd>
+        </div>
+        {attr.commissionAmount != null && (
+          <div className="pcard__fact">
+            <dt>Commission</dt>
+            <dd className="pcard__commission">{formatFee(attr.commissionAmount, currency)}</dd>
+          </div>
+        )}
+      </dl>
+
+      {/* ── When ──────────────────────────────────────────────────────────── */}
+      {intakeLabels.length > 0 && (
+        <div className="pcard__intakes">
+          <div className="pcard__intakes-label">
+            {recurring
+              ? `Runs every ${monthLabels(attr.intakeMonths).join(', ')}`
+              : 'Available intakes'}
+          </div>
+          <div className="pcard__intake-list">
+            {intakeLabels.map((label) => (
+              <span key={label} className="pcard__intake">{label}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Act ───────────────────────────────────────────────────────────── */}
+      <footer className="pcard__actions">
+        <Link className="btn btn-primary pcard__apply" to={`/partner/add-application?courseId=${id}`}>
+          Create application
+        </Link>
+        {/* The whole payload is already here, so this opens with no request. */}
+        <button
+          type="button"
+          className="pcard__detail"
+          onClick={() => setShowDetail(true)}
+          aria-label={`View details for ${attr.name}`}
+          title="View details"
+        >
+          <Icon name="eye" size={16} />
+        </button>
+      </footer>
 
       {showDetail && (
         <CourseDetailModal program={program} onClose={() => setShowDetail(false)} />
       )}
-    </div>
+    </article>
   );
 }

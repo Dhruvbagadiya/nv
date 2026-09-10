@@ -46,37 +46,19 @@
   .result-count b { color: var(--ink-950); font-weight: 700; }
   .country-active-tag { font-size: 11px; font-weight: 700; color: var(--accent-700); background: var(--accent-50); border: 1px solid var(--accent-100); border-radius: var(--radius-pill); padding: 2px 9px; }
 
-  /* ===================== COURSE CARDS ===================== */
+  /* ============= RESULTS GRID & SHARED STATUS PILLS =============
+     The card itself is .pcard below; what lives here is the grid it sits in
+     and the two pill styles the admin tables share with it. */
   /* Column counts are divisors of the 12-card page size, never auto-fill.
      auto-fill picks whatever fits — 5 columns around 1400px, 7 above 1900 —
      and neither divides 12, so the last row came up short and the grid looked
      broken on a wide screen. 6 / 4 / 3 / 2 / 1 always fill every row. */
   .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
-  .card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); 
-    padding: 0; display: flex; flex-direction: column; overflow: hidden;
-    transition: box-shadow .14s, border-color .14s, transform .14s;
-  }
-  .card:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); transform: translateY(-1px); }
-  .card-body { padding: 10px 11px 10px; display: flex; flex-direction: column; flex: 1; }
 
-  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; gap: 6px; }
-  .school-row { display: flex; align-items: center; gap: 7px; min-width: 0; }
-  .school-logo {
-    width: 25px; height: 25px; border-radius: var(--radius-sm); flex-shrink: 0;
-    background: var(--ink-800); color: #fff; display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 700; letter-spacing: .01em;
-  }
-  .school-name { color: var(--ink-600); font-size: 11px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .status-stack { display:flex; gap:3px; flex-wrap:wrap; justify-content:flex-end; flex-shrink: 0; }
   .status-pill { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: var(--radius-pill); white-space: nowrap; letter-spacing: .01em; }
   .status-pill.offer { background: var(--success-100); color: var(--success-700); }
   .status-pill.submission { background: var(--info-100); color: var(--info-700); }
 
-  .degree-label { font-size: 10px; color: var(--ink-500); margin-bottom: 2px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
-  .course-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; line-height: 1.25; color: var(--ink-950); }
-
-  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 7px; }
   .tag-pill { font-size: 9px; padding: 2px 7px; border-radius: var(--radius-pill); font-weight: 700; }
   .tag-pill.green { background: var(--success-100); color: var(--success-700); }
   .tag-pill.amber { background: var(--warning-100); color: var(--warning-700); }
@@ -84,35 +66,125 @@
   .tag-pill.purple { background: var(--purple-100); color: var(--purple-700); }
   .tag-pill.teal { background: var(--teal-100); color: var(--teal-700); }
 
-  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; padding: 6px 0; border-top: 1px solid var(--border); }
-  .info-tile .i-label { font-size: 9px; color: var(--ink-400); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 1px; }
-  .info-tile .i-value { font-size: 11px; color: var(--ink-900); font-weight: 600; }
-  .info-tile .i-value.mono { font-family: var(--font-mono); font-size: 10.5px; }
 
-  .success-row { padding-top: 6px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-size:11px; }
-  .success-row .s-label { color: var(--ink-500); font-weight: 600; }
-  .success-high { color: var(--success-700); font-weight:700; display: flex; align-items: center; gap: 4px; }
-  .success-high .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success-600); display: inline-block; }
+  /* ===================== PROGRAM CARD =====================
+     Four sections in a fixed order — who / what / what it costs / when —
+     so a column of cards scans down rather than being re-read each time.
+     The action row is pinned to the bottom so buttons line up across a row
+     of cards whose bodies differ in height. */
+  .pcard {
+    display: flex; flex-direction: column; height: 100%;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-md, 10px); padding: 14px;
+    transition: border-color .14s ease, box-shadow .14s ease, transform .14s ease;
+  }
+  .pcard:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
 
-  .intakes { margin-top:6px; padding-top:6px; border-top:1px solid var(--border); }
-  .intakes-label { font-size:9px; color:var(--ink-400); margin-bottom:4px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
-  .intake-list { display:flex; gap:4px; flex-wrap:wrap; }
-  .intake-list span { font-size: 9.5px; font-family: var(--font-mono); font-weight: 600; color: var(--ink-700); background: var(--canvas); border: 1px solid var(--border); border-radius: 5px; padding: 2px 5px; }
+  /* ── who ── */
+  .pcard__head { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
+  .pcard__logo {
+    width: 34px; height: 34px; flex-shrink: 0; object-fit: contain;
+    border: 1px solid var(--border); border-radius: 8px; padding: 3px;
+    background: #fff;
+  }
+  .pcard__logo--initials {
+    display: flex; align-items: center; justify-content: center;
+    background: var(--ink-900); color: #fff; border-color: transparent;
+    font-size: 12px; font-weight: 700; letter-spacing: .02em; padding: 0;
+  }
+  .pcard__who { min-width: 0; }
+  /* Two lines, then ellipsis. The institution is how a row is recognised, so
+     truncating it to "Anglia…" at 11 characters cost more than the space saved. */
+  .pcard__school {
+    font-size: 12.5px; font-weight: 650; color: var(--ink-900); line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .pcard__place {
+    display: flex; align-items: center; gap: 5px; margin-top: 3px;
+    font-size: 11px; color: var(--ink-500);
+  }
+  .pcard__place span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  /* margin-top:auto pins the action row to the bottom of .card-body (which is a
-     flex column with flex:1), so every button in a row lines up regardless of how
-     many tags a course has or whether it lists intakes. Grid rows already stretch
-     cards to equal height; this is what makes the buttons agree.
-     padding-top keeps the old gap when the content is tall enough to touch it. */
-  .card-actions { display:flex; gap:5px; align-items:center; margin-top:auto; padding-top:7px; }
-  .card-actions .btn-primary { flex:1; width:auto; justify-content:center; height: 31px; font-size: 12px; }
-  /* Shares the heart button's geometry so the action row stays even whichever
-     of the two a card shows. */
-  .heart-btn, .detail-btn { width:31px; height:31px; border:1px solid var(--border); border-radius:var(--radius-sm); background:#fff; cursor:pointer; font-size:15px; color:var(--ink-400); flex-shrink: 0; transition: all .13s; }
-  .detail-btn { display:inline-flex; align-items:center; justify-content:center; }
-  .detail-btn:hover { border-color: var(--accent-700, var(--ink-700)); color: var(--accent-700, var(--ink-700)); }
-  .heart-btn:hover { border-color: var(--danger-700); color: var(--danger-700); }
-  .heart-btn.active { color: var(--danger-700); background: var(--danger-100); border-color: var(--danger-100); }
+  /* ── what ── */
+  .pcard__level {
+    font-size: 9.5px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--accent-700, var(--ink-500));
+    margin-bottom: 3px;
+  }
+  .pcard__title {
+    font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--ink-950);
+    margin: 0 0 8px; text-wrap: balance;
+  }
+  .pcard__highlights { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+  .pcard__highlight {
+    font-size: 9.5px; font-weight: 700; padding: 2.5px 8px;
+    border-radius: var(--radius-pill); background: var(--accent-50, var(--info-100));
+    color: var(--accent-700, var(--info-700));
+  }
+
+  /* ── what it costs ──
+     One number carries the card. Everything else is a quiet label/value pair.
+
+     margin-top:auto here is the single auto margin in the column, and it is what
+     makes a row of cards line up: the grid stretches every card to the tallest,
+     this absorbs all the slack in one place, and so the price, the facts, the
+     intakes and the buttons below it are flush to the bottom of every card
+     regardless of how long a title ran or how many highlights it carried. A
+     second auto margin further down would split the slack between the two and
+     leave a gap above this block instead. */
+  .pcard__price { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border); }
+  .pcard__tuition {
+    font-size: 20px; font-weight: 700; line-height: 1.1; color: var(--ink-950);
+    font-variant-numeric: tabular-nums;
+  }
+  .pcard__from { font-size: 12px; font-weight: 600; color: var(--ink-500); }
+  .pcard__tuition-note {
+    font-size: 10px; color: var(--ink-500); margin-top: 2px; letter-spacing: .01em;
+  }
+
+  .pcard__facts { margin: 10px 0 0; display: flex; flex-direction: column; gap: 5px; }
+  .pcard__fact { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .pcard__fact dt { font-size: 10.5px; color: var(--ink-500); }
+  .pcard__fact dd {
+    margin: 0; font-size: 11.5px; font-weight: 650; color: var(--ink-900);
+    font-variant-numeric: tabular-nums; text-align: right;
+  }
+  /* "Not published" is not a value — it should not read as one. */
+  .pcard__unknown { color: var(--ink-400); font-weight: 500; font-style: italic; }
+  .pcard__commission { color: var(--success-700); }
+
+  /* ── when ── */
+  .pcard__intakes { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .pcard__intakes-label {
+    font-size: 9.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--ink-400); margin-bottom: 5px;
+  }
+  .pcard__intake-list { display: flex; flex-wrap: wrap; gap: 4px; }
+  .pcard__intake {
+    font-size: 10px; font-weight: 600; padding: 2.5px 7px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--ink-700); background: var(--canvas);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── act ── */
+  /* A plain margin, not another auto one — see .pcard__price above. */
+  .pcard__actions { display: flex; gap: 6px; align-items: center; margin-top: 12px; }
+  .pcard__apply { flex: 1; justify-content: center; height: 34px; font-size: 12.5px; }
+  .pcard__detail {
+    width: 34px; height: 34px; flex-shrink: 0; display: inline-flex;
+    align-items: center; justify-content: center;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--surface); color: var(--ink-500); cursor: pointer;
+    transition: border-color .13s, color .13s;
+  }
+  .pcard__detail:hover { border-color: var(--accent-700, var(--ink-700)); color: var(--accent-700, var(--ink-700)); }
+  .pcard__detail:focus-visible { outline: 2px solid var(--accent-500); outline-offset: 1px; }
 
   .pagination-wrap { margin-top:9px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:7px 10px; }
   .pagination-info { display:flex; align-items:center; gap:7px; color:var(--ink-500); font-size:11.5px; }

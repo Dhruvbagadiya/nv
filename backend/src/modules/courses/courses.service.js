@@ -13,7 +13,9 @@ const PROGRAM_INCLUDE = {
   institution: {
     include: {
       country: {
-        select: { code: true, currencyCode: true },
+        // isoCode is deliberately separate from `code`: the portal's shorthand
+        // is not ISO (UK, SP, IR), and the flag CDN needs the real one.
+        select: { code: true, currencyCode: true, name: true, isoCode: true },
       },
       commission: true,
       // Gallery photos back the detail view. Bounded: a school with 40 photos
@@ -46,7 +48,7 @@ const PROGRAM_INCLUDE = {
 const PROGRAM_LIST_INCLUDE = {
   institution: {
     include: {
-      country: { select: { code: true, currencyCode: true } },
+      country: { select: { code: true, currencyCode: true, name: true, isoCode: true } },
     },
   },
   intakes: { orderBy: { startDate: 'asc' }, take: 12 },
@@ -111,6 +113,9 @@ function toProgramResource(course) {
     city: institution.city ?? null,
     province: institution.province ?? null,
     countryCode: country.code,
+    countryName: country.name ?? null,
+    // Lets the card render a flag rather than a two-letter code.
+    countryIso: country.isoCode ?? null,
     logoThumbnailUrl: institution.logoUrl ?? null,
     bannerUrl: institution.bannerUrl ?? null,
     photos: (institution.photos ?? []).map((p) => ({

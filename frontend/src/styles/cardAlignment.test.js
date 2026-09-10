@@ -22,17 +22,26 @@ describe('card action alignment', () => {
   const student = css('student.css');
 
   it('the course card is a flex column that fills its grid cell', () => {
-    expect(rule(components, '.card')).toMatch(/flex-direction:\s*column/);
-    const body = rule(components, '.card-body');
-    expect(body).toMatch(/flex-direction:\s*column/);
-    // flex:1 is what gives the body height to distribute.
-    expect(body).toMatch(/flex:\s*1/);
+    const card = rule(components, '.pcard');
+    expect(card).toMatch(/flex-direction:\s*column/);
+    // height:100% is what makes the card take the whole stretched grid cell;
+    // without it the card is only as tall as its content and there is no spare
+    // room for margin-top:auto to distribute.
+    expect(card).toMatch(/height:\s*100%/);
   });
 
-  // The actual fix: without this the button simply follows the content, so a card
-  // with fewer tags or no intakes list puts its button higher than its neighbours.
-  it('pins the course card action row to the bottom', () => {
-    expect(rule(components, '.card-actions')).toMatch(/margin-top:\s*auto/);
+  // The actual fix: without this the price block and everything under it simply
+  // follow the content, so a card with fewer highlights puts its button higher
+  // than its neighbours.
+  it('pins the course card cost block, and so its buttons, to the bottom', () => {
+    expect(rule(components, '.pcard__price')).toMatch(/margin-top:\s*auto/);
+  });
+
+  // Two auto margins in the same column split the slack between them, which
+  // leaves a gap above the price block and undoes the alignment above.
+  it('uses exactly one auto top margin inside the card', () => {
+    const inCard = components.match(/\.pcard[\w-]*[^{]*\{[^}]*margin-top:\s*auto[^}]*\}/g) ?? [];
+    expect(inCard).toHaveLength(1);
   });
 
   it('pins the student card meta row to the bottom', () => {
