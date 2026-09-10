@@ -42,7 +42,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # 22, not 20: jsdom 30 declares engines
+          # "^22.22.2 || ^24.15.0 || >=26.0.0" and the undici it pulls in wants
+          # >=22.19.0. On Node 20 jsdom fails to load at all — every test file
+          # dies during collection with "webidl.util.markAsUncloneable is not a
+          # function" and the run reports "no tests" rather than a failure you
+          # can read. Bump this in step with jsdom, not independently.
+          node-version: '22'
           cache: npm
           cache-dependency-path: |
             package-lock.json
