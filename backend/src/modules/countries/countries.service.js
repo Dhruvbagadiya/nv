@@ -37,6 +37,10 @@ export async function listCountries(filters = {}) {
     where: countryWhere(filters),
     select: COUNTRY_SELECT,
     orderBy: COUNTRY_ORDER,
+    // There are ~15 destinations and the comment above is right that paging
+    // would be ceremony — but "small today" is not a bound, and this feeds a
+    // dropdown on nearly every screen.
+    take: 300,
   });
 
   return rows.map(flattenCount);

@@ -30,6 +30,28 @@ const PROGRAM_INCLUDE = {
   },
 };
 
+/**
+ * What a 12-card page needs, which is much less than the detail view.
+ *
+ * The list used PROGRAM_INCLUDE, so every page of 12 courses also fetched each
+ * institution's commission row, up to 12 gallery photos per course, and EVERY
+ * intake row — unbounded, and a rolling course can carry dozens. None of it is
+ * read by a card: the gallery backs the detail view, and no screen reads the
+ * institution commission object at all (the card's commission figure is the
+ * course's own commissionAmount column).
+ *
+ * Intakes are capped rather than dropped because the card does show them. 12 is
+ * far past what it renders and still bounds the payload.
+ */
+const PROGRAM_LIST_INCLUDE = {
+  institution: {
+    include: {
+      country: { select: { code: true, currencyCode: true } },
+    },
+  },
+  intakes: { orderBy: { startDate: 'asc' }, take: 12 },
+};
+
 // Archived courses stay in the table so existing applications keep resolving,
 // but they must never appear in the catalogue agents search.
 const NOT_ARCHIVED = { archivedAt: null, institution: { archivedAt: null } };
@@ -255,7 +277,7 @@ export async function searchCourses({
   const [rows, total] = await Promise.all([
     prisma.course.findMany({
       where,
-      include: PROGRAM_INCLUDE,
+      include: PROGRAM_LIST_INCLUDE,
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       skip,
       take: safeSize,

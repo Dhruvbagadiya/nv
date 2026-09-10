@@ -158,3 +158,47 @@ describe('createCourse', () => {
     expect(prismaMock.course.create.mock.calls[0][0].data.slug).toBe('chosen-slug');
   });
 });
+
+/**
+ * The list used the detail include, so a page of 12 courses also fetched each
+ * institution's commission row, up to 12 gallery photos per course, and EVERY
+ * intake row — unbounded, and a rolling course carries dozens. A card reads
+ * none of it: the gallery backs the detail view, and no screen reads the
+ * institution commission object at all.
+ */
+describe('searchCourses — what a page of cards actually needs', () => {
+  beforeEach(() => {
+    resetPrismaMock();
+    prismaMock.course.findMany.mockResolvedValue([]);
+    prismaMock.course.count.mockResolvedValue(0);
+  });
+
+  const includeOf = () => prismaMock.course.findMany.mock.calls[0][0].include;
+
+  it('does not fetch the photo gallery for a list', async () => {
+    await service.searchCourses({ page: 1, pageSize: 12 });
+    expect(includeOf().institution.include.photos).toBeUndefined();
+  });
+
+  it('does not fetch the institution commission for a list', async () => {
+    await service.searchCourses({ page: 1, pageSize: 12 });
+    expect(includeOf().institution.include.commission).toBeUndefined();
+  });
+
+  // Cards do show intakes, so these are bounded rather than dropped.
+  it('bounds the intake rows instead of taking all of them', async () => {
+    await service.searchCourses({ page: 1, pageSize: 12 });
+    expect(includeOf().intakes.take).toBeGreaterThan(0);
+  });
+
+  it('still fetches the detail view in full', async () => {
+    // The row is absent, so getCourse throws — irrelevant here. What is being
+    // asserted is the include it asked for, which is recorded either way.
+    prismaMock.course.findFirst.mockResolvedValue(null);
+    await expect(service.getCourse('11111111-1111-1111-1111-111111111111')).rejects.toThrow();
+
+    const include = prismaMock.course.findFirst.mock.calls[0][0].include;
+    expect(include.institution.include.photos).toBeDefined();
+    expect(include.institution.include.commission).toBe(true);
+  });
+});

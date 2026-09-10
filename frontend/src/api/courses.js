@@ -46,3 +46,13 @@ export async function restoreCourse(id) {
   const { data } = await api.post(`/courses/${id}/restore`);
   return data;
 }
+
+/**
+ * Up to 1,000 courses in one call. The endpoint has existed since it was
+ * written with no client function and no screen, so the only way to reach it
+ * was curl.
+ */
+export async function bulkImportCourses(rows) {
+  const { data } = await api.post('/courses/bulk-import', { rows });
+  return data;
+}

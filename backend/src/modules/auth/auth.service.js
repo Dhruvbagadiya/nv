@@ -202,6 +202,9 @@ export async function listSubAgents({ parentAgentId }) {
     where: { parentAgentId },
     select: { ...PUBLIC_USER_FIELDS, _count: { select: { applications: true } } },
     orderBy: { createdAt: 'desc' },
+    // One agency's sub-logins. Bounded so a large agency cannot make its own
+    // team screen time out.
+    take: 200,
   });
 }
 

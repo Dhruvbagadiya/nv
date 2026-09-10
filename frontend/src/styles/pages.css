@@ -306,6 +306,13 @@
     box-shadow: var(--shadow-md, 0 8px 24px rgb(0 0 0 / .12));
   }
   .entity-picker__list li { display: block; }
+
+  /* Import problems, listed before the preview — they are why someone is looking. */
+  .bulk-errors {
+    margin: 0 0 8px; padding: 8px 10px 8px 26px; list-style: disc;
+    background: var(--danger-100); color: var(--danger-700);
+    border-radius: var(--radius-sm); font-size: 11.5px; line-height: 1.6;
+  }
   .picker-note { font-size: 11px; color: var(--warning-700); margin: 6px 0 0; }
 
   .selected-course {

@@ -60,6 +60,8 @@ model User {
 
   @@index([parentAgentId])
   @@index([role])
+  // The admin user list orders by this.
+  @@index([createdAt])
 }
 
 // Password reset. Same discipline as RefreshToken: only the SHA-256 of the token
@@ -416,6 +418,9 @@ model MoiAcceptance {
 
   @@index([institutionId])
   @@index([courseType])
+  // One record per (institution, course type). Duplicates already split the
+  // agent-facing dropdown into two options for the same award.
+  @@unique([institutionId, courseType])
 }
 
 // Commission structure per institution. `tiers` (legacy freeform) is preserved
@@ -445,6 +450,8 @@ model UniversityCommission {
   updatedAt  DateTime  @updatedAt
 
   institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  // Every list on this model filters on archivedAt.
+  @@index([archivedAt])
 }
 
 enum StudyLevel {
@@ -473,6 +480,8 @@ model EntryRequirement {
   @@unique([institutionId, level])
   @@index([level])
   @@index([credibilityInterview])
+  // Every list on this model filters on archivedAt.
+  @@index([archivedAt])
 }
 
 // Images 5 and 6 — Important Updates, filtered by publish date, country and
@@ -496,6 +505,8 @@ model ImportantUpdate {
   @@index([publishDate])
   @@index([countryId])
   @@index([institutionId])
+  // Every list on this model filters on archivedAt.
+  @@index([archivedAt])
 }
 
 enum DocumentCategory {
@@ -529,6 +540,8 @@ model Document {
   // narrows by country and institution.
   @@index([category, countryId, institutionId])
   @@index([category, sortOrder])
+  // Every list on this model filters on archivedAt.
+  @@index([archivedAt])
 }
 
 // Image 21 — the Help & Support contact cards.
@@ -543,6 +556,8 @@ model SupportContact {
   updatedAt  DateTime  @updatedAt
 
   @@index([sortOrder])
+  // Every list on this model filters on archivedAt.
+  @@index([archivedAt])
 }
 
 // The two banners pinned above every screen in the reference portal: a red
@@ -582,6 +597,8 @@ model UsefulInformation {
   updatedAt  DateTime  @updatedAt
 
   @@index([sortOrder])
+  // Every list on this model filters on archivedAt.
+  @@index([archivedAt])
 }
 
 // ============================================================================

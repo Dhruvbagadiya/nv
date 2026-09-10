@@ -14,6 +14,8 @@ import { fetchCourses, createCourse, updateCourse, archiveCourse, restoreCourse 
 import { formatFee } from '../../utils/format.js';
 import { PROGRAM_LEVELS } from '../../constants/referenceData.js';
 import SourceBadge, { ImportNotice } from '../../components/ui/SourceBadge.jsx';
+import BulkImportDialog from './BulkImportDialog.jsx';
+import { toast } from '../../store/useToast.js';
 
 const LEVEL_LABEL = Object.fromEntries(PROGRAM_LEVELS.map((l) => [l.value, l.label]));
 
@@ -456,6 +458,7 @@ export default function AdminCourses() {
   });
 
   const invalidate = useInvalidateResource('courses');
+  const [importing, setImporting] = useState(false);
 
   const archiveMutation = useMutation({ mutationFn: archiveCourse, onSuccess: invalidate });
   const restoreMutation = useMutation({ mutationFn: restoreCourse, onSuccess: invalidate });
@@ -580,7 +583,12 @@ export default function AdminCourses() {
     <Page
       title="Courses"
       subtitle="Manage the program catalogue agents search from the Dashboard"
-      actions={<button className="btn btn-primary" onClick={() => setEditing({})}>Add course</button>}
+      actions={
+        <>
+          <button className="btn btn-outline" onClick={() => setImporting(true)}>Import CSV</button>
+          <button className="btn btn-primary" onClick={() => setEditing({})}>Add course</button>
+        </>
+      }
     >
       <FilterBar fields={filterFields} values={draft} onChange={setField}
         onApply={apply} onClear={clear} busy={isFetching} />
@@ -595,6 +603,17 @@ export default function AdminCourses() {
         onPageChange={setPage}
         getRowKey={(r) => r.id}
       />
+
+      {importing && (
+        <BulkImportDialog
+          onClose={() => setImporting(false)}
+          onImported={(n) => {
+            setImporting(false);
+            invalidate();
+            toast.success(`${n} course${n === 1 ? '' : 's'} imported.`);
+          }}
+        />
+      )}
 
       {editing !== null && (
         <CourseModal

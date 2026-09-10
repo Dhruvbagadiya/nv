@@ -8,11 +8,20 @@ export async function listActiveAnnouncements() {
   return prisma.announcement.findMany({
     where: { isActive: true },
     orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    // Every one of these renders as a banner across the top of the app. A
+    // hundred active banners is a mistake, not a use case, and it should not be
+    // able to make the shell unusable on every screen at once.
+    take: 20,
   });
 }
 
 export async function listAllAnnouncements() {
-  return prisma.announcement.findMany({ orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] });
+  // Admin list. Capped for the same reason as everything else here: a table
+  // anyone can add to must not return an unbounded response.
+  return prisma.announcement.findMany({
+    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    take: 200,
+  });
 }
 
 export async function createAnnouncement(data) {
