@@ -8,7 +8,11 @@ node_modules/
 
 # Uploaded avatars, logos and documents when storage is on local disk. User
 # content, not source.
-uploads/
+# Local file storage, scoped to the one directory that actually holds it.
+# A bare `uploads/` matches any directory of that name at any depth, which
+# silently swallowed backend/src/modules/uploads/ — the code committed, the
+# files never left the machine, and CI failed on an import that resolves fine
+# locally.
 backend/uploads/
 
 # Let's Encrypt material created on the server by deploy/issue-cert.sh.
