@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import DataTable from './DataTable.jsx';
 
 const COLUMNS = [
@@ -64,5 +64,36 @@ describe('DataTable', () => {
     );
     expect(screen.getByLabelText('Pagination')).toBeTruthy();
     expect(screen.getByText('Showing 1–20 of 100')).toBeTruthy();
+  });
+
+  // The row was mouse-only. On AdminUsers and AdminApplications the row is the
+  // only way to open the detail panel, so a keyboard user could not advance an
+  // application at all.
+  it('opens a clickable row from the keyboard', () => {
+    const onRowClick = vi.fn();
+    render(
+      <DataTable
+        columns={[{ key: 'name', header: 'Name' }]}
+        rows={[{ id: 'r1', name: 'Priya' }]}
+        onRowClick={onRowClick}
+        rowLabel={(r) => `Open ${r.name}`}
+      />
+    );
+
+    const row = screen.getByRole('button', { name: 'Open Priya' });
+    expect(row.getAttribute('tabindex')).toBe('0');
+
+    fireEvent.keyDown(row, { key: 'Enter' });
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(row, { key: ' ' });
+    expect(onRowClick).toHaveBeenCalledTimes(2);
+  });
+
+  it('leaves a non-clickable row out of the tab order entirely', () => {
+    render(
+      <DataTable columns={[{ key: 'name', header: 'Name' }]} rows={[{ id: 'r1', name: 'Priya' }]} />
+    );
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });

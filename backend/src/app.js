@@ -28,6 +28,7 @@ import entryRequirementRoutes from './modules/entryRequirements/entryRequirement
 import importantUpdateRoutes from './modules/importantUpdates/importantUpdates.routes.js';
 import documentRoutes from './modules/documents/documents.routes.js';
 import uploadRoutes from './modules/uploads/uploads.routes.js';
+import usefulInformationRoutes from './modules/usefulInformation/usefulInformation.routes.js';
 import announcementRoutes from './modules/announcements/announcements.routes.js';
 import supportRoutes from './modules/support/support.routes.js';
 import reportRoutes  from './modules/reports/reports.routes.js';
@@ -122,6 +123,7 @@ app.use('/api/entry-requirements', entryRequirementRoutes);
 app.use('/api/important-updates', importantUpdateRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/useful-information', usefulInformationRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/support-contacts', supportRoutes);
 app.use('/api/reports',  reportRoutes);

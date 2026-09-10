@@ -32,6 +32,18 @@ export const archiveEntryRequirement = (id)  => api.delete(`/entry-requirements/
 export const restoreEntryRequirement = (id)  => api.post(`/entry-requirements/${id}/restore`).then((r) => r.data);
 export const archiveCommission       = (id)  => api.delete(`/commissions/${id}`);
 export const restoreCommission       = (id)  => api.post(`/commissions/${id}/restore`).then((r) => r.data);
+
+// Useful Information had no API at all — the model, its index and the Report
+// panel that reads it all existed, but nothing could put a row there, so the
+// panel has always read "No useful information found."
+export const createUsefulInformation  = (b)     => api.post('/useful-information', b).then((r) => r.data);
+export const updateUsefulInformation  = (id, b) => api.put(`/useful-information/${id}`, b).then((r) => r.data);
+export const archiveUsefulInformation = (id)    => api.delete(`/useful-information/${id}`);
+export const restoreUsefulInformation = (id)    => api.post(`/useful-information/${id}/restore`).then((r) => r.data);
+
+// PATCH /:id/stage was admin-gated but had no client function and no screen.
+export const updateInquiryStage = (id, stage) =>
+  api.patch(`/course-inquiries/${id}/stage`, { stage }).then((r) => r.data);
 export const fetchStorageStatus = ()      => api.get('/documents/storage-status').then((r) => r.data);
 export const createUploadUrl    = (b)     => api.post('/documents/upload-url', b).then((r) => r.data);
 

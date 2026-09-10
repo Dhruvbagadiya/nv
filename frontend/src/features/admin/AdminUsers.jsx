@@ -438,6 +438,7 @@ export default function AdminUsers() {
         onPageChange={setPage}
         getRowKey={(r) => r.id}
         onRowClick={(u) => setSelectedId(u.id)}
+        rowLabel={(u) => `Open ${u.name ?? u.email}`}
         rowClickTitle="View user details"
       />
 

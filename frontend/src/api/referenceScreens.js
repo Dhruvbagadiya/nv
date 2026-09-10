@@ -64,3 +64,13 @@ export async function fetchReportSummary() {
   const { data } = await api.get('/reports/summary');
   return data;
 }
+
+export async function fetchUsefulInformation(params) {
+  const { data } = await api.get('/useful-information', { params });
+  return data;
+}
+
+export async function fetchCourseInquiries(params) {
+  const { data } = await api.get('/course-inquiries', { params });
+  return data;
+}

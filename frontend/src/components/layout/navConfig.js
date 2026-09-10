@@ -71,6 +71,8 @@ export const navConfig = [
       { path: '/admin/announcements',      label: 'Banners',            icon: 'banner' },
       { path: '/admin/support-contacts',   label: 'Support team',       icon: 'users' },
       { path: '/admin/applications',       label: 'All applications',   icon: 'list' },
+      { path: '/admin/course-inquiries',   label: 'Course inquiries',   icon: 'help' },
+      { path: '/admin/useful-information', label: 'Useful information', icon: 'info' },
       { path: '/admin/users', roles: ['SUPER_ADMIN'], label: 'Users',   icon: 'userPlus' },
     ],
   },

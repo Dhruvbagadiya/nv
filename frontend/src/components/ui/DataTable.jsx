@@ -33,6 +33,9 @@ export default function DataTable({
   onPageChange,
   // Optional: makes each row clickable with a pointer cursor.
   onRowClick,
+  // Names the row for a screen reader: "Open Priya Shah" beats 40 rows all
+  // announced as "button".
+  rowLabel,
   rowClickTitle,
 }) {
   const colSpan = columns.length;
@@ -137,6 +140,26 @@ export default function DataTable({
                   title={rowClickTitle}
                   className={onRowClick ? 'row-clickable' : undefined}
                   style={{ '--i': Math.min(i, STAGGER_CAP) }}
+                  // A clickable row was mouse-only. On Users and Applications the
+                  // row is the ONLY way to open the detail panel, so a keyboard
+                  // user could not advance an application stage at all — not a
+                  // rough edge, a wall. role="button" rather than a link because
+                  // it opens a panel rather than navigating.
+                  {...(onRowClick
+                    ? {
+                        tabIndex: 0,
+                        role: 'button',
+                        'aria-label': rowLabel ? rowLabel(row) : undefined,
+                        onKeyDown: (e) => {
+                          // Space scrolls the page unless it is stopped, and both
+                          // keys activate a button by convention.
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onRowClick(row);
+                          }
+                        },
+                      }
+                    : {})}
                 >
                   {columns.map((col) => (
                     <td key={col.key} className={col.className}>

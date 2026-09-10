@@ -13,6 +13,7 @@ import { useCountries, useInstitutions } from '../../hooks/useReferenceData.js';
 import { fetchCourses, createCourse, updateCourse, archiveCourse, restoreCourse } from '../../api/courses.js';
 import { formatFee } from '../../utils/format.js';
 import { PROGRAM_LEVELS } from '../../constants/referenceData.js';
+import SourceBadge, { ImportNotice } from '../../components/ui/SourceBadge.jsx';
 
 const LEVEL_LABEL = Object.fromEntries(PROGRAM_LEVELS.map((l) => [l.value, l.label]));
 
@@ -269,14 +270,7 @@ function CourseModal({ initial, onClose, onSaved, institutions }) {
             that feed, which rewrites the fields it owns by (source, externalId).
             Saying so here is the difference between an admin making an informed
             change and one wondering why their correction vanished overnight. */}
-        {isEdit && attr.source && attr.source !== 'manual' && (
-          <p className="form-notice">
-            Imported from <strong>{attr.source}</strong>
-            {attr.externalId != null && <> (id {attr.externalId})</>}. Edits to imported
-            fields are overwritten the next time this feed is imported — correct the
-            source or the import mapping to make a change stick.
-          </p>
-        )}
+        {isEdit && <ImportNotice source={attr.source} externalId={attr.externalId} />}
 
         {/* Section: Basic info */}
         <div className="admin-section-label">Basic information</div>
@@ -554,14 +548,9 @@ export default function AdminCourses() {
       // Scraped rows are rewritten by the next import, so an edit here is not
       // permanent. Saying so in the table is cheaper than an admin discovering
       // it when their change disappears.
-      render: (p) =>
-        p.attributes.source === 'manual' ? (
-          <span className="cell-muted">Manual</span>
-        ) : (
-          <span className="tag-pill" title={`Imported from ${p.attributes.source} — edits are overwritten by the next import`}>
-            {p.attributes.source}
-          </span>
-        ),
+      render: (p) => (
+        <SourceBadge source={p.attributes.source} externalId={p.attributes.externalId} />
+      ),
     },
     {
       key: 'intakes',

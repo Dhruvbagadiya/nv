@@ -35,6 +35,8 @@ import AdminEntryRequirements from './features/admin/AdminEntryRequirements.jsx'
 import AdminMoiAcceptances from './features/admin/AdminMoiAcceptances.jsx';
 import AdminUpdates from './features/admin/AdminUpdates.jsx';
 import AdminDocuments from './features/admin/AdminDocuments.jsx';
+import AdminUsefulInformation from './features/admin/AdminUsefulInformation.jsx';
+import AdminCourseInquiries from './features/admin/AdminCourseInquiries.jsx';
 import AdminAnnouncements from './features/admin/AdminAnnouncements.jsx';
 import AdminSupportContacts from './features/admin/AdminSupportContacts.jsx';
 import AdminUsers from './features/admin/AdminUsers.jsx';
@@ -179,6 +181,8 @@ export default function App() {
               <Route path="announcements"     element={<AdminAnnouncements />} />
               <Route path="support-contacts"  element={<AdminSupportContacts />} />
               <Route path="applications"      element={<AdminApplications />} />
+              <Route path="course-inquiries"  element={<AdminCourseInquiries />} />
+              <Route path="useful-information" element={<AdminUsefulInformation />} />
               <Route path="users" element={
                 <ProtectedRoute allowedRoles={SUPER_ADMIN_ROLES} loginPath="/admin/login" redirectPath="/admin">
                   <AdminUsers />

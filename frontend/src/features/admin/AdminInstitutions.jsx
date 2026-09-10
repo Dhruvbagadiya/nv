@@ -10,6 +10,7 @@ import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useInvalidateResource } from '../../hooks/useInvalidateResource.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 import FileField from '../../components/ui/FileField.jsx';
+import SourceBadge, { ImportNotice } from '../../components/ui/SourceBadge.jsx';
 import {
   fetchInstitutionsPage,
   createInstitution,
@@ -76,6 +77,7 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
   return (
     <Modal title={isEdit ? 'Edit institution' : 'Add institution'} onClose={onClose} wide>
       <form onSubmit={submit}>
+        <ImportNotice source={initial?.source} externalId={initial?.externalId} />
         <div className="admin-form-grid">
           <div className="form-field">
             <label className="flabel" htmlFor="inst-name">Institution name *</label>
@@ -295,6 +297,14 @@ export default function AdminInstitutions() {
           )}
         </div>
       ),
+    },
+    {
+      key: 'source',
+      header: 'Source',
+      // An imported row is rewritten by the next run of that feed, so an edit
+      // here is not permanent. Saying so in the table is cheaper than an admin
+      // discovering it when their correction disappears overnight.
+      render: (inst) => <SourceBadge source={inst.source} externalId={inst.externalId} />,
     },
     {
       key: '__actions',

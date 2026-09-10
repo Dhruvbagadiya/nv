@@ -175,6 +175,7 @@ export default function AdminApplications() {
         meta={data?.meta}
         onPageChange={setPage}
         onRowClick={(row) => setSelectedId(row.id)}
+        rowLabel={(row) => `Open application for ${row.studentName ?? 'this student'}`}
         rowClickTitle="Click to view and advance stage"
       />
 
