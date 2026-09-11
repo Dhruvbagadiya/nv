@@ -22,7 +22,7 @@ export default function AdminUpdates() {
   const resource = {
     title: 'Important updates',
     subtitle: 'Policy and institution announcements agents see',
-    queryKey: 'admin-important-updates',
+    queryKey: ['important-updates', 'admin'],
     createLabel: 'Add update',
     emptyMessage: 'No updates published.',
     list: fetchImportantUpdates,

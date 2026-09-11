@@ -17,7 +17,7 @@ const VARIANTS = [
 const resource = {
   title: 'Announcements',
   subtitle: 'Banners shown above every page',
-  queryKey: 'admin-announcements',
+  queryKey: ['announcements', 'admin'],
   createLabel: 'Add banner',
   emptyMessage: 'No banners configured.',
   list: fetchAllAnnouncements,

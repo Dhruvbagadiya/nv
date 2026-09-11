@@ -12,6 +12,7 @@ import {
 import { formatDate } from '../../utils/format.js';
 import { applicationStageLabel } from '../../constants/referenceData.js';
 import { toast } from '../../store/useToast.js';
+import { invalidateResource } from '../../hooks/useInvalidateResource.js';
 
 const FILTER_DEFAULTS = { role: '', search: '', page: 1 };
 
@@ -81,15 +82,15 @@ function UserDetailPanel({ userId, onClose }) {
   const [newPassword, setNewPassword] = useState('');
 
   const { data: user, isLoading } = useQuery({
-    queryKey: ['admin-user-detail', userId],
+    queryKey: ['users', 'detail', userId],
     queryFn: () => fetchUserDetail(userId),
     enabled: Boolean(userId),
   });
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ['admin-user-detail', userId] });
-    queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-  };
+  // RELATED_KEYS.users already lists the detail key and ['admin-stats'];
+  // hand-rolling the first two here is what left the dashboard Users tile
+  // showing the old count after every create and deactivate.
+  const invalidate = () => invalidateResource(queryClient, 'users');
 
   const updateMut = useMutation({
     mutationFn: (payload) => updateUserAdmin(userId, payload),
@@ -343,12 +344,12 @@ export default function AdminUsers() {
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
 
   const { data, isLoading, isError, isFetching } = useQuery({
-    queryKey: ['admin-users', applied],
+    queryKey: ['users', 'admin', applied],
     queryFn: () => fetchAllUsers(applied),
     placeholderData: keepPreviousData,
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+  const invalidate = () => invalidateResource(queryClient, 'users');
 
   const filterFields = [
     { name: 'role',   label: 'Role',   type: 'select', placeholder: 'All roles',    options: ROLES },

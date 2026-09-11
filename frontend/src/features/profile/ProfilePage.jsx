@@ -23,6 +23,7 @@ import {
 import { formatDate } from '../../utils/format.js';
 import Icon from '../../components/ui/Icon.jsx';
 import { toast } from '../../store/useToast.js';
+import { invalidateResource } from '../../hooks/useInvalidateResource.js';
 
 const ROLE_LABEL = {
   SUPER_ADMIN: 'Super Admin',
@@ -294,7 +295,7 @@ function StudentDetailsForm() {
       address:      form.address      || undefined,
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['student-profile'] });
+      invalidateResource(queryClient, 'profile');
       toast.success('Student info updated.');
     },
   });
@@ -417,7 +418,7 @@ export default function ProfilePage() {
   });
 
   const handleUpdated = () => {
-    queryClient.invalidateQueries({ queryKey: ['my-profile'] });
+    invalidateResource(queryClient, 'profile');
   };
 
   if (isLoading) {

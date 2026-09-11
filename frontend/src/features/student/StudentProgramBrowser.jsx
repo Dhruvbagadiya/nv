@@ -139,7 +139,9 @@ export default function StudentProgramBrowser() {
 
   // Query fires only when the debounced value changes
   const { data, isLoading, isError, isFetching } = useQuery({
-    queryKey: ['student-programs', country, debouncedSearch, programLevel, page],
+    // Under the ['courses'] root so archiving or editing a course reaches this
+    // browser too; on its own root it was the one course cache nothing cleared.
+    queryKey: ['courses', 'student', country, debouncedSearch, programLevel, page],
     queryFn: () => fetchCourses({
       country,
       search:       debouncedSearch || undefined,

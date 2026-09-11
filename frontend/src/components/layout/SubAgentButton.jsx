@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { invalidateResource } from '../../hooks/useInvalidateResource.js';
 import Modal from '../ui/Modal.jsx';
 import { fetchSubAgents, createSubAgent, removeSubAgent } from '../../api/admin.js';
 import { useAuth } from '../../store/useAuth.js';
@@ -26,7 +27,9 @@ export default function SubAgentButton() {
   const create = useMutation({
     mutationFn: createSubAgent,
     onSuccess: (subAgent) => {
-      queryClient.invalidateQueries({ queryKey: ['sub-agents'] });
+      // A sub-agent IS a User row, so the admin list and the dashboard tile
+      // count it too — RELATED_KEYS.users covers this list as well.
+      invalidateResource(queryClient, 'users');
       setCreated({ ...subAgent, password: form.password });
       setForm({ name: '', email: '', password: '' });
     },
@@ -34,7 +37,7 @@ export default function SubAgentButton() {
 
   const remove = useMutation({
     mutationFn: removeSubAgent,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sub-agents'] }),
+    onSuccess: () => invalidateResource(queryClient, 'users'),
   });
 
   const close = () => {

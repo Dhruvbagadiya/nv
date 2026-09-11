@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { useInvalidateResource } from '../../hooks/useInvalidateResource.js';
 import { useNavigate } from 'react-router-dom';
 import { createInquiry } from '../../api/courseInquiries.js';
 import Page from '../../components/ui/Page.jsx';
@@ -29,9 +30,17 @@ export default function CourseInquiryForm() {
     [countries]
   );
 
+  const invalidateInquiries = useInvalidateResource('course-inquiries');
+
   const mutation = useMutation({
     mutationFn: createInquiry,
-    onSuccess: () => navigate('/partner/history'),
+    onSuccess: () => {
+      // The list this navigates to is cached and stays fresh for 30s
+      // (main.jsx), so a user who was just looking at it comes back to the old
+      // set with the row they just created missing.
+      invalidateInquiries();
+      navigate('/partner/history');
+    },
   });
 
   // countryId used to sit in this component's state with no control to set it, so

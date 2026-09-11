@@ -14,7 +14,7 @@ const FILTER_DEFAULTS = { search: '', status: 'active', page: 1 };
 const resource = {
   title: 'Useful information',
   subtitle: 'The notes agents see on the Report screen',
-  queryKey: 'admin-useful-information',
+  queryKey: ['useful-information', 'admin'],
   createLabel: 'Add note',
   emptyMessage: 'Nothing published yet — the Report panel is empty until you add something.',
   list: fetchUsefulInformation,

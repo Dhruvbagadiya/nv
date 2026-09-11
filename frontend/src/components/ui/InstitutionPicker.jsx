@@ -10,7 +10,10 @@ import { fetchInstitutions } from '../../api/institutions.js';
  * rather than wiring a list it does not otherwise use.
  *
  * `pageSize` is capped well below the endpoint's 100 limit: this is a picker,
- * and anyone scrolling past twenty results should be typing instead.
+ * and anyone scrolling past twenty results should be typing instead. It is sent
+ * with `page`, because the endpoint treats an absent page as "give me the whole
+ * capped list" and discards pageSize on that branch — so this asked for 20 and
+ * was quietly served up to 2,000 rows with their relations.
  */
 export default function InstitutionPicker({
   id = 'institution-picker',
@@ -28,13 +31,19 @@ export default function InstitutionPicker({
       value={value}
       selectedLabel={selectedLabel}
       onChange={onChange}
-      // countryCode is part of the key: the same search text must not reuse
+      // Under the ['institutions'] root, not beside it: one key root per entity
+      // is what lets a single invalidateResource('institutions') reach the
+      // picker too. Keyed on its own root, a newly created institution stayed
+      // missing from every one of the ~14 screens that mount this until the
+      // page was reloaded by hand — the "I have to refresh" report, verbatim.
+      // countryCode stays in the key so the same search text does not reuse
       // results cached for a different country.
-      queryKey={['institution-picker', countryCode ?? 'all']}
+      queryKey={['institutions', 'picker', countryCode ?? 'all']}
       fetchOptions={async (search) => {
         const rows = await fetchInstitutions({
           ...(search ? { search } : {}),
           ...(countryCode ? { country: countryCode } : {}),
+          page: 1,
           pageSize: 20,
         });
         return rows.map((i) => ({

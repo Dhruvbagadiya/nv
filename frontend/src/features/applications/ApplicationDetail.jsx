@@ -9,6 +9,7 @@
  */
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { invalidateResource } from '../../hooks/useInvalidateResource.js';
 import Modal from '../../components/ui/Modal.jsx';
 import { fetchApplication, advanceApplicationStage } from '../../api/applications.js';
 import { APPLICATION_STAGES, applicationStageLabel } from '../../constants/referenceData.js';
@@ -48,8 +49,11 @@ export default function ApplicationDetail({ applicationId, onClose }) {
   const mutation = useMutation({
     mutationFn: (payload) => advanceApplicationStage(applicationId, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['application', applicationId] });
-      queryClient.invalidateQueries({ queryKey: ['applications'] });
+      // This renders as a modal OVER the admin applications table, which reads
+      // ['admin-applications', …] — a key the two lines here never touched, so
+      // closing the modal showed the old stage in the row behind it. The Report
+      // panel and the dashboard tile count stages too.
+      invalidateResource(queryClient, 'applications');
       setStageForm(null);
       setAdvanceError(null);
     },

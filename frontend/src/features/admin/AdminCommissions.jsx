@@ -11,7 +11,7 @@ export default function AdminCommissions() {
   const resource = {
     title: 'Universities commission',
     subtitle: 'Commission rates agents see per institution',
-    queryKey: 'admin-commissions',
+    queryKey: ['commissions', 'admin'],
     createLabel: 'Set commission',
     emptyMessage: 'No commission rates recorded.',
     list: fetchCommissions,

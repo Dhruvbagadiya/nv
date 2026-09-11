@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { invalidateResource } from '../../hooks/useInvalidateResource.js';
 import {
   fetchInstitutionPhotos,
   addInstitutionPhoto,
@@ -31,7 +32,13 @@ export default function InstitutionPhotos({ institutionId, institutionName }) {
     queryFn: () => fetchInstitutionPhotos(institutionId),
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: key });
+  // The gallery is also embedded in the institution and course payloads the
+  // detail views read, so clearing only its own key left those showing the
+  // photo set from before the edit.
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: key });
+    invalidateResource(queryClient, 'institutions');
+  };
   const onError = (e) => setError(errorMessage(e));
 
   const add = useMutation({

@@ -14,7 +14,7 @@ const FILTER_DEFAULTS = { status: 'active' };
 const resource = {
   title: 'Support contacts',
   subtitle: 'The team shown on Help & Support',
-  queryKey: 'admin-support-contacts',
+  queryKey: ['support-contacts', 'admin'],
   createLabel: 'Add contact',
   emptyMessage: 'No support contacts published.',
   list: async (filters) => ({ items: await fetchSupportContacts(filters) }),

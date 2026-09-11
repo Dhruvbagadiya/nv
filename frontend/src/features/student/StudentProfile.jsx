@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { invalidateResource } from '../../hooks/useInvalidateResource.js';
 import { fetchStudentProfile, updateStudentProfile } from '../../api/students.js';
 import { useAuth } from '../../store/useAuth.js';
 import { toast } from '../../store/useToast.js';
@@ -55,7 +56,7 @@ export default function StudentProfile() {
       address:     form.address      || undefined,
     }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['student-profile'] });
+      invalidateResource(queryClient, 'profile');
       toast.success('Profile saved.');
     },
   });

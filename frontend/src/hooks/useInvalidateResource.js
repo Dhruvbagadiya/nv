@@ -13,18 +13,26 @@ import { useQueryClient } from '@tanstack/react-query';
  * what depends on what. Add the derived key here and every screen that mutates
  * the resource picks it up.
  *
- * Keys are matched by prefix, so ['institutions'] also clears
- * ['institutions', { country: 'UK' }] and the other filter variants.
+ * THE RULE THIS MAP DEPENDS ON: **one key root per entity, variants after the
+ * root, never beside it.** Keys are matched by prefix, so ['institutions'] also
+ * clears ['institutions', { country: 'UK' }] and ['institutions', 'picker', …].
+ * A cache keyed on a root of its own — as the institution picker, the student
+ * programme browser and the admin entry-requirements tabs each were — shares a
+ * prefix with nothing, so no entry here can reach it and it goes stale
+ * permanently. Name a new cache under the entity it holds and it is covered for
+ * free; give it a new root and it is invisible to all of this.
  */
 export const RELATED_KEYS = {
-  // Admin list, the shared dropdown cache, the course lists that embed an
-  // institution name, and the MOI screens keyed off institutions.
+  // Admin list, the shared dropdown cache and the picker, the course lists that
+  // embed an institution name, and the MOI screens keyed off institutions.
   institutions: [
     ['admin-institutions'], ['institutions'],
     ['admin-courses'], ['courses'], ['course'],
     ['moi-institutions'], ['document-facets'], ['admin-stats'],
   ],
   countries: [['admin-countries'], ['countries'], ['admin-stats']],
+  // ['courses'] also covers the picker and the student browser, both of which
+  // live under that root.
   courses: [['admin-courses'], ['courses'], ['course'], ['admin-stats']],
   documents: [
     ['admin-documents'], ['documents'],
@@ -32,24 +40,33 @@ export const RELATED_KEYS = {
     // document has to re-derive them or its filter never appears.
     ['document-facets'], ['admin-stats'],
   ],
-  users: [['admin-users'], ['admin-user-detail'], ['admin-stats']],
+  // ['users'] covers the admin table and the detail panel, both keyed under it;
+  // ['sub-agents'] is the agent-facing view of the same rows.
+  users: [['users'], ['sub-agents'], ['admin-stats']],
   // Commission is read onto agent-facing program cards, not just its own screen.
   commissions: [['commissions'], ['courses'], ['course']],
-  'entry-requirements': [['entry-requirements']],
+  // ['entry-requirements'] covers both the agent screen and the admin tabs.
+  // english-tests is derived server-side from the requirement text, so a new
+  // test named in a requirement only reaches the filter if this re-derives it.
+  'entry-requirements': [['entry-requirements'], ['english-tests']],
   'important-updates': [['important-updates']],
   'support-contacts': [['support-contacts']],
-  announcements: [['announcements']],
+  // The banner tile on the dashboard counts active announcements.
+  announcements: [['announcements'], ['admin-stats']],
   'moi-institutions': [['moi-institutions'], ['moi-course-types']],
-  'course-inquiries': [['course-inquiries']],
-
-  // The config-driven screens pass their own queryKey straight through, so the
-  // admin key is what arrives here. Each also clears the agent-facing cache that
-  // reads the same rows.
-  'admin-commissions': [['admin-commissions'], ['commissions'], ['courses'], ['course']],
-  'admin-support-contacts': [['admin-support-contacts'], ['support-contacts']],
-  'admin-important-updates': [['admin-important-updates'], ['important-updates']],
-  'admin-moi': [['admin-moi'], ['moi-institutions'], ['moi-course-types']],
-  'admin-announcements': [['admin-announcements'], ['announcements']],
+  // The Report panel is composed from applications, inquiries, deadlines,
+  // notifications and these notes, so each of them has to re-derive it.
+  'useful-information': [['useful-information'], ['report-summary']],
+  'course-inquiries': [['course-inquiries'], ['report-summary']],
+  applications: [
+    ['applications'], ['application'],
+    ['admin-applications'],
+    ['student-applications'], ['student-application'],
+    ['report-summary'], ['admin-stats'],
+  ],
+  notifications: [['notifications'], ['report-summary']],
+  // A person's own profile, under either portal's key.
+  profile: [['my-profile'], ['student-profile']],
 };
 
 /**
@@ -57,7 +74,8 @@ export const RELATED_KEYS = {
  *
  * An unmapped resource still clears its own key, so a screen wired up before its
  * entry is added here degrades to the old behaviour rather than silently
- * refetching nothing.
+ * refetching nothing. `relatedKeys.test.js` asserts every name here is a key
+ * root some useQuery actually uses — a typo is otherwise invisible at runtime.
  */
 export function invalidateResource(queryClient, resource) {
   const keys = RELATED_KEYS[resource] ?? [[resource]];

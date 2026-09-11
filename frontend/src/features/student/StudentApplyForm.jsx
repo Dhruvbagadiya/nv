@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useInvalidateResource } from '../../hooks/useInvalidateResource.js';
 import { fetchCourse } from '../../api/courses.js';
 import { createStudentApplication } from '../../api/students.js';
 import { useAuth } from '../../store/useAuth.js';
@@ -25,6 +26,8 @@ export default function StudentApplyForm() {
   const course = courseResp?.data;
   const attr   = course?.attributes;
 
+  const invalidateApplications = useInvalidateResource('applications');
+
   const mutation = useMutation({
     mutationFn: () => createStudentApplication({
       courseId,
@@ -32,7 +35,13 @@ export default function StudentApplyForm() {
       passportNo:  form.passportNo,
       intakeLabel: form.intakeLabel || undefined,
     }),
-    onSuccess: (app) => navigate(`/my-applications/${app.id}`),
+    onSuccess: (app) => {
+      // The list this navigates to is cached and stays fresh for 30s
+      // (main.jsx), so a user who was just looking at it comes back to the old
+      // set with the row they just created missing.
+      invalidateApplications();
+      navigate(`/my-applications/${app.id}`);
+    },
   });
 
   if (courseLoading) return <div className="student-detail-loading">Loading…</div>;

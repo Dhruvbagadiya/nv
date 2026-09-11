@@ -17,7 +17,7 @@ export default function AdminEntryRequirements() {
     subtitle: `${level === 'UG' ? 'Undergraduate' : 'Postgraduate'} programmes`,
     // Level in the key so switching tabs refetches rather than showing the other
     // level's cached rows.
-    queryKey: `admin-entry-requirements-${level}`,
+    queryKey: ['entry-requirements', 'admin', level],
     createLabel: `Set ${level} requirements`,
     emptyMessage: `No ${level} requirements recorded.`,
     list: (filters) => fetchEntryRequirements({ ...filters, level }),

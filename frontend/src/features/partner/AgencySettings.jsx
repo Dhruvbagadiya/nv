@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import Page from '../../components/ui/Page.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import LogoCropper from '../../components/ui/LogoCropper.jsx';
@@ -30,7 +30,6 @@ export default function AgencySettings() {
   const user              = useAuth((s) => s.user);
   const agencyProfile     = useAuth((s) => s.agencyProfile);
   const setAgencyProfile  = useAuth((s) => s.setAgencyProfile);
-  const queryClient       = useQueryClient();
   const isSubAgent        = Boolean(user?.parentAgentId);
 
   const current     = agencyProfile ?? {};
@@ -76,7 +75,9 @@ export default function AgencySettings() {
       setPendingBlob(null);
       setPendingPreview(null);
       toast.success('Branding saved.');
-      queryClient.invalidateQueries({ queryKey: ['agency-profile'] });
+      // No ['agency-profile'] invalidation: nothing queries that key. The
+      // branding lives in the auth store, and setAgencyProfile above is what
+      // actually republishes it.
     },
     onError: (e) => setError(e.response?.data?.error ?? 'Could not save. Please try again.'),
   });

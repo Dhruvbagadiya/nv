@@ -13,7 +13,8 @@ import { invalidateResource } from '../../hooks/useInvalidateResource.js';
 // and DataTable on the read-only side.
 //
 // A resource config provides:
-//   title, subtitle, queryKey
+//   title, subtitle, queryKey  (a string, or an array whose FIRST element is the
+//                                entity name used to look up related caches)
 //   list(filters) -> { items, meta } | { items }
 //   create?(values), update?(id, values), remove?(id)
 //   columns          DataTable columns
@@ -38,13 +39,23 @@ export default function AdminResourcePage({ resource }) {
     resource.filterDefaults ?? EMPTY_FILTERS
   );
 
+  // One key root per entity, variants after it. An admin screen and the
+  // agent-facing screen reading the same rows share a root, so invalidating the
+  // entity reaches both by prefix — which is what a config screen got wrong when
+  // its key was the flat string `admin-entry-requirements-UG`: nothing else in
+  // the app shared a prefix with it, so saving a requirement refreshed the admin
+  // table and no other screen.
+  const keyParts = Array.isArray(resource.queryKey) ? resource.queryKey : [resource.queryKey];
+
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: [resource.queryKey, applied],
+    queryKey: [...keyParts, applied],
     queryFn: () => resource.list(filtersEnabled ? applied : undefined),
     placeholderData: keepPreviousData,
   });
 
-  const invalidate = () => invalidateResource(queryClient, resource.queryKey);
+  // The root IS the entity name in RELATED_KEYS, so a resource never has to
+  // repeat itself in two places.
+  const invalidate = () => invalidateResource(queryClient, keyParts[0]);
 
   const saveMutation = useMutation({
     mutationFn: ({ id, values }) => {

@@ -11,7 +11,7 @@ export default function AdminMoiAcceptances() {
   const resource = {
     title: 'MOI Acceptances',
     subtitle: 'Ministry of Interior acceptance records per institution and course type',
-    queryKey: 'admin-moi',
+    queryKey: ['moi-institutions', 'admin'],
     createLabel: 'Add MOI record',
     emptyMessage: 'No MOI acceptance records yet.',
 

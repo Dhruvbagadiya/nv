@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useInvalidateResource } from '../../hooks/useInvalidateResource.js';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { createApplication } from '../../api/applications.js';
 import { fetchCourse } from '../../api/courses.js';
@@ -33,9 +34,17 @@ export default function NewApplication() {
   const course = courseResponse?.data ?? null;
   const courseAttr = course?.attributes ?? null;
 
+  const invalidateApplications = useInvalidateResource('applications');
+
   const mutation = useMutation({
     mutationFn: createApplication,
-    onSuccess: (application) => navigate(`/partner/app-history?studentName=${encodeURIComponent(application.studentName)}`),
+    onSuccess: (application) => {
+      // The list this navigates to is cached and stays fresh for 30s
+      // (main.jsx), so a user who was just looking at it comes back to the old
+      // set with the row they just created missing.
+      invalidateApplications();
+      navigate(`/partner/app-history?studentName=${encodeURIComponent(application.studentName)}`);
+    },
   });
 
   const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
