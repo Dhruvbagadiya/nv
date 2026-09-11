@@ -387,5 +387,21 @@ export async function restoreCourse(id) {
 }
 
 export async function bulkCreateCourses(rows) {
-  return prisma.course.createMany({ data: rows, skipDuplicates: true });
+  // Course.slug is required with no database default while the request schema
+  // makes it optional, exactly as in createCourse above — and a createMany with
+  // a row missing it raises a PrismaClientValidationError, which carries no
+  // `.code` and surfaces as a 500. The import screen never sends a slug, so
+  // every bulk import failed.
+  //
+  // The row index is part of the suffix as well as the timestamp: a whole file
+  // is created inside the same millisecond, so a timestamp alone gives two
+  // courses of the same title an identical slug, and `skipDuplicates` would
+  // then drop the second one without reporting it.
+  const stamp = Date.now().toString(36);
+  const data = rows.map((row, i) => ({
+    ...row,
+    slug: row.slug || `${slugify(row.title)}-${stamp}-${i.toString(36)}`,
+  }));
+
+  return prisma.course.createMany({ data, skipDuplicates: true });
 }

@@ -64,7 +64,12 @@ function ContactCard({ contact }) {
 export default function HelpSupport() {
   const { data: contacts = [], isLoading, isError } = useQuery({
     queryKey: ['support-contacts'],
-    queryFn: fetchSupportContacts,
+    // Wrapped, not passed by reference: React Query calls queryFn with its own
+    // context object ({ client, queryKey, signal, meta }), and fetchSupportContacts
+    // takes `params` — so a whole QueryClient was being handed to axios as the
+    // query string. It only escaped notice because this endpoint's query schema
+    // is the one in its module without .strict(), so the junk was stripped.
+    queryFn: () => fetchSupportContacts(),
     staleTime: 30 * 60 * 1000,
   });
 

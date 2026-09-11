@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { uploadedUrl } from '../../utils/queryTypes.js';
 
 // Validate hex color: #RGB or #RRGGBB
 const hexColor = z
@@ -7,20 +8,10 @@ const hexColor = z
   .nullable()
   .optional();
 
-// Accept either a full URL (https://cdn.example.com/logo.png)
-// or a local relative path from the uploads endpoint (/uploads/logos/...)
-const logoUrlSchema = z
-  .string()
-  .max(500)
-  .refine(
-    (v) => {
-      try { new URL(v); return true; } catch { /* not absolute */ }
-      return v.startsWith('/uploads/');
-    },
-    { message: 'Must be a valid URL or a /uploads/ path' }
-  )
-  .nullable()
-  .optional();
+// Accept either a full URL (https://cdn.example.com/logo.png) or a local
+// relative path from the uploads endpoint (/uploads/logos/...). Shared, because
+// institutions and MOI documents needed the same rule and used .url() instead.
+const logoUrlSchema = uploadedUrl(500).nullable().optional();
 
 export const upsertAgencyBody = z.object({
   agencyName:  z.string().trim().min(1).max(120),

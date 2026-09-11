@@ -7,7 +7,12 @@ import { listDocumentsQuery, uploadUrlBody } from '../src/modules/documents/docu
 import { createAnnouncementBody } from '../src/modules/announcements/announcements.schemas.js';
 import { listUpdatesQuery } from '../src/modules/importantUpdates/importantUpdates.schemas.js';
 import { listEntryRequirementsQuery } from '../src/modules/entryRequirements/entryRequirements.schemas.js';
-import { listInstitutionsQuery } from '../src/modules/institutions/institutions.schemas.js';
+import { listInstitutionsQuery, createInstitutionBody } from '../src/modules/institutions/institutions.schemas.js';
+import { createMoiBody } from '../src/modules/moiInstitutions/moiInstitutions.schemas.js';
+import { upsertAgencyBody } from '../src/modules/agency/agency.schemas.js';
+import { updateProfileBody } from '../src/modules/profile/profile.schemas.js';
+
+const UUID = '00000000-0000-4000-8000-000000000000';
 
 // The schemas are the API's actual security and correctness boundary — several of
 // this project's worst bugs were things a schema would have refused. These are
@@ -218,4 +223,36 @@ describe('ProgramLevel parity', () => {
       expect(listCoursesQuery.safeParse({ programLevel: level }).success).toBe(true);
     }
   );
+});
+
+// ---------------------------------------------------------------------------
+// Uploaded URLs
+// ---------------------------------------------------------------------------
+// `putObject` returns an absolute CDN URL when S3/R2 is configured and a RELATIVE
+// `/uploads/<key>` path when it is not — and local storage is the live
+// configuration. A FileField writes whatever came back straight into the form
+// field, so every schema that used a plain z.string().url() answered a perfectly
+// good upload with 400 "Invalid url". Agency logos and profile avatars each
+// carried their own refinement and worked; institutions and MOI documents did not.
+describe('uploaded URL fields accept what the upload endpoint actually returns', () => {
+  const cases = [
+    ['institution logo',   createInstitutionBody, (v) => ({ name: 'X', countryId: UUID, logoUrl: v })],
+    ['institution banner', createInstitutionBody, (v) => ({ name: 'X', countryId: UUID, bannerUrl: v })],
+    ['MOI document',       createMoiBody,         (v) => ({ institutionId: UUID, courseType: 'MBA', years: 2, documentUrl: v })],
+    ['agency logo',        upsertAgencyBody,      (v) => ({ agencyName: 'A', logoUrl: v })],
+    ['profile avatar',     updateProfileBody,     (v) => ({ avatarUrl: v })],
+  ];
+
+  it.each(cases)('%s accepts a local /uploads/ path', (_label, schema, body) => {
+    expect(schema.safeParse(body('/uploads/logos/2f9c.png')).success).toBe(true);
+  });
+
+  it.each(cases)('%s still accepts an absolute CDN URL', (_label, schema, body) => {
+    expect(schema.safeParse(body('https://cdn.nvimmigrationpvtltd.com/logos/2f9c.png')).success).toBe(true);
+  });
+
+  // The refinement must still refuse nonsense — it widens the rule, not removes it.
+  it.each(cases)('%s rejects a string that is neither', (_label, schema, body) => {
+    expect(schema.safeParse(body('logos/2f9c.png')).success).toBe(false);
+  });
 });

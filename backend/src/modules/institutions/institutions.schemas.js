@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { optionalText, queryBool } from '../../utils/queryTypes.js';
+import { optionalText, queryBool, uploadedUrl } from '../../utils/queryTypes.js';
 
 // `page` deliberately has no .default(1): its absence is the signal that the
 // caller wants the whole (capped) list rather than a page. Every dropdown in the
@@ -22,10 +22,12 @@ export const createInstitutionBody = z
     countryId:    z.string().uuid(),
     city:         z.string().trim().max(120).nullable().optional(),
     province:     z.string().trim().max(120).nullable().optional(),
-    logoUrl:      z.string().url().max(500).nullable().optional(),
+    // uploadedUrl, not .url(): a FileField writes whatever the upload endpoint
+    // returned, and with S3 unconfigured that is the relative /uploads/ path.
+    logoUrl:      uploadedUrl(500).nullable().optional(),
     // Wide header image for the institution page. Populated by the Catalogue A
     // import; Catalogue B publishes no banners, so it stays null for those.
-    bannerUrl:    z.string().url().max(500).nullable().optional(),
+    bannerUrl:    uploadedUrl(500).nullable().optional(),
     isTrending:   z.boolean().optional(),
     isBlacklisted: z.boolean().optional(),
   })

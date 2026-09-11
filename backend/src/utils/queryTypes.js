@@ -35,3 +35,33 @@ export const optionalUuid = () => optionalQuery(z.string().uuid());
 export const optionalText = (max = 200) => optionalQuery(z.string().trim().max(max));
 export const optionalEnum = (values) => optionalQuery(z.enum(values));
 export const optionalDate = () => optionalQuery(z.coerce.date());
+
+/**
+ * A URL produced by the upload endpoints.
+ *
+ * `putObject` returns an absolute CDN URL when S3/R2 is configured and a
+ * RELATIVE path — `/uploads/<key>` — when it is not (utils/storage.js). A plain
+ * `z.string().url()` accepts the first and rejects the second, so on a box
+ * running local storage every logo, banner and attachment a FileField uploaded
+ * came back 400 "Invalid url" at save time.
+ *
+ * Agency logos and profile avatars each carried their own copy of this
+ * refinement and so worked; institutions and MOI documents used `.url()` and did
+ * not. One helper, used by every field a FileField writes.
+ */
+export const uploadedUrl = (max = 500) =>
+  z
+    .string()
+    .max(max)
+    .refine(
+      (v) => {
+        try {
+          new URL(v);
+          return true;
+        } catch {
+          /* not absolute — fall through to the local-path check */
+        }
+        return v.startsWith('/uploads/');
+      },
+      { message: 'Must be a valid URL or a /uploads/ path' }
+    );

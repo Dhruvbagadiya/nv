@@ -159,6 +159,55 @@ describe('createCourse', () => {
   });
 });
 
+// Same defect as createCourse above, in the path that skipped the fix: the bulk
+// importer handed its rows straight to createMany, and the import screen never
+// sends a slug, so every bulk import raised a PrismaClientValidationError and
+// surfaced as a 500. Its own screen test mocked the API, so it passed against a
+// backend that could not accept its payload.
+describe('bulkCreateCourses', () => {
+  beforeEach(() => {
+    prismaMock.course.createMany.mockResolvedValue({ count: 2 });
+  });
+
+  const dataOf = () => prismaMock.course.createMany.mock.calls[0][0].data;
+
+  it('derives a slug for every row that arrives without one', async () => {
+    await service.bulkCreateCourses([
+      { institutionId: 'i1', title: 'MSc Data Science', tuitionFee: 1 },
+      { institutionId: 'i1', title: 'BA Design', tuitionFee: 2 },
+    ]);
+
+    const [a, b] = dataOf();
+    expect(a.slug).toMatch(/^msc-data-science-/);
+    expect(b.slug).toMatch(/^ba-design-/);
+  });
+
+  // A whole file is created inside one millisecond, so a timestamp alone gives
+  // two rows of the same title an identical slug — and `skipDuplicates` would
+  // then drop the second silently rather than reporting anything.
+  it('gives two rows of the same title distinct slugs', async () => {
+    await service.bulkCreateCourses([
+      { institutionId: 'i1', title: 'MBA', tuitionFee: 1 },
+      { institutionId: 'i2', title: 'MBA', tuitionFee: 2 },
+    ]);
+
+    const [a, b] = dataOf();
+    expect(a.slug).not.toBe(b.slug);
+  });
+
+  it('keeps an explicit slug untouched', async () => {
+    await service.bulkCreateCourses([{ institutionId: 'i1', title: 'X', slug: 'chosen', tuitionFee: 1 }]);
+
+    expect(dataOf()[0].slug).toBe('chosen');
+  });
+
+  it('still asks Prisma to skip duplicates', async () => {
+    await service.bulkCreateCourses([{ institutionId: 'i1', title: 'X', tuitionFee: 1 }]);
+
+    expect(prismaMock.course.createMany.mock.calls[0][0].skipDuplicates).toBe(true);
+  });
+});
+
 /**
  * The list used the detail include, so a page of 12 courses also fetched each
  * institution's commission row, up to 12 gallery photos per course, and EVERY
