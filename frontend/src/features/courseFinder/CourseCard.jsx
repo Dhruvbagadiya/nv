@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Icon from '../../components/ui/Icon.jsx';
 import Flag from '../../components/ui/Flag.jsx';
 import CourseDetailModal from './CourseDetailModal.jsx';
-import { formatFee } from '../../utils/format.js';
+import { formatFee, formatApplicationFee, formatDuration } from '../../utils/format.js';
 import { programLevelLabel } from '../../constants/referenceData.js';
 import { monthLabels, nextIntakes, formatIntake } from '../../utils/intakes.js';
 
@@ -39,13 +39,6 @@ function restatesStructuredData(label, showsIntakes) {
   // not a loose \bmay\b, which would also swallow "May apply without IELTS".
   const words = text.split(/[\s,/&+-]+/).filter(Boolean);
   return words.length > 0 && words.every((w) => MONTH_WORD.test(w));
-}
-
-// Duration from min/max month integers.
-function formatDuration(min, max) {
-  if (!min && !max) return null;
-  if (min === max) return `${min} months`;
-  return `${min} – ${max} months`;
 }
 
 export default function CourseCard({ program }) {
@@ -98,12 +91,7 @@ export default function CourseCard({ program }) {
     .filter(Boolean)
     .join(', ');
 
-  const applicationFee =
-    attr.applicationFee == null
-      ? null
-      : attr.applicationFee > 0
-        ? formatFee(attr.applicationFee, currency)
-        : 'Free';
+  const applicationFee = formatApplicationFee(attr.applicationFee, currency);
 
   return (
     <article className="pcard">

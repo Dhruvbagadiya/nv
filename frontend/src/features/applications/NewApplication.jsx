@@ -123,7 +123,12 @@ export default function NewApplication() {
                     <button
                       type="button"
                       className="btn btn-ghost"
-                      onClick={() => setField('courseId', '')}
+                      // The intake goes with the course. Clearing only the
+                      // course left a label picked from the old one in state,
+                      // and the select is not rendered for a course with no
+                      // dated intakes — so it was submitted unseen, filing the
+                      // application against an intake that course does not run.
+                      onClick={() => setForm((f) => ({ ...f, courseId: '', intakeLabel: '' }))}
                     >
                       Change
                     </button>

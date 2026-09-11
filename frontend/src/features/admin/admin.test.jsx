@@ -78,11 +78,11 @@ const COUNTRY = { id: 'c1', code: 'UK', name: 'United Kingdom', flagEmoji: '🇬
 const INSTITUTION = { id: 'i1', name: 'University of Hertfordshire', country: COUNTRY };
 const meta = (total) => ({ total, page: 1, pageSize: 20, totalPages: 1 });
 
-function renderScreen(ui) {
+function renderScreen(ui, route = '/') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>{ui}</MemoryRouter>
+      <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>
     </QueryClientProvider>
   );
 }
@@ -309,6 +309,29 @@ describe('admin resource pages', () => {
     // type the API will reject.
     expect(fileInput.getAttribute('accept')).toBe('application/pdf,image/png');
     expect(screen.getByText(/Max 25 MB/)).toBeTruthy();
+  });
+});
+
+// The page lives in the URL and the category tab does not, so switching tabs
+// kept the page number: from SOP page 3 to a category with one page, the request
+// asked for page 3, came back empty, and the screen read "No documents in this
+// category yet" for a category that had rows. Not transient — it persisted until
+// someone noticed the pager.
+describe('tab switch and the page number', () => {
+  it('goes back to page 1 when the category changes', async () => {
+    refApi.fetchDocuments.mockResolvedValue({ items: [], meta: meta(0) });
+    adminApi.fetchStorageStatus.mockResolvedValue({ enabled: true, maxBytes: 1, allowedContentTypes: [] });
+
+    renderScreen(<AdminDocuments />, '/?page=3');
+    await waitFor(() => expect(refApi.fetchDocuments).toHaveBeenCalled());
+    // The deep link is honoured: arriving on page 3 stays on page 3.
+    expect(refApi.fetchDocuments.mock.calls.at(-1)[0]).toMatchObject({ page: 3 });
+
+    fireEvent.click(screen.getByText('LOR documents'));
+
+    await waitFor(() =>
+      expect(refApi.fetchDocuments.mock.calls.at(-1)[0]).toMatchObject({ page: 1 })
+    );
   });
 });
 

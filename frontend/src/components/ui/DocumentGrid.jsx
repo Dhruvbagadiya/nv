@@ -59,6 +59,11 @@ export default function DocumentGrid({
   const tPages   = meta?.totalPages ?? totalPages;
   const tot      = meta?.total      ?? total;
   const pgSize   = meta?.pageSize   ?? pageSize;
+  // maxPage is the last page the API will actually serve — past MAX_OFFSET it
+  // answers 400. Every other pager passes it through; dropping it here let the
+  // pager offer pages that cannot be fetched, the defect already fixed on
+  // /programs.
+  const maxPg    = meta?.maxPage    ?? null;
   if (isLoading) {
     return (
       <div className="doc-panel">
@@ -101,6 +106,7 @@ export default function DocumentGrid({
           totalPages={tPages}
           total={tot}
           pageSize={pgSize}
+          maxPage={maxPg}
           onChange={onPageChange}
         />
       )}

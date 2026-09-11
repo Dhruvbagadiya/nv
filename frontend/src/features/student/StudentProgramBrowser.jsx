@@ -5,7 +5,7 @@ import { fetchCourses } from '../../api/courses.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 import Pagination from '../../components/ui/Pagination.jsx';
 import Icon from '../../components/ui/Icon.jsx';
-import { formatFee } from '../../utils/format.js';
+import { formatFee, formatApplicationFee, formatDuration } from '../../utils/format.js';
 
 // Fixed program level labels — no HTML entities in JSX
 const PROGRAM_LEVELS = [
@@ -32,10 +32,8 @@ function useDebounced(value, delay = 350) {
 function ProgramCard({ program }) {
   const a = program.attributes;
   const initials = a.school.name.slice(0, 2).toUpperCase();
-  const hasBoth  = a.minLength && a.maxLength;
-  const dur      = !hasBoth ? null
-    : a.minLength === a.maxLength ? `${a.minLength} months`
-    : `${a.minLength}–${a.maxLength} months`;
+  const appFee   = formatApplicationFee(a.applicationFee, a.currency);
+  const dur      = formatDuration(a.minLength, a.maxLength);
   const nextIntake = a.programIntakes?.[0];
 
   return (
@@ -98,7 +96,8 @@ function ProgramCard({ program }) {
         <div>
           <span className="student-meta-label">App fee</span>
           <span className="student-meta-val">
-            {Number(a.applicationFee) === 0 ? 'Free' : formatFee(a.applicationFee, a.currency)}
+            {/* null is "not published", which must not read as a free application. */}
+            {appFee ?? 'Not published'}
           </span>
         </div>
       </div>

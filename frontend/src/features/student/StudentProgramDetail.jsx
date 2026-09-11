@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchCourse } from '../../api/courses.js';
-import { formatFee } from '../../utils/format.js';
+import { formatFee, formatApplicationFee, formatDuration } from '../../utils/format.js';
 import { useAuth } from '../../store/useAuth.js';
 
 export default function StudentProgramDetail() {
@@ -60,13 +60,13 @@ export default function StudentProgramDetail() {
             <div className="student-detail-stat">
               <div className="student-detail-stat-label">Application fee</div>
               <div className="student-detail-stat-val">
-                {Number(a.applicationFee) === 0 ? 'Free' : formatFee(a.applicationFee, a.currency)}
+                {formatApplicationFee(a.applicationFee, a.currency) ?? 'Not published'}
               </div>
             </div>
             <div className="student-detail-stat">
               <div className="student-detail-stat-label">Duration</div>
               <div className="student-detail-stat-val">
-                {a.minLength === a.maxLength ? `${a.minLength} months` : `${a.minLength}–${a.maxLength} months`}
+                {formatDuration(a.minLength, a.maxLength) ?? 'Not published'}
               </div>
             </div>
             <div className="student-detail-stat">

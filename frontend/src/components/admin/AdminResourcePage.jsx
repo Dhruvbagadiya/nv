@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import Page from '../ui/Page.jsx';
 import DataTable from '../ui/DataTable.jsx';
@@ -56,6 +56,24 @@ export default function AdminResourcePage({ resource }) {
   // The root IS the entity name in RELATED_KEYS, so a resource never has to
   // repeat itself in two places.
   const invalidate = () => invalidateResource(queryClient, keyParts[0]);
+
+  // A screen whose tab strip lives outside useUrlFilters — Entry Requirements
+  // switching UG/PG — keeps the page number across the switch, so moving from
+  // page 3 of one tab to a tab with one page requests page 3 and renders the
+  // empty state for a tab that has rows. useUrlFilters already enforces "any
+  // filter change resets the page" for the filters it owns; this extends it to
+  // the part of the key the resource supplies.
+  //
+  // A ref rather than a render-phase comparison because the reset writes to the
+  // URL, which cannot happen during render — and skipping the first run is what
+  // keeps a pasted ?page=3 link working.
+  const tabKey = JSON.stringify(keyParts);
+  const previousTabKey = useRef(tabKey);
+  useEffect(() => {
+    if (previousTabKey.current === tabKey) return;
+    previousTabKey.current = tabKey;
+    setPage(1);
+  }, [tabKey, setPage]);
 
   const saveMutation = useMutation({
     mutationFn: ({ id, values }) => {

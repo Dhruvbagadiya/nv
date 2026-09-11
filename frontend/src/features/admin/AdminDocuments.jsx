@@ -339,7 +339,14 @@ export default function AdminDocuments() {
             key={c.value}
             type="button"
             className={`chip${category === c.value ? ' chip-active' : ''}`}
-            onClick={() => setCategory(c.value)}
+            onClick={() => {
+              setCategory(c.value);
+              // The page lives in the URL and the tab does not, so without this
+              // a switch from SOP page 3 to a category with one page asks for
+              // page 3, gets nothing back, and reads "No documents in this
+              // category yet" for a category that has several.
+              setPage(1);
+            }}
             aria-pressed={category === c.value}
           >
             {c.label}

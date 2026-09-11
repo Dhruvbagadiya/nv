@@ -137,6 +137,42 @@ describe('student portal', () => {
     expect(screen.getByText(/Sault Ste\. Marie/)).toBeTruthy();
   });
 
+  // applicationFee is nullable and null means "no fee published" — the majority
+  // of the imported catalogue. Number(null) is 0, so the browser and the course
+  // page both announced Free on two PUBLIC pages, for courses that then invoice.
+  it('does not advertise an unpublished application fee as free', async () => {
+    const noFee = { ...PROGRAM, attributes: { ...PROGRAM.attributes, applicationFee: null } };
+    coursesApi.fetchCourses.mockResolvedValue({
+      data: [noFee],
+      meta: { counts: { total: 1 }, page: 1, pageSize: 12, totalPages: 1, maxPage: 1 },
+    });
+
+    renderAt(<StudentProgramBrowser />, '/programs-list');
+    await waitFor(() => expect(screen.getByText(/Bachelor of Computer Science/)).toBeTruthy());
+
+    expect(screen.queryByText('Free')).toBeNull();
+    expect(screen.getByText('Not published')).toBeTruthy();
+  });
+
+  it('still says Free when the fee is genuinely zero', async () => {
+    renderAt(<StudentProgramBrowser />, '/programs-list');
+    await waitFor(() => expect(screen.getByText(/Bachelor of Computer Science/)).toBeTruthy());
+
+    expect(screen.getByText('Free')).toBeTruthy();
+  });
+
+  // Both length columns default to 0, so an unstated duration read "0 months".
+  it('does not render an unpublished duration as zero months', async () => {
+    coursesApi.fetchCourse.mockResolvedValue({
+      data: { ...PROGRAM, attributes: { ...PROGRAM.attributes, minLength: 0, maxLength: 0 } },
+    });
+
+    renderAt(<StudentProgramDetail />, '/programs/p1', '/programs/:id');
+    await waitFor(() => expect(screen.getByText(/Bachelor of Computer Science/)).toBeTruthy());
+
+    expect(screen.queryByText('0 months')).toBeNull();
+  });
+
   // The public browser offered all 7,757 pages while the API refuses any offset
   // past page 834, so the last-page button led straight to an error. The partner
   // course finder already passed maxPage; this screen did not.
