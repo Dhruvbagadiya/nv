@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import Page from '../../components/ui/Page.jsx';
 import Modal from '../../components/ui/Modal.jsx';
@@ -54,6 +54,19 @@ export default function AgencySettings() {
     setAccentColor(hex);
     applyTheme(hex); // instantly repaints CSS vars
   };
+
+  // The preview paints --accent-* onto the document root, which is the whole
+  // app, not this page. Without putting it back on the way out, trying three
+  // swatches and navigating away without saving left the entire portal that
+  // colour for the rest of the session — only a re-login reset it.
+  //
+  // The saved value is read through a ref so this runs on unmount alone: as a
+  // dependency it would fire on every save and undo the colour just saved.
+  const savedAccent = useRef(agencyProfile?.accentColor ?? null);
+  useEffect(() => {
+    savedAccent.current = agencyProfile?.accentColor ?? null;
+  }, [agencyProfile]);
+  useEffect(() => () => applyTheme(savedAccent.current), []);
 
   // ── Save mutation ────────────────────────────────────────────────────────
   const saveMutation = useMutation({

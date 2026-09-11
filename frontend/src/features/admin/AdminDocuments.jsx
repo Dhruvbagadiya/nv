@@ -6,6 +6,8 @@ import FilterBar from '../../components/ui/FilterBar.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import Icon from '../../components/ui/Icon.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
+import { toast } from '../../store/useToast.js';
+import { errorMessage } from '../../utils/format.js';
 import { useInvalidateResource } from '../../hooks/useInvalidateResource.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 import { fetchDocuments, fetchDocumentFacets } from '../../api/referenceScreens.js';
@@ -262,8 +264,18 @@ export default function AdminDocuments() {
   });
 
   const invalidate = useInvalidateResource('documents');
-  const archive = useMutation({ mutationFn: archiveDocument, onSuccess: invalidate });
-  const restore = useMutation({ mutationFn: restoreDocument, onSuccess: invalidate });
+  // Archiving and restoring had no error surface at all, so a refusal looked
+  // exactly like a success: the row simply stayed as it was.
+  const archive = useMutation({
+    mutationFn: archiveDocument,
+    onSuccess: () => { invalidate(); toast.success('Document archived.'); },
+    onError: (e) => toast.error(errorMessage(e, 'Could not archive that document.')),
+  });
+  const restore = useMutation({
+    mutationFn: restoreDocument,
+    onSuccess: () => { invalidate(); toast.success('Document restored.'); },
+    onError: (e) => toast.error(errorMessage(e, 'Could not restore that document.')),
+  });
 
   const columns = [
     { key: 'title', header: 'Title', className: 'cell-strong' },

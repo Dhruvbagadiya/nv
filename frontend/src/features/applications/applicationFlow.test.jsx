@@ -19,8 +19,11 @@ vi.mock('../../api/courses.js', () => ({
 vi.mock('../../api/applications.js', () => ({
   fetchApplications: vi.fn(),
   createApplication: vi.fn(),
+  fetchApplication: vi.fn(),
+  advanceApplicationStage: vi.fn(),
 }));
 vi.mock('../../api/countries.js', () => ({ fetchCountries: vi.fn() }));
+vi.mock('../../api/auth.js', () => ({ login: vi.fn(), refresh: vi.fn(), logout: vi.fn() }));
 vi.mock('../../api/institutions.js', () => ({
   fetchInstitutions: vi.fn(),
   createInstitution: vi.fn(),
@@ -31,9 +34,11 @@ const coursesApi = await import('../../api/courses.js');
 const applicationsApi = await import('../../api/applications.js');
 const countriesApi = await import('../../api/countries.js');
 const institutionsApi = await import('../../api/institutions.js');
+const { useAuth } = await import('../../store/useAuth.js');
 
 const NewApplication = (await import('./NewApplication.jsx')).default;
 const ApplicationHistory = (await import('./ApplicationHistory.jsx')).default;
+const ApplicationDetail = (await import('./ApplicationDetail.jsx')).default;
 const CourseCard = (await import('../courseFinder/CourseCard.jsx')).default;
 
 const COUNTRY = { id: 'c1', code: 'UK', name: 'United Kingdom', flagEmoji: '🇬🇧', currencyCode: 'GBP', institutionCount: 3 };
@@ -250,5 +255,71 @@ describe('ApplicationHistory', () => {
     expect(applicationsApi.fetchApplications).toHaveBeenCalledWith(
       expect.objectContaining({ stage: 'CAS_LETTER' })
     );
+  });
+});
+
+/**
+ * The stage strip is the ONLY way an admin moves an application through the
+ * pipeline, and it was a <div onClick> — no tabIndex, no role, no key handler.
+ * DataTable's rows were given keyboard access precisely so a keyboard user could
+ * reach an application; the fix stopped at the row, so they arrived at the panel
+ * and could not act.
+ */
+describe('advancing a stage without a mouse', () => {
+  const APP = {
+    id: 'a1',
+    reference: 41,
+    studentName: 'Test Student',
+    passportNo: 'P123',
+    intakeLabel: 'January 2027',
+    stage: 'PROFILE_ASSESSMENT',
+    stageNote: null,
+    deadlineAt: null,
+    createdAt: '2026-08-09T00:00:00.000Z',
+    agent: null,
+    course: {
+      id: 'p1',
+      title: 'MBA (Project Management)',
+      institution: { id: 'i1', name: 'University of Hertfordshire', country: COUNTRY },
+    },
+  };
+
+  // Registered per-describe in this file, so a new block needs its own.
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    applicationsApi.fetchApplication.mockResolvedValue(APP);
+    useAuth.setState({ user: { id: 'u1', name: 'Admin', role: 'ADMIN' }, status: 'authenticated' });
+  });
+
+  const nextStageTile = async () => {
+    renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByText('Test Student')).toBeTruthy());
+    // The stages after the current one are the actionable ones; each is labelled
+    // with where it would advance to.
+    return screen.getAllByRole('button', { name: /^Advance to / })[0];
+  };
+
+  it('exposes each advanceable stage as a focusable button', async () => {
+    const tile = await nextStageTile();
+    expect(tile.getAttribute('tabIndex')).toBe('0');
+  });
+
+  it.each(['Enter', ' '])('opens the stage form on %s', async (key) => {
+    const tile = await nextStageTile();
+    fireEvent.keyDown(tile, { key });
+
+    await waitFor(() => expect(screen.getByText(/Stage note/i)).toBeTruthy());
+  });
+
+  // An AGENT can view but not advance, so those tiles must not be focusable at
+  // all — a tab stop that does nothing is its own kind of broken.
+  it('leaves the tiles unfocusable for a role that cannot advance', async () => {
+    useAuth.setState({ user: { id: 'u2', name: 'Agent', role: 'AGENT' }, status: 'authenticated' });
+
+    renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByText('Test Student')).toBeTruthy());
+
+    expect(screen.queryAllByRole('button', { name: /^Advance to / })).toHaveLength(0);
   });
 });

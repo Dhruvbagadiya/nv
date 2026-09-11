@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { invalidateResource } from '../../hooks/useInvalidateResource.js';
+import { toast } from '../../store/useToast.js';
+import { errorMessage } from '../../utils/format.js';
 import {
   fetchNotifications,
   fetchUnreadCount,
@@ -55,9 +58,12 @@ export default function NotificationDropdown() {
     staleTime: 0, // always fresh when re-opened
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['notifications'] });
-  const readOne = useMutation({ mutationFn: markNotificationRead, onSuccess: invalidate });
-  const readAll = useMutation({ mutationFn: markAllNotificationsRead, onSuccess: invalidate });
+  const invalidate = () => invalidateResource(queryClient, 'notifications');
+  // Neither mark-read mutation reported a failure, and the only visible effect
+  // is a dot disappearing — so a failure looked like it had worked.
+  const onMarkError = (e) => toast.error(errorMessage(e, 'Could not mark that as read.'));
+  const readOne = useMutation({ mutationFn: markNotificationRead, onSuccess: invalidate, onError: onMarkError });
+  const readAll = useMutation({ mutationFn: markAllNotificationsRead, onSuccess: invalidate, onError: onMarkError });
 
   // Click-outside and Escape. The panel had neither, so it could only be dismissed
   // by clicking the bell again and stayed open over whatever you clicked next.
@@ -134,18 +140,28 @@ export default function NotificationDropdown() {
             </div>
           )}
 
-          {items.map((n) => (
+          {items.map((n) => {
+            // Clicking was the only way to mark one notification read and to
+            // follow its application link, so a keyboard user had nothing but
+            // "Mark all read" — the same defect DataTable's rows were fixed for.
+            const activate = () => {
+              if (!n.readAt) readOne.mutate(n.id);
+              setOpen(false);
+              // Navigate to the application if one is attached
+              if (n.applicationId) {
+                navigate(`/partner/app-history`);
+              }
+            };
+            return (
             <div
               className="notif-item"
               key={n.id}
+              tabIndex={0}
+              role="button"
               style={{ ...(!n.readAt ? {} : { opacity: 0.6 }), cursor: 'pointer' }}
-              onClick={() => {
-                if (!n.readAt) readOne.mutate(n.id);
-                setOpen(false);
-                // Navigate to the application if one is attached
-                if (n.applicationId) {
-                  navigate(`/partner/app-history`);
-                }
+              onClick={activate}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
               }}
             >
               <div className={`n-icon n-icon--${KIND_TONE[n.kind] ?? 'neutral'}`}>
@@ -167,7 +183,8 @@ export default function NotificationDropdown() {
                 }} />
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

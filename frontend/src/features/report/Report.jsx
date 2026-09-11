@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import Page from '../../components/ui/Page.jsx';
@@ -10,6 +11,14 @@ import { formatDate } from '../../utils/format.js';
 // broken images rendering as raw alt text. Falling back to an initials chip means a
 // missing logo degrades instead of looking like a bug.
 function InstitutionLogo({ institution }) {
+  // Through state, not by swapping the DOM node out from under React with
+  // replaceWith(): the <img> belongs to React, and once it has been detached by
+  // hand the next render of this list — which happens whenever report-summary
+  // refetches and this institution drops out of `trending` — tries to remove a
+  // node that is no longer where React left it, throwing NotFoundError from
+  // removeChild and unmounting the screen. Same fix as CourseCard.
+  const [failed, setFailed] = useState(false);
+
   const initials = institution.name
     .split(' ')
     .map((p) => p[0])
@@ -17,7 +26,7 @@ function InstitutionLogo({ institution }) {
     .join('')
     .toUpperCase();
 
-  if (!institution.logoUrl) {
+  if (!institution.logoUrl || failed) {
     return (
       <div className="trending-logo trending-logo-fallback" title={institution.name}>
         {initials}
@@ -30,17 +39,9 @@ function InstitutionLogo({ institution }) {
       src={institution.logoUrl}
       alt={institution.name}
       title={institution.name}
-      // A URL that 404s would otherwise show a broken-image glyph and the alt text,
-      // which is exactly what the reference screenshots do.
-      onError={(e) => {
-        e.currentTarget.replaceWith(
-          Object.assign(document.createElement('div'), {
-            className: 'trending-logo trending-logo-fallback',
-            textContent: initials,
-            title: institution.name,
-          })
-        );
-      }}
+      // A URL that 404s would otherwise show a broken-image glyph and the alt
+      // text, which is exactly what the reference screenshots do.
+      onError={() => setFailed(true)}
     />
   );
 }

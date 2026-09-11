@@ -48,13 +48,22 @@ export default function EnquiryDialog({ open, onClose, whatsappBase, tel, email 
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  // LandingPage passes onClose as an inline arrow, so its identity changes on
+  // every render of a 970-line page. With onClose in the dependency list the
+  // setup below tore down and rebuilt each time — and its cleanup calls
+  // returnFocusTo.current.focus(), which yanked focus out of the dialog
+  // mid-keystroke and back to the first field. Modal.jsx holds its callback in
+  // a ref for exactly this reason; this dialog never got the same fix.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
   useEffect(() => {
     if (!open) return undefined;
     returnFocusTo.current = document.activeElement;
     firstFieldRef.current?.focus();
 
     const onKey = (e) => {
-      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key === 'Escape') { onCloseRef.current(); return; }
       if (e.key !== 'Tab') return;
       // Focus trap. Without it Tab walks out of the dialog and into the page
       // behind it, which is still scrollable and full of links.
@@ -76,7 +85,7 @@ export default function EnquiryDialog({ open, onClose, whatsappBase, tel, email 
       document.body.style.overflow = prev;
       returnFocusTo.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

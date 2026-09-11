@@ -37,6 +37,11 @@
     .sidebar-item, .side-group-toggle {
       min-height: 44px; padding: 10px 12px; font-size: 14px;
     }
+    /* Same rule, the two places it had not reached. Pagination is the only way
+       past page 1 of the catalogue on a phone, and these are the student
+       portal's only auth controls — both were 28px. */
+    .page-btn { min-width: 44px; height: 44px; font-size: 13px; }
+    .student-header-right .btn { min-height: 44px; padding-inline: 14px; }
     .side-children .sidebar-item { min-height: 40px; }
     .menu-toggle { min-width: 44px; min-height: 44px; }
     /* The drawer is its own scroll region; without this the list under the fold

@@ -6,6 +6,8 @@ import FilterBar from '../ui/FilterBar.jsx';
 import ResourceForm from './ResourceForm.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { invalidateResource } from '../../hooks/useInvalidateResource.js';
+import { toast } from '../../store/useToast.js';
+import { errorMessage } from '../../utils/format.js';
 
 // Six reference resources need the same admin screen: a table, a create button, and
 // per-row edit and archive actions. Rather than six copies, each screen supplies a
@@ -89,7 +91,13 @@ export default function AdminResourcePage({ resource }) {
   });
 
   const removeMutation = useMutation({ mutationFn: resource.remove, onSuccess: invalidate });
-  const restoreMutation = useMutation({ mutationFn: resource.restore, onSuccess: invalidate });
+  // Only removeMutation.isError was ever rendered, so a failed Restore was
+  // silent on all six config screens — the row just stayed archived.
+  const restoreMutation = useMutation({
+    mutationFn: resource.restore,
+    onSuccess: () => { invalidate(); toast.success('Restored.'); },
+    onError: (e) => toast.error(errorMessage(e, 'Could not restore that item.')),
+  });
 
   const rows = data?.items ?? [];
 

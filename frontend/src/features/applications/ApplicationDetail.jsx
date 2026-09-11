@@ -132,23 +132,46 @@ export default function ApplicationDetail({ applicationId, onClose }) {
                 const isCurrent = idx === currentStageIdx;
                 const isFuture  = idx > currentStageIdx;
                 const sc = STAGE_COLOR[value] ?? {};
+                const actionable = canAdvance && isFuture;
                 return (
                   <div
                     key={value}
-                    onClick={() => canAdvance && isFuture && openStageForm(value)}
-                    title={canAdvance && isFuture ? `Advance to ${label}` : undefined}
+                    onClick={() => actionable && openStageForm(value)}
+                    title={actionable ? `Advance to ${label}` : undefined}
+                    // DataTable's rows were given keyboard access because a
+                    // keyboard user could not open an application at all. The fix
+                    // stopped at the row: this is the control the row opens onto,
+                    // and it is the ONLY way to move an application through the
+                    // pipeline — so without this an admin could reach the panel
+                    // and then not act. role="button" rather than a real <button>
+                    // because the tile's content is block-level.
+                    {...(actionable
+                      ? {
+                          tabIndex: 0,
+                          role: 'button',
+                          'aria-label': `Advance to ${label}`,
+                          onKeyDown: (e) => {
+                            // Space scrolls the page unless it is stopped, and
+                            // both keys activate a button by convention.
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              openStageForm(value);
+                            }
+                          },
+                        }
+                      : {})}
                     style={{
                       padding: '8px 10px',
                       borderRadius: 'var(--radius-sm)',
                       border: `1px solid ${isCurrent ? 'var(--accent-600)' : 'var(--border)'}`,
                       background: isCurrent ? sc.background : isPast ? 'var(--canvas)' : 'var(--surface)',
                       opacity: isFuture && !canAdvance ? 0.45 : 1,
-                      cursor: canAdvance && isFuture ? 'pointer' : 'default',
+                      cursor: actionable ? 'pointer' : 'default',
                       transition: 'border-color .12s, background .12s',
                       position: 'relative',
                     }}
-                    onMouseEnter={(e) => { if (canAdvance && isFuture) e.currentTarget.style.borderColor = 'var(--accent-500)'; }}
-                    onMouseLeave={(e) => { if (canAdvance && isFuture) e.currentTarget.style.borderColor = 'var(--border)'; }}
+                    onMouseEnter={(e) => { if (actionable) e.currentTarget.style.borderColor = 'var(--accent-500)'; }}
+                    onMouseLeave={(e) => { if (actionable) e.currentTarget.style.borderColor = 'var(--border)'; }}
                   >
                     <div style={{
                       fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase',

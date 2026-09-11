@@ -7,6 +7,8 @@ import FilterBar from '../../components/ui/FilterBar.jsx';
 import Modal from '../../components/ui/Modal.jsx';
 import InstitutionPhotos from './InstitutionPhotos.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
+import { toast } from '../../store/useToast.js';
+import { errorMessage } from '../../utils/format.js';
 import { useInvalidateResource } from '../../hooks/useInvalidateResource.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 import FileField from '../../components/ui/FileField.jsx';
@@ -219,19 +221,27 @@ export default function AdminInstitutions() {
 
   const invalidate = useInvalidateResource('institutions');
 
+  // None of the three reported a failure, so a refusal was invisible: the row
+  // kept its old state and looked like it had simply been left alone.
   const blacklistMutation = useMutation({
     mutationFn: ({ id, isBlacklisted }) => setBlacklist(id, isBlacklisted),
-    onSuccess: invalidate,
+    onSuccess: (_data, { isBlacklisted }) => {
+      invalidate();
+      toast.success(isBlacklisted ? 'Institution blacklisted.' : 'Institution removed from the blacklist.');
+    },
+    onError: (e) => toast.error(errorMessage(e, 'Could not change that institution.')),
   });
 
   const archiveMutation = useMutation({
     mutationFn: archiveInstitution,
-    onSuccess: invalidate,
+    onSuccess: () => { invalidate(); toast.success('Institution archived.'); },
+    onError: (e) => toast.error(errorMessage(e, 'Could not archive that institution.')),
   });
 
   const restoreMutation = useMutation({
     mutationFn: restoreInstitution,
-    onSuccess: invalidate,
+    onSuccess: () => { invalidate(); toast.success('Institution restored.'); },
+    onError: (e) => toast.error(errorMessage(e, 'Could not restore that institution.')),
   });
 
   const filterFields = [

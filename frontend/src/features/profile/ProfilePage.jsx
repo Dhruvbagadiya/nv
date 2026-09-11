@@ -20,7 +20,7 @@ import {
   fetchStudentProfile,
   updateStudentProfile,
 } from '../../api/students.js';
-import { formatDate } from '../../utils/format.js';
+import { formatDate, errorMessage } from '../../utils/format.js';
 import Icon from '../../components/ui/Icon.jsx';
 import { toast } from '../../store/useToast.js';
 import { invalidateResource } from '../../hooks/useInvalidateResource.js';
@@ -48,7 +48,12 @@ function AvatarSection({ profile, onUpdated }) {
     onSuccess: (updated) => {
       patchUser({ avatarUrl: updated.avatarUrl });
       onUpdated(updated);
+      toast.success('Photo updated.');
     },
+    // Only isPending was rendered, so a rejected upload — too large, wrong type,
+    // storage unreachable — ended with the old photo still showing and nothing
+    // said, which reads as "it worked".
+    onError: (e) => toast.error(errorMessage(e, 'Could not upload that photo.')),
   });
 
   const handleCropped = (blob, mime) => {

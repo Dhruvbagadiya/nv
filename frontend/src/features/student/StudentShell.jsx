@@ -39,12 +39,12 @@ export default function StudentShell({ children }) {
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 12, color: 'var(--ink-600)' }}>{user.name}</span>
-              <button className="btn btn-outline" onClick={handleLogout} style={{ fontSize: 12, height: 28 }}>
+              <button className="btn btn-outline" onClick={handleLogout} style={{ fontSize: 12 }}>
                 Sign out
               </button>
             </div>
           ) : (
-            <Link to="/login" className="btn btn-primary" style={{ fontSize: 12, height: 28 }}>
+            <Link to="/login" className="btn btn-primary" style={{ fontSize: 12 }}>
               Sign in
             </Link>
           )}

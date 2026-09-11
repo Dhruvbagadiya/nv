@@ -16,6 +16,7 @@ import { PROGRAM_LEVELS } from '../../constants/referenceData.js';
 import SourceBadge, { ImportNotice } from '../../components/ui/SourceBadge.jsx';
 import BulkImportDialog from './BulkImportDialog.jsx';
 import { toast } from '../../store/useToast.js';
+import { errorMessage } from '../../utils/format.js';
 import InstitutionPicker from '../../components/ui/InstitutionPicker.jsx';
 
 const LEVEL_LABEL = Object.fromEntries(PROGRAM_LEVELS.map((l) => [l.value, l.label]));
@@ -445,8 +446,18 @@ export default function AdminCourses() {
   const invalidate = useInvalidateResource('courses');
   const [importing, setImporting] = useState(false);
 
-  const archiveMutation = useMutation({ mutationFn: archiveCourse, onSuccess: invalidate });
-  const restoreMutation = useMutation({ mutationFn: restoreCourse, onSuccess: invalidate });
+  // Both were silent on failure, which is indistinguishable from success when
+  // the only visible effect is a row changing state.
+  const archiveMutation = useMutation({
+    mutationFn: archiveCourse,
+    onSuccess: () => { invalidate(); toast.success('Course archived.'); },
+    onError: (e) => toast.error(errorMessage(e, 'Could not archive that course.')),
+  });
+  const restoreMutation = useMutation({
+    mutationFn: restoreCourse,
+    onSuccess: () => { invalidate(); toast.success('Course restored.'); },
+    onError: (e) => toast.error(errorMessage(e, 'Could not restore that course.')),
+  });
 
   const programs = data?.data ?? [];
   const meta = data?.meta;
