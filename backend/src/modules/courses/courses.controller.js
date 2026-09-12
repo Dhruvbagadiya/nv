@@ -1,5 +1,5 @@
 import * as coursesService from './courses.service.js';
-import { canSeeArchived } from '../../middleware/optionalAuth.js';
+import { canSeeArchived, canSeeCommission } from '../../middleware/optionalAuth.js';
 
 // No try/catch here: asyncHandler in the routes file forwards rejections to the
 // error middleware. Express 4 does not do that on its own, which is why every
@@ -15,12 +15,18 @@ export async function listCoursesHandler(req, res) {
   // pass status=archived and enumerate rows an admin had deliberately hidden.
   // Non-admins now get the default regardless of what they asked for.
   const query = canSeeArchived(req.user) ? req.query : { ...req.query, status: 'active' };
-  res.json(await coursesService.searchCourses(query));
+  // Commission is partner-confidential, and this endpoint is public — so the
+  // figures were being served to anonymous callers on every /programs page load.
+  res.json(
+    await coursesService.searchCourses(query, { includeCommission: canSeeCommission(req.user) })
+  );
 }
 
 export async function getCourseHandler(req, res) {
   // Single program wrapped in { data: <resource> } for consistency.
-  const program = await coursesService.getCourse(req.params.id);
+  const program = await coursesService.getCourse(req.params.id, {
+    includeCommission: canSeeCommission(req.user),
+  });
   res.json({ data: program });
 }
 

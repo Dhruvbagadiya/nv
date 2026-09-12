@@ -377,6 +377,31 @@
   .text-link { color: var(--info-700); text-decoration: underline; font-weight: 600; }
   .text-link:hover { color: var(--accent-700); }
 
+  /* Shares .empty-state's icon and heading treatment, because a crashed panel
+     and an empty one are the same kind of moment for the reader: the screen has
+     nothing to show and needs to say why. */
+  .error-boundary {
+    padding: var(--sp-7) var(--sp-5); text-align: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .error-boundary h3 { font-size: var(--fs-md); font-weight: 700; color: var(--ink-950); margin: 0 0 var(--sp-1); }
+  .error-boundary p {
+    font-size: var(--fs-xs); color: var(--ink-500); margin: 0 auto;
+    max-width: 46ch; line-height: var(--lh-prose);
+  }
+  .error-boundary__actions {
+    display: flex; gap: var(--sp-2); justify-content: center; flex-wrap: wrap;
+    margin-top: var(--sp-4);
+  }
+  .error-boundary__detail {
+    margin: var(--sp-5) auto 0; max-width: 60ch; overflow-x: auto;
+    padding: var(--sp-3); border-radius: var(--radius-sm);
+    background: var(--canvas); border: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: var(--fs-2xs);
+    color: var(--ink-600); text-align: left; white-space: pre-wrap;
+  }
+
   .empty-state { padding: var(--sp-7) var(--sp-5); text-align: center; }
   .empty-state .e-icon {
     width: 44px; height: 44px; border-radius: var(--radius); background: var(--canvas);

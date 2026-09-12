@@ -1,5 +1,6 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/useAuth.js';
+import ErrorBoundary from '../../components/ui/ErrorBoundary.jsx';
 
 export default function StudentShell({ children }) {
   const user     = useAuth((s) => s.user);
@@ -52,7 +53,9 @@ export default function StudentShell({ children }) {
       </header>
 
       <main className="student-main">
-        {children}
+        {/* Same reasoning as PartnerShell: a throw in a programme list must
+            not take the student portal's header and sign-in control with it. */}
+        <ErrorBoundary>{children}</ErrorBoundary>
       </main>
 
       <footer className="student-footer">

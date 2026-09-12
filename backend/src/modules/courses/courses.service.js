@@ -102,7 +102,7 @@ function buildCommission(commission) {
  *
  *   { id, type: "program", attributes: { ... } }
  */
-function toProgramResource(course) {
+function toProgramResource(course, { includeCommission = false } = {}) {
   const { institution } = course;
   const country = institution.country;
 
@@ -136,14 +136,21 @@ function toProgramResource(course) {
       : null,
   }));
 
-  const commission = buildCommission(institution.commission);
+  // Defaults to false so a caller that forgets to pass it leaks nothing. Both
+  // fields are gated: `commission` is the structured object from the
+  // UniversityCommission row, and `commissionAmount` is the per-course payout
+  // column — different sources, same confidentiality.
+  const commission = includeCommission ? buildCommission(institution.commission) : null;
 
   const attributes = {
     abAppCreationEnabled: course.abAppCreationEnabled,
     // Number(null) is 0, so this must branch: null means no fee was published,
     // and collapsing it to 0 would present an unknown fee as a free one.
     applicationFee: course.applicationFee == null ? null : Number(course.applicationFee),
-    commissionAmount: course.commissionAmount != null ? Number(course.commissionAmount) : null,
+    commissionAmount:
+      includeCommission && course.commissionAmount != null
+        ? Number(course.commissionAmount)
+        : null,
     // The course's own currency wins where the feed publishes one: a country
     // default cannot express De Montfort University Dubai, a UK institution
     // quoting AED, or Lincoln University (New Zealand) quoting NZD.
@@ -226,7 +233,7 @@ export async function searchCourses({
   status = 'active',
   page = 1,
   pageSize = 12,
-}) {
+}, { includeCommission = false } = {}) {
   // Shares the deep-offset guard with every other list endpoint.
   const { skip, take: safeSize, page: safePage } = toSkipTake({ page, pageSize: pageSize ?? 12 });
 
@@ -292,7 +299,7 @@ export async function searchCourses({
 
   const totalPages = Math.ceil(total / safeSize);
   return {
-    data: rows.map(toProgramResource),
+    data: rows.map((row) => toProgramResource(row, { includeCommission })),
     meta: {
       counts: { total },
       page: safePage,
@@ -306,13 +313,13 @@ export async function searchCourses({
   };
 }
 
-export async function getCourse(id) {
+export async function getCourse(id, { includeCommission = false } = {}) {
   const course = await prisma.course.findFirst({
     where: { id, archivedAt: null },
     include: PROGRAM_INCLUDE,
   });
   if (!course) throw new NotFoundError('Course not found or no longer available');
-  return toProgramResource(course);
+  return toProgramResource(course, { includeCommission });
 }
 
 export async function createCourse(data) {
@@ -338,7 +345,9 @@ export async function createCourse(data) {
     },
     include: PROGRAM_INCLUDE,
   });
-  return toProgramResource(course);
+  // ADMIN-only route, and the admin form seeds itself from this response — so
+  // withholding commission here would blank the field on screen after a save.
+  return toProgramResource(course, { includeCommission: true });
 }
 
 export async function updateCourse(id, data) {
@@ -367,7 +376,9 @@ export async function updateCourse(id, data) {
     },
     include: PROGRAM_INCLUDE,
   });
-  return toProgramResource(course);
+  // ADMIN-only route, and the admin form seeds itself from this response — so
+  // withholding commission here would blank the field on screen after a save.
+  return toProgramResource(course, { includeCommission: true });
 }
 
 export async function archiveCourse(id) {
@@ -383,7 +394,9 @@ export async function restoreCourse(id) {
     data: { archivedAt: null },
     include: PROGRAM_INCLUDE,
   });
-  return toProgramResource(course);
+  // ADMIN-only route, and the admin form seeds itself from this response — so
+  // withholding commission here would blank the field on screen after a save.
+  return toProgramResource(course, { includeCommission: true });
 }
 
 export async function bulkCreateCourses(rows) {

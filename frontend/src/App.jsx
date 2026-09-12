@@ -1,9 +1,10 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // ── Public marketing site ──────────────────────────────────────────────
 import LandingPage from './features/landing/LandingPage.jsx';
 
 // ── Partner portal ─────────────────────────────────────────────────────
+import ErrorBoundary from './components/ui/ErrorBoundary.jsx';
 import Header from './components/layout/Header.jsx';
 import Sidebar from './components/layout/Sidebar.jsx';
 import CourseFinder from './features/courseFinder/CourseFinder.jsx';
@@ -61,6 +62,7 @@ const PARTNER_ROLES     = ['AGENT', 'ADMIN', 'SUPER_ADMIN'];
 
 // Shared shell wrapper for partner routes
 function PartnerShell({ children }) {
+  const { pathname } = useLocation();
   return (
     <>
       <Header />
@@ -71,7 +73,12 @@ function PartnerShell({ children }) {
               uncommenting; the announcements themselves are still in the DB and
               editable at /admin/announcements. */}
           {/* <AnnouncementBar /> */}
-          {children}
+          {/* Inside <main>, not around the whole shell: a screen that throws
+              should not take the header and sidebar with it, which is exactly
+              what made the old white page unrecoverable. Keyed on the path so
+              navigating away from a broken screen clears the error rather than
+              carrying it to the next one. */}
+          <ErrorBoundary key={pathname}>{children}</ErrorBoundary>
         </main>
       </div>
     </>
@@ -82,6 +89,9 @@ export default function App() {
   return (
     <>
     <ToastStack />
+    {/* Backstop for anything thrown outside a shell — the landing page, the
+        auth screens, or a route element itself. */}
+    <ErrorBoundary title="Something went wrong">
     <Routes>
       {/* ── Public marketing home ─────────────────────── */}
       {/* Was a redirect to /login, which meant anyone arriving at the bare
@@ -198,6 +208,7 @@ export default function App() {
       {/* ── Catch-all ─────────────────────────────────── */}
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </ErrorBoundary>
     </>
   );
 }

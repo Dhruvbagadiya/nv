@@ -29,7 +29,11 @@ const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
 // Writes remain admin-only.
 router.get('/', optionalAuth, validate(listCoursesQuery, 'query'), asyncHandler(listCoursesHandler));
 
-router.get('/:id', validate(idParam, 'params'), asyncHandler(getCourseHandler));
+// optionalAuth, not "no middleware": the route stays public so a student can
+// open a programme without an account, but the payload carries commission and
+// the serializer has to be able to tell a partner from a stranger. Without it
+// req.user is always undefined here and every caller looked anonymous.
+router.get('/:id', optionalAuth, validate(idParam, 'params'), asyncHandler(getCourseHandler));
 
 // Admin-only writes.
 // bulk-import must be declared before /:id, or "bulk-import" is parsed as an id

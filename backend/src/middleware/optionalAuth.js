@@ -34,3 +34,21 @@ export async function optionalAuth(req, _res, next) {
 
 /** Roles allowed to see soft-deleted rows through a public list endpoint. */
 export const canSeeArchived = (user) => user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+
+/**
+ * Roles allowed to see what the agency earns on a course.
+ *
+ * The course catalogue is deliberately public so students can browse without an
+ * account, but commission is partner-confidential everywhere else in the
+ * product: /api/commissions requires a partner role, the screen lives under
+ * /partner/*, and the only components that render it are partner components.
+ * The figures rode along on the public programme payload anyway, so they sat in
+ * the network tab of any anonymous visitor to /programs — the UI simply never
+ * drew them.
+ *
+ * Written as an allow-list rather than `role !== 'STUDENT'`, which is the
+ * negation pattern utils/scope.js exists to keep out of this codebase: with a
+ * negation, an anonymous caller (`user` undefined) passes.
+ */
+export const canSeeCommission = (user) =>
+  user?.role === 'AGENT' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
