@@ -37,8 +37,14 @@ const COLUMNS = [
     // per-programme. Rendered as lines rather than squeezed into one string.
     render: (c) => (
       <div>
-        {c.tiers.map((t) => (
-          <div key={t.label} className="status-line">
+        {/* Keyed by index, not by label: a flat rate carries the label
+            "All students", and an institution with several unbanded conditions
+            legitimately repeats it — duplicate keys make React reconcile the
+            wrong rows. The list is never reordered, so the index is stable.
+            `?? []` because tiers is a Json column with no shape constraint at
+            the database level. */}
+        {(Array.isArray(c.tiers) ? c.tiers : []).map((t, i) => (
+          <div key={i} className="status-line">
             {t.label === 'All students' ? (
               <b>{t.rate}</b>
             ) : (
