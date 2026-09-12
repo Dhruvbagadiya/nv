@@ -77,6 +77,11 @@ function IntakeMonthPicker({ months, onChange }) {
 
 function IntakeEditor({ intakes, onChange }) {
   const add = () => onChange([...intakes, { startDate: '', openDate: '', submissionDeadline: '' }]);
+  // NOTE: the start date input below is deliberately NOT `required`. It was, and
+  // that made an empty row block submit with the browser's own validation
+  // bubble — which in a long scrolled modal reads as a dead Save button. The
+  // payload already filters rows without a start date, which is what that filter
+  // was written for.
   const remove = (i) => onChange(intakes.filter((_, idx) => idx !== i));
   const update = (i, key, val) =>
     onChange(intakes.map((intake, idx) => (idx === i ? { ...intake, [key]: val } : intake)));
@@ -88,7 +93,7 @@ function IntakeEditor({ intakes, onChange }) {
           <div className="form-field" style={{ flex: 1 }}>
             <label className="flabel">Start date *</label>
             <input type="date" value={intake.startDate}
-              onChange={(e) => update(i, 'startDate', e.target.value)} required />
+              onChange={(e) => update(i, 'startDate', e.target.value)} />
           </div>
           <div className="form-field" style={{ flex: 1 }}>
             <label className="flabel">Open date</label>
@@ -117,7 +122,12 @@ function ChipEditor({ value, onChange, placeholder }) {
 
   const add = () => {
     const v = input.trim();
-    if (v && !chips.includes(v)) onChange([...chips, v]);
+    // Case-insensitive, and the box is cleared only when something was actually
+    // added: clearing it on a duplicate was indistinguishable from a successful
+    // add, and "Instant Offer" / "instant offer" coexisted as two badges.
+    if (!v) return;
+    if (chips.some((c) => c.toLowerCase() === v.toLowerCase())) return;
+    onChange([...chips, v]);
     setInput('');
   };
 

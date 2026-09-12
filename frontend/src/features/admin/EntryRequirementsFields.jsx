@@ -277,7 +277,12 @@ function ChipList({ value, onChange, placeholder }) {
 
   const add = () => {
     const v = draft.trim();
-    if (v && !chips.includes(v)) onChange([...chips, v]);
+    // Case-insensitive: "Instant Offer" and "instant offer" were kept as two
+    // separate badges. The box is cleared only when something was actually
+    // added — clearing it on a duplicate looked exactly like a successful add.
+    if (!v) return;
+    if (chips.some((c) => c.toLowerCase() === v.toLowerCase())) return;
+    onChange([...chips, v]);
     setDraft('');
   };
 

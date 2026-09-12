@@ -72,9 +72,14 @@ function Field({ field, value, onChange }) {
     return (
       <>
         <label htmlFor={id} className="flabel">
-          {field.label}
+          {field.label}{field.required && ' *'}
         </label>
         <TierEditor value={value} onChange={(next) => onChange(field.name, next)} />
+        {/* These two branches returned before the shared hint and asterisk at
+            the bottom of this function, so a config author's hint was silently
+            discarded for exactly the two field types whose purpose is least
+            obvious — while every neighbouring field showed its own. */}
+        {field.hint && <p className="field-hint">{field.hint}</p>}
       </>
     );
   }
@@ -115,16 +120,22 @@ function Field({ field, value, onChange }) {
 
   if (field.type === 'checkbox') {
     return (
-      <label className="checkbox-row" htmlFor={id}>
-        <input
-          id={id}
-          type="checkbox"
-          checked={Boolean(value)}
-          disabled={field.disabled}
-          onChange={(e) => onChange(field.name, e.target.checked)}
-        />
-        <span>{field.label}</span>
-      </label>
+      <>
+        <label className="checkbox-row" htmlFor={id}>
+          <input
+            id={id}
+            type="checkbox"
+            checked={Boolean(value)}
+            disabled={field.disabled}
+            onChange={(e) => onChange(field.name, e.target.checked)}
+          />
+          <span>{field.label}{field.required && ' *'}</span>
+        </label>
+        {/* The hint matters most here: "Untick to take the banner down without
+            deleting it" is the whole explanation of what the box does, and it
+            was being dropped. */}
+        {field.hint && <p className="field-hint">{field.hint}</p>}
+      </>
     );
   }
 

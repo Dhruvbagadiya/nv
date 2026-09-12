@@ -115,7 +115,14 @@ export default function AgencySettings() {
   const handleCropped = (blob, mime, detectedColor) => {
     setPendingBlob(blob);
     setPendingMime(mime);
-    setPendingPreview(URL.createObjectURL(blob));
+    // Revoke the previous one first. createObjectURL pins the blob for the life
+    // of the document, and this is the only createObjectURL in the frontend with
+    // no revokeObjectURL anywhere — so re-cropping five times pinned five 256px
+    // PNGs until the tab closed, as did saving, resetting, or removing the logo.
+    setPendingPreview((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return URL.createObjectURL(blob);
+    });
     setShowCropper(false);
 
     // Auto-apply the detected color as a live preview
@@ -290,7 +297,11 @@ export default function AgencySettings() {
               <input
                 ref={colorInputRef}
                 type="color"
-                value={accentColor}
+                // A partial hex is still legal to have in the text box while
+                // typing, but this control only accepts a complete one — React
+                // warns on anything else and the browser silently coerces it to
+                // black, which then reads back as a deliberate choice.
+                value={/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(accentColor) ? accentColor : NV_DEFAULT_ACCENT}
                 onChange={(e) => previewColor(e.target.value)}
                 style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
                 aria-label="Custom color"
@@ -300,11 +311,20 @@ export default function AgencySettings() {
                   type="text"
                   value={accentColor}
                   onChange={(e) => {
-                    const v = e.target.value;
-                    if (/^#([0-9A-Fa-f]{0,6})$/.test(v)) {
-                      setAccentColor(v);
-                      if (/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(v)) applyTheme(v);
-                    }
+                    // A hex copied from a brand guide arrives without the hash,
+                    // and the old pattern required one — so select-all + paste
+                    // "1B5AA0" matched nothing, setAccentColor never ran, and the
+                    // controlled input snapped back to its previous value. The
+                    // hash is added rather than demanded.
+                    const raw = e.target.value.trim().replace(/^#/, '');
+                    if (!/^[0-9A-Fa-f]{0,6}$/.test(raw)) return;
+                    const v = `#${raw}`;
+                    setAccentColor(v);
+                    // Only a COMPLETE hex is applied. The old pattern allowed
+                    // "#C9", which the swatch rendered as an invalid background
+                    // and <input type="color"> coerced to black while React
+                    // warned about it.
+                    if (/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(v)) applyTheme(v);
                   }}
                   maxLength={7}
                   placeholder="#C96E0E"

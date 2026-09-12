@@ -69,6 +69,33 @@ export function extractDominantColor(imgEl) {
   return extractDominantColorFromData(data, SIZE, SIZE);
 }
 
+// How the image sits inside the preview canvas.
+//
+// The canvas used to be sized min(nw,480) x min(nh,360) and the image stretched
+// to fill it, so a 1200x400 logo was squashed to 480x360 — scaleX 0.4 against
+// scaleY 0.9. The crop box's ORIGIN was then converted with those two separate
+// scales while its SIZE used Math.min of them, so the white square on screen and
+// the region actually sampled were different rectangles: the thumbnails and the
+// saved logo showed a visibly different area and aspect from the box you dragged,
+// and the resize handle was not under its own hit-zone.
+//
+// One scale, letterboxed, so image space and canvas space agree.
+function fitToCanvas(img, W, H) {
+  const scale = Math.min(W / img.naturalWidth, H / img.naturalHeight);
+  return {
+    scale,
+    offsetX: (W - img.naturalWidth * scale) / 2,
+    offsetY: (H - img.naturalHeight * scale) / 2,
+    drawW: img.naturalWidth * scale,
+    drawH: img.naturalHeight * scale,
+  };
+}
+
+// What the dropzone's hint already promised. Kept here rather than only on the
+// input's `accept`, which the file dialog lets the user bypass.
+const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const MAX_BYTES = 2 * 1024 * 1024;
+
 export default function LogoCropper({
   onCropped,
   onCancel,
@@ -81,16 +108,37 @@ export default function LogoCropper({
 
   const [imageSrc,  setImageSrc]  = useState(null);
   const [imgEl,     setImgEl]     = useState(null);
+  const [loadError, setLoadError] = useState(null);
   const [crop,      setCrop]      = useState({ x: 0, y: 0, size: 100 });
   const [dragging,  setDragging]  = useState(null); // null | 'move' | 'resize'
   const [dragStart, setDragStart] = useState(null);
 
   // ── Load selected file ──────────────────────────────────────────────────
+  //
+  // The dropzone's own hint promises "PNG, JPEG or WebP · max 2 MB" and nothing
+  // enforced either half. `accept` on the input is a filter, not a rule — the
+  // file dialog offers an "All files" option — so picking a PDF set imageSrc,
+  // switched the UI to the crop view on the strength of that alone, and then
+  // img.onload never fired: a blank canvas, no preview, no error, and a "Use
+  // this crop" button that threw on drawImage(null, …). A 40 MB JPEG was
+  // base64-encoded into memory and uploaded before the server could refuse it.
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      setLoadError('That file is not a PNG, JPEG or WebP image.');
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      setLoadError(`That image is ${(file.size / 1024 / 1024).toFixed(1)} MB. The limit is 2 MB.`);
+      return;
+    }
+
+    setLoadError(null);
     const reader = new FileReader();
     reader.onload = (ev) => setImageSrc(ev.target.result);
+    reader.onerror = () => setLoadError('That file could not be read.');
     reader.readAsDataURL(file);
   };
 
@@ -98,6 +146,12 @@ export default function LogoCropper({
   useEffect(() => {
     if (!imageSrc) return;
     const img = new Image();
+    // A file can carry an image MIME type and still not decode. Without this the
+    // crop view stays up with an empty canvas and no explanation.
+    img.onerror = () => {
+      setImageSrc(null);
+      setLoadError('That image could not be opened.');
+    };
     img.onload = () => {
       setImgEl(img);
       const size = Math.min(img.naturalWidth, img.naturalHeight) * 0.8;
@@ -117,17 +171,17 @@ export default function LogoCropper({
     const ctx = canvas.getContext('2d');
     const W = canvas.width;
     const H = canvas.height;
+    const { scale, offsetX, offsetY, drawW, drawH } = fitToCanvas(imgEl, W, H);
 
-    // Draw the full image dimmed
+    // Draw the full image dimmed, at its own aspect ratio.
     ctx.clearRect(0, 0, W, H);
-    ctx.drawImage(imgEl, 0, 0, W, H);
+    ctx.drawImage(imgEl, offsetX, offsetY, drawW, drawH);
 
-    // Scale crop coords from image space → canvas space
-    const scaleX = W / imgEl.naturalWidth;
-    const scaleY = H / imgEl.naturalHeight;
-    const cx     = crop.x    * scaleX;
-    const cy     = crop.y    * scaleY;
-    const cs     = crop.size * Math.min(scaleX, scaleY);
+    // Image space → canvas space. One scale for both axes and for the size, so
+    // the box drawn is exactly the region sampled.
+    const cx = offsetX + crop.x    * scale;
+    const cy = offsetY + crop.y    * scale;
+    const cs = crop.size * scale;
 
     // Darken outside the crop
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -139,7 +193,7 @@ export default function LogoCropper({
     ctx.beginPath();
     ctx.rect(cx, cy, cs, cs);
     ctx.clip();
-    ctx.drawImage(imgEl, 0, 0, W, H);
+    ctx.drawImage(imgEl, offsetX, offsetY, drawW, drawH);
     ctx.restore();
 
     // Crop border
@@ -161,11 +215,12 @@ export default function LogoCropper({
   const toImgCoords = (e) => {
     const canvas = previewRef.current;
     const rect   = canvas.getBoundingClientRect();
-    const px     = (e.clientX - rect.left) * (canvas.width  / rect.width);
-    const py     = (e.clientY - rect.top)  * (canvas.height / rect.height);
-    const scaleX = canvas.width  / imgEl.naturalWidth;
-    const scaleY = canvas.height / imgEl.naturalHeight;
-    return { ix: px / scaleX, iy: py / scaleY };
+    const px = (e.clientX - rect.left) * (canvas.width  / rect.width);
+    const py = (e.clientY - rect.top)  * (canvas.height / rect.height);
+    const { scale, offsetX, offsetY } = fitToCanvas(imgEl, canvas.width, canvas.height);
+    // The same letterbox offsets the drawing uses, so the handle is under the
+    // pointer rather than beside it.
+    return { ix: (px - offsetX) / scale, iy: (py - offsetY) / scale };
   };
 
   const onPointerDown = (e) => {
@@ -241,6 +296,9 @@ export default function LogoCropper({
           <div className="logo-cropper-hint">Click to select a logo image</div>
           <div className="logo-cropper-sub">PNG, JPEG or WebP · max 2 MB</div>
         </div>
+        {/* Said where the file was chosen, rather than leaving the picker
+            looking as though the click did nothing. */}
+        {loadError && <p className="form-error" role="alert">{loadError}</p>}
         <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp"
           style={{ display: 'none' }} onChange={handleFile} />
         <div className="logo-cropper-actions">
@@ -257,8 +315,10 @@ export default function LogoCropper({
       {/* Interactive preview canvas */}
       <canvas
         ref={previewRef}
-        width={imgEl ? Math.min(imgEl.naturalWidth, 480) : 480}
-        height={imgEl ? Math.min(imgEl.naturalHeight, 360) : 360}
+        // Fixed, because fitToCanvas letterboxes the image into it. Sizing the
+        // canvas to the image is what forced the non-uniform stretch.
+        width={480}
+        height={360}
         className="logo-cropper-canvas"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -290,7 +350,7 @@ export default function LogoCropper({
           Choose different image
         </button>
         <button type="button" className="btn btn-outline" onClick={onCancel}>Cancel</button>
-        <button type="button" className="btn btn-primary" onClick={applyCrop}>
+        <button type="button" className="btn btn-primary" onClick={applyCrop} disabled={!imgEl}>
           Use this crop
         </button>
       </div>
