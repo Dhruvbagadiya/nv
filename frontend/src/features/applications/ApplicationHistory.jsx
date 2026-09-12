@@ -33,7 +33,7 @@ export default function ApplicationHistory() {
   const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState(null);
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
-  const { options: countryOptions } = useCountries();
+  const { options: countryOptions, isError: countriesFailed } = useCountries();
   const { options: institutionOptions } = useInstitutions(
     applied.country ? { country: applied.country } : {}
   );
@@ -45,6 +45,7 @@ export default function ApplicationHistory() {
       type: 'select',
       placeholder: 'Select country',
       options: countryOptions,
+      optionsError: countriesFailed,
     },
     {
       name: 'institutionId',

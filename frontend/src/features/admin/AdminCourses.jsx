@@ -475,7 +475,7 @@ const FILTER_DEFAULTS = { country: '', institutionId: '', programLevel: '', sear
 export default function AdminCourses() {
   const [editing, setEditing] = useState(null);
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
-  const { options: countryOptions } = useCountries();
+  const { options: countryOptions, isError: countriesFailed } = useCountries();
 
   const { data, isLoading, isError, isFetching } = useQuery({
     queryKey: ['admin-courses', applied],
@@ -503,7 +503,7 @@ export default function AdminCourses() {
   const meta = data?.meta;
 
   const filterFields = [
-    { name: 'country',      label: 'Country',       type: 'select', placeholder: 'All countries',      options: countryOptions },
+    { name: 'country',      label: 'Country',       type: 'select', placeholder: 'All countries',      options: countryOptions, optionsError: countriesFailed },
     { name: 'institutionId',label: 'Institution',    type: 'institution', countryCode: applied.country || undefined },
     { name: 'programLevel', label: 'Level',          type: 'select', placeholder: 'All levels',
       options: PROGRAM_LEVELS },

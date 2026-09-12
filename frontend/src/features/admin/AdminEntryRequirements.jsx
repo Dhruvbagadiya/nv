@@ -10,7 +10,7 @@ export default function AdminEntryRequirements() {
   // The API requires a level and there is no combined view, so the screen owns the
   // choice rather than pretending UG and PG are one list.
   const [level, setLevel] = useState('UG');
-  const { options: countryOptions } = useCountries();
+  const { options: countryOptions, isError: countriesFailed } = useCountries();
 
   const resource = {
     title: 'Entry requirements',
@@ -34,7 +34,7 @@ export default function AdminEntryRequirements() {
 
     filterDefaults: FILTER_DEFAULTS,
     filterFields: [
-      { name: 'country', label: 'Country', type: 'select', placeholder: 'Any country', options: countryOptions },
+      { name: 'country', label: 'Country', type: 'select', placeholder: 'Any country', options: countryOptions, optionsError: countriesFailed },
       {
         name: 'institutionId',
         label: 'Institution',

@@ -43,7 +43,7 @@ export default function EntityPicker({
     return () => clearTimeout(t);
   }, [search]);
 
-  const { data: options = [], isFetching } = useQuery({
+  const { data: options = [], isFetching, isError } = useQuery({
     queryKey: [...queryKey, debounced],
     queryFn: () => fetchOptions(debounced),
     enabled: open,
@@ -155,7 +155,10 @@ export default function EntityPicker({
           ))}
           {!options.length && (
             <li className="picker-empty" role="presentation">
-              {isFetching ? 'Searching…' : emptyMessage}
+              {/* "Not found" and "the search failed" are different answers, and
+                  reading the second as the first is how an admin creates a
+                  duplicate institution. */}
+              {isFetching ? 'Searching…' : isError ? 'Search failed — try again.' : emptyMessage}
             </li>
           )}
         </ul>

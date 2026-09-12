@@ -16,7 +16,7 @@ export default function CoursePicker({ value, onChange }) {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounced(search);
 
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isError } = useQuery({
     queryKey: ['courses', 'picker', debouncedSearch],
     queryFn: () => fetchCourses({ search: debouncedSearch || undefined, page: 1 }),
     placeholderData: keepPreviousData,
@@ -42,7 +42,11 @@ export default function CoursePicker({ value, onChange }) {
         )}
         {!isFetching && programs.length === 0 && (
           <div className="picker-empty">
-            {search ? `No courses match "${search}".` : 'Start typing to search courses.'}
+            {/* A failed search read as "that course is not in the catalogue",
+                so an agent abandoned a perfectly valid application. */}
+            {isError
+              ? 'Couldn’t search courses — try again.'
+              : search ? `No courses match "${search}".` : 'Start typing to search courses.'}
           </div>
         )}
 

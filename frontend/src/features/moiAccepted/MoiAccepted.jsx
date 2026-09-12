@@ -47,7 +47,7 @@ export default function MoiAccepted() {
   // Both dropdowns come from live data now. Course type in particular is a
   // free-text column, so a hardcoded list in the UI would drift from what is
   // actually stored and offer filters that match nothing.
-  const { options: countryOptions } = useCountries();
+  const { options: countryOptions, isError: countriesFailed } = useCountries();
   const { data: courseTypes = [] } = useQuery({
     queryKey: ['moi-course-types'],
     queryFn: fetchMoiCourseTypes,
@@ -61,6 +61,7 @@ export default function MoiAccepted() {
       type: 'select',
       placeholder: 'Select country',
       options: countryOptions,
+      optionsError: countriesFailed,
     },
     {
       name: 'courseType',

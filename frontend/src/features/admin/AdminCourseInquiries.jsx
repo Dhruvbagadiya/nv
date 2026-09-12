@@ -6,6 +6,8 @@ import Flag from '../../components/ui/Flag.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 import { invalidateResource } from '../../hooks/useInvalidateResource.js';
+import { toast } from '../../store/useToast.js';
+import { errorMessage } from '../../utils/format.js';
 import { fetchCourseInquiries } from '../../api/referenceScreens.js';
 import { updateInquiryStage } from '../../api/admin.js';
 
@@ -42,7 +44,14 @@ export default function AdminCourseInquiries() {
 
   const setStage = useMutation({
     mutationFn: ({ id, stage }) => updateInquiryStage(id, stage),
-    onSuccess: () => invalidateResource(queryClient, 'course-inquiries'),
+    onSuccess: () => {
+      invalidateResource(queryClient, 'course-inquiries');
+      toast.success('Stage updated.');
+    },
+    // The <select> is controlled by value={r.stage}, so a rejected update
+    // re-renders with the OLD value: the dropdown flicks back with nothing said,
+    // and by then the admin is looking at the next row.
+    onError: (e) => toast.error(errorMessage(e, 'Could not update that stage.')),
   });
 
   const columns = [

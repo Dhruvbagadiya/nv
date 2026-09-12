@@ -15,7 +15,7 @@ import { formatDate, toDateInput } from '../../utils/format.js';
 const FILTER_DEFAULTS = { countryId: '', institutionId: '', status: 'active', page: 1 };
 
 export default function AdminUpdates() {
-  const { countries } = useCountries();
+  const { countries, isError: countriesFailed } = useCountries();
 
   const countryOptions = countries.map((c) => ({ value: c.id, label: c.name }));
 
@@ -86,6 +86,7 @@ export default function AdminUpdates() {
         type: 'select',
         placeholder: 'All countries',
         options: countryOptions,
+        optionsError: countriesFailed,
         hint: 'Leave blank for an update that applies everywhere.',
       },
       {

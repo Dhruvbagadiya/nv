@@ -6,7 +6,7 @@ import { useCountries } from '../../hooks/useReferenceData.js';
 const FILTER_DEFAULTS = { country: '', institutionId: '', courseType: '', page: 1 };
 
 export default function AdminMoiAcceptances() {
-  const { options: countryOptions } = useCountries();
+  const { options: countryOptions, isError: countriesFailed } = useCountries();
 
   const resource = {
     title: 'MOI Acceptances',
@@ -25,7 +25,7 @@ export default function AdminMoiAcceptances() {
 
     filterDefaults: FILTER_DEFAULTS,
     filterFields: [
-      { name: 'country',       label: 'Country',     type: 'select', placeholder: 'Any country',     options: countryOptions },
+      { name: 'country',       label: 'Country',     type: 'select', placeholder: 'Any country',     options: countryOptions, optionsError: countriesFailed },
       { name: 'institutionId', label: 'Institution',  type: 'institution' },
       { name: 'courseType',    label: 'Course type',  type: 'text',   placeholder: 'e.g. Masters' },
     ],

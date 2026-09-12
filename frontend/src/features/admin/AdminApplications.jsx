@@ -40,7 +40,7 @@ const STAGE_COLORS = {
 export default function AdminApplications() {
   const [selectedId, setSelectedId] = useState(null);
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
-  const { options: countryOptions } = useCountries();
+  const { options: countryOptions, isError: countriesFailed } = useCountries();
 
   const { data, isLoading, isError, isFetching } = useQuery({
     queryKey: ['admin-applications', applied],
@@ -49,7 +49,7 @@ export default function AdminApplications() {
   });
 
   const filterFields = [
-    { name: 'country',      label: 'Country',      type: 'select', placeholder: 'All countries',    options: countryOptions },
+    { name: 'country',      label: 'Country',      type: 'select', placeholder: 'All countries',    options: countryOptions, optionsError: countriesFailed },
     // countryCode narrows the search to the chosen destination, which is what
     // the country-scoped institution list used to do before this became a
     // server-side search.

@@ -13,7 +13,7 @@ const FILTER_DEFAULTS = { from: '', to: '', countryId: '', institutionId: '', pa
 
 export default function ImportantUpdates() {
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
-  const { countries } = useCountries();
+  const { countries, isError: countriesFailed } = useCountries();
   const { options: institutionOptions } = useInstitutions();
   // The detail row is already in the list payload, so the eye icon opens instantly
   // rather than firing another request for data we have.
@@ -30,6 +30,7 @@ export default function ImportantUpdates() {
       // Filters by id here, not code, because ImportantUpdate.countryId is a
       // direct relation rather than a join through institution.
       options: countries.map((c) => ({ value: c.id, label: c.name })),
+      optionsError: countriesFailed,
     },
     {
       name: 'institutionId',

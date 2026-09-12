@@ -1,8 +1,16 @@
 import axios from 'axios';
 import { getAccessToken, getCurrentUserId, useAuth } from '../store/useAuth.js';
 
+// A hung backend — TCP connected, no response — never settles on its own, so
+// without a timeout every screen sat on its skeleton indefinitely with no error
+// state and no way to cancel. ProtectedRoute had the same exposure: bootstrap()
+// hanging meant an unbreakable full-screen "Loading…". 20s is well past the
+// slowest real query (the 93k-row catalogue count) and far short of forever.
+const TIMEOUT_MS = 20_000;
+
 export const api = axios.create({
   baseURL: '/api',
+  timeout: TIMEOUT_MS,
   // Required for the httpOnly refresh cookie to be sent on /auth/refresh.
   withCredentials: true,
 });
@@ -10,7 +18,7 @@ export const api = axios.create({
 // A bare client with no interceptors, used only to call /auth/refresh. Reusing
 // `api` here would recurse: a failing refresh returns 401, which would trigger
 // the interceptor, which would call refresh again.
-const refreshClient = axios.create({ baseURL: '/api', withCredentials: true });
+const refreshClient = axios.create({ baseURL: '/api', timeout: TIMEOUT_MS, withCredentials: true });
 
 api.interceptors.request.use((config) => {
   const token = getAccessToken();

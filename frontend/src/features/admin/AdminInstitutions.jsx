@@ -201,7 +201,7 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
 export default function AdminInstitutions() {
   const [editing, setEditing] = useState(null);
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
-  const { countries } = useCountries();
+  const { countries, isError: countriesFailed } = useCountries();
 
   const countryOptions = countries.map((c) => ({ value: c.code, label: c.name }));
 
@@ -245,7 +245,7 @@ export default function AdminInstitutions() {
   });
 
   const filterFields = [
-    { name: 'country',         label: 'Country',           type: 'select', placeholder: 'All countries',  options: countryOptions },
+    { name: 'country',         label: 'Country',           type: 'select', placeholder: 'All countries',  options: countryOptions, optionsError: countriesFailed },
     { name: 'search',          label: 'Search',            type: 'text',   placeholder: 'Institution name' },
     { name: 'blacklisted',     label: 'Blacklisted',       type: 'select', placeholder: 'Any status',
       options: [{ value: 'true', label: 'Blacklisted only' }, { value: 'false', label: 'Active only' }] },

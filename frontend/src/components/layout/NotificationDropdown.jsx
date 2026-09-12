@@ -51,7 +51,7 @@ export default function NotificationDropdown() {
 
   // The list is only fetched once the panel is actually opened, and re-fetches
   // when the panel opens so it's always fresh.
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['notifications', 'list'],
     queryFn: () => fetchNotifications({ pageSize: 10 }),
     enabled: open,
@@ -134,7 +134,17 @@ export default function NotificationDropdown() {
             </div>
           )}
 
-          {!isLoading && items.length === 0 && (
+          {/* A failed request used to render "You're all caught up." — and this
+              panel sits in the header of every partner and admin page, so an
+              agent with three unread offer letters was told there were none,
+              with nothing to distinguish it from a genuine zero. */}
+          {isError && (
+            <div className="notif-item">
+              <div className="notif-text">Couldn’t load notifications.</div>
+            </div>
+          )}
+
+          {!isLoading && !isError && items.length === 0 && (
             <div className="notif-item">
               <div className="notif-text">You’re all caught up.</div>
             </div>

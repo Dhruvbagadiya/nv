@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invalidateResource } from '../../hooks/useInvalidateResource.js';
+import { toast } from '../../store/useToast.js';
+import { errorMessage } from '../../utils/format.js';
 import Modal from '../ui/Modal.jsx';
 import { fetchSubAgents, createSubAgent, removeSubAgent } from '../../api/admin.js';
 import { useAuth } from '../../store/useAuth.js';
@@ -18,7 +20,7 @@ export default function SubAgentButton() {
   const queryClient = useQueryClient();
   const user = useAuth((s) => s.user);
 
-  const { data: subAgents = [], isLoading } = useQuery({
+  const { data: subAgents = [], isLoading, isError } = useQuery({
     queryKey: ['sub-agents'],
     queryFn: fetchSubAgents,
     enabled: open,
@@ -38,6 +40,9 @@ export default function SubAgentButton() {
   const remove = useMutation({
     mutationFn: removeSubAgent,
     onSuccess: () => invalidateResource(queryClient, 'users'),
+    // Its sibling `create` reports failures and this did not, so a refused
+    // removal left the row in place and invited a second click.
+    onError: (e) => toast.error(errorMessage(e, 'Could not remove that sub-agent.')),
   });
 
   const close = () => {
@@ -112,7 +117,11 @@ export default function SubAgentButton() {
             <>
               <div className="subagent-list">
                 {isLoading && <div className="picker-empty">Loading…</div>}
-                {!isLoading && subAgents.length === 0 && (
+                {/* Without this, a failed fetch told an agent their entire
+                    team had vanished — and the obvious response is to create
+                    accounts that already exist. */}
+                {isError && <div className="picker-empty">Couldn’t load your sub-agents.</div>}
+                {!isLoading && !isError && subAgents.length === 0 && (
                   <div className="picker-empty">You have no sub-agents yet.</div>
                 )}
                 {subAgents.map((s) => (

@@ -9,7 +9,10 @@
 //
 //   const FIELDS = [
 //     { name: 'country',  label: 'Country', type: 'select', placeholder: 'Select country',
-//       options: countries.map((c) => ({ value: c.code, label: c.name })) },
+//       options: countries.map((c) => ({ value: c.code, label: c.name })),
+//       // Pass the reference query's isError so an empty list caused by a failed
+//       // request does not read as a destination list with nothing in it.
+//       optionsError: countriesQuery.isError },
 //     { name: 'search',   label: 'Search by name', type: 'text',
 //       placeholder: 'Enter keywords to search institute' },
 //     { name: 'dateFrom', label: 'Publish date from', type: 'date' },
@@ -72,7 +75,18 @@ export default function FilterBar({
                   disabled={field.disabled}
                   onChange={(e) => onChange(field.name, e.target.value)}
                 >
-                  <option value="">{field.placeholder ?? `All ${field.label.toLowerCase()}`}</option>
+                  {/* An options list that failed to load is not an empty one.
+                      The reference hooks return `options: data ?? []` and expose
+                      isError through the spread, but no caller reads it — so a
+                      failed /countries left every Country dropdown in the app
+                      holding only its placeholder, looking like a broken filter
+                      rather than a transient network problem. Said once here,
+                      where all twelve of those dropdowns already pass through. */}
+                  <option value="">
+                    {field.optionsError
+                      ? `Couldn’t load ${field.label.toLowerCase()}`
+                      : field.placeholder ?? `All ${field.label.toLowerCase()}`}
+                  </option>
                   {(field.options ?? []).map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}

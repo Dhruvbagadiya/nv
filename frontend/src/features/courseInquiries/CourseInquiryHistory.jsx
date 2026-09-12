@@ -28,7 +28,7 @@ const INTAKES = intakeFilters();
 export default function CourseInquiryHistory() {
   const navigate = useNavigate();
   const { applied, draft, setField, apply, clear, setPage } = useUrlFilters(FILTER_DEFAULTS);
-  const { countries } = useCountries();
+  const { countries, isError: countriesFailed } = useCountries();
 
   const fields = [
     {
@@ -38,6 +38,7 @@ export default function CourseInquiryHistory() {
       placeholder: 'Select country',
       // countryId, not code: CourseInquiry has a direct relation to Country.
       options: countries.map((c) => ({ value: c.id, label: c.name })),
+      optionsError: countriesFailed,
     },
     {
       name: 'intake',

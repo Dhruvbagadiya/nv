@@ -6,7 +6,7 @@ import { useCountries } from '../../hooks/useReferenceData.js';
 const FILTER_DEFAULTS = { country: '', search: '', status: 'active', page: 1 };
 
 export default function AdminCommissions() {
-  const { options: countryOptions } = useCountries();
+  const { options: countryOptions, isError: countriesFailed } = useCountries();
 
   const resource = {
     title: 'Universities commission',
@@ -29,7 +29,7 @@ export default function AdminCommissions() {
 
     filterDefaults: FILTER_DEFAULTS,
     filterFields: [
-      { name: 'country', label: 'Country', type: 'select', placeholder: 'Any country', options: countryOptions },
+      { name: 'country', label: 'Country', type: 'select', placeholder: 'Any country', options: countryOptions, optionsError: countriesFailed },
       { name: 'search', label: 'Search', type: 'text', placeholder: 'Institution name' },
     ],
 
