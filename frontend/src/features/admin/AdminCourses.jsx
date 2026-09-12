@@ -10,7 +10,7 @@ import Icon from '../../components/ui/Icon.jsx';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
 import { useInvalidateResource } from '../../hooks/useInvalidateResource.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
-import { fetchCourses, createCourse, updateCourse, archiveCourse, restoreCourse } from '../../api/courses.js';
+import { fetchCourses, fetchCourse, createCourse, updateCourse, archiveCourse, restoreCourse } from '../../api/courses.js';
 import { formatFee } from '../../utils/format.js';
 import { PROGRAM_LEVELS } from '../../constants/referenceData.js';
 import SourceBadge, { ImportNotice } from '../../components/ui/SourceBadge.jsx';
@@ -147,14 +147,10 @@ function ChipEditor({ value, onChange, placeholder }) {
   );
 }
 
-// ── Course modal form ─────────────────────────────────────────────────────────
-function CourseModal({ initial, onClose, onSaved }) {
-  const isEdit = Boolean(initial?.id);
-  // When editing, attributes live inside initial.attributes
-  const attr = initial?.attributes ?? {};
-
-  const [form, setForm] = useState({
-    institutionId:         attr.school ? '' : '',  // resolved below
+// One seed, used both for the first render and for the re-seed once the detail
+// query returns the untruncated course — two copies of this would drift.
+function formFrom(attr) {
+  return {
     title:                 attr.name              ?? '',
     shortName:             attr.shortName         ?? '',
     slug:                  attr.slug              ?? '',
@@ -191,7 +187,32 @@ function CourseModal({ initial, onClose, onSaved }) {
       overallScore:       i.overallScore       ?? null,
       scoreDetails:       i.scoreDetails       ?? [],
     })),
+  };
+}
+
+// ── Course modal form ─────────────────────────────────────────────────────────
+function CourseModal({ initial, onClose, onSaved }) {
+  const isEdit = Boolean(initial?.id);
+
+  // The row handed in came from the LIST query, whose include caps intakes at
+  // `take: 12` (PROGRAM_LIST_INCLUDE). The form posts `intakes` on every save
+  // and the API replaces the whole set, so editing a course with more than
+  // twelve dated intakes silently deleted the rest — a title change was enough,
+  // and nothing reported it. The detail endpoint returns them all, so the form
+  // edits the real thing rather than a truncated projection of it.
+  const detail = useQuery({
+    queryKey: ['course', initial?.id],
+    queryFn: () => fetchCourse(initial.id),
+    enabled: isEdit,
   });
+
+  const attr = (isEdit ? detail.data?.data?.attributes : null) ?? initial?.attributes ?? {};
+  // Whether the full set is actually in hand. Until it is, the form must not
+  // send `intakes` at all — otherwise a save made from the truncated seed does
+  // the very damage this is here to prevent.
+  const intakesLoaded = !isEdit || detail.isSuccess;
+
+  const [form, setForm] = useState(() => formFrom(attr));
 
   // For edit, find the institution by slug or name match.
   // The course response carries school.id, so there was never anything to match.
@@ -199,6 +220,16 @@ function CourseModal({ initial, onClose, onSaved }) {
   // re-run once that list arrived — and matching by name is how a course lands
   // on the wrong campus when two share one.
   const [instId, setInstId] = useState(attr.school?.id ?? '');
+
+  // Seeded during render, keyed on the payload's identity, the same way
+  // ProfilePage and useUrlFilters do it — not in an effect, which would render
+  // one frame of the truncated seed first.
+  const [seededFrom, setSeededFrom] = useState(null);
+  if (isEdit && detail.data && detail.data !== seededFrom) {
+    setSeededFrom(detail.data);
+    setForm(formFrom(detail.data.data?.attributes ?? {}));
+    setInstId(detail.data.data?.attributes?.school?.id ?? '');
+  }
 
   const [error, setError] = useState(null);
   const set = (k, v) => setForm((f) => {
@@ -242,15 +273,20 @@ function CourseModal({ initial, onClose, onSaved }) {
       intakeMonths:          form.intakeMonths,
       tags:                  form.tags,
       badges:                form.badges,
-      intakes:               form.intakes
-        .filter((i) => i.startDate)
-        .map((i) => ({
-          startDate:          new Date(i.startDate),
-          openDate:           i.openDate           ? new Date(i.openDate)           : null,
-          submissionDeadline: i.submissionDeadline ? new Date(i.submissionDeadline) : null,
-          overallScore:       i.overallScore ?? null,
-          scoreDetails:       Array.isArray(i.scoreDetails) ? i.scoreDetails : [],
-        })),
+      // Omitted entirely unless the full set was loaded: the API leaves intakes
+      // alone when the key is absent and replaces them when it is present, so
+      // sending a partial list is what destroys rows.
+      ...(intakesLoaded && {
+        intakes: form.intakes
+          .filter((i) => i.startDate)
+          .map((i) => ({
+            startDate:          new Date(i.startDate),
+            openDate:           i.openDate           ? new Date(i.openDate)           : null,
+            submissionDeadline: i.submissionDeadline ? new Date(i.submissionDeadline) : null,
+            overallScore:       i.overallScore ?? null,
+            scoreDetails:       Array.isArray(i.scoreDetails) ? i.scoreDetails : [],
+          })),
+      }),
     });
   };
 
@@ -420,8 +456,12 @@ function CourseModal({ initial, onClose, onSaved }) {
 
         <div className="submit-row" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
           <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={save.isPending}>
-            {save.isPending ? 'Saving…' : (isEdit ? 'Save changes' : 'Add course')}
+          {/* Held closed until the untruncated course is in hand. The payload
+              omits intakes until then so an early save cannot delete any, but
+              the intake editor would still be showing a partial list, and
+              editing a list you cannot see all of is its own trap. */}
+          <button type="submit" className="btn btn-primary" disabled={save.isPending || !intakesLoaded}>
+            {save.isPending ? 'Saving…' : !intakesLoaded ? 'Loading…' : (isEdit ? 'Save changes' : 'Add course')}
           </button>
         </div>
       </form>

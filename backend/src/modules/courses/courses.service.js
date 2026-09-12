@@ -361,13 +361,15 @@ export async function updateCourse(id, data) {
     where: { id },
     data: {
       ...rest,
-      // `intakes?.length`, not `intakes`: [] is truthy, and the admin form sends
-      // the key on every save filtered to rows that have a start date. A course
-      // whose intake rows were never filled in therefore had every CourseIntake
-      // row deleted by an unrelated edit. An empty array now means "nothing to
-      // say about intakes", the same as omitting the key; clearing them is a
-      // deliberate act that belongs behind its own endpoint.
-      ...(intakes?.length && {
+      // Absent key means "no opinion, leave them alone"; a present array — empty
+      // included — means "this is the set". The guard used to be
+      // `intakes?.length`, so an empty array was indistinguishable from an
+      // absent key and removing every intake silently did nothing: the rows came
+      // back the moment the modal was reopened, while the UI had reported a
+      // successful save. That guard existed because the form posted a truncated
+      // list; it now posts the key only when it holds the complete set, so the
+      // honest semantics are safe again.
+      ...(intakes !== undefined && {
         intakes: {
           deleteMany: {},
           create: intakes,

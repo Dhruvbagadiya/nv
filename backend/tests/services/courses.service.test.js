@@ -93,16 +93,24 @@ describe('updateCourse — intake handling', () => {
     prismaMock.course.update.mockResolvedValue(courseRow());
   });
 
-  // `[]` is truthy. The admin form sends `intakes` on every save, filtered to
-  // rows that have a start date — so saving a course whose intake rows were
-  // never filled in deleted every CourseIntake row it had.
-  it('does not delete every intake when handed an empty array', async () => {
+  // The contract is the key's PRESENCE, not its length.
+  //
+  // It used to be `intakes?.length`, which made an empty array mean the same as
+  // an absent key — so a user who removed every intake and saved got a success
+  // message and the rows back on reopening. That guard was compensating for an
+  // admin form that posted a truncated list (the list query caps intakes at 12);
+  // the form now omits the key entirely until it holds the complete set, so the
+  // honest reading is safe and clearing works.
+  it('clears the set when handed an empty array', async () => {
     await service.updateCourse('c1', { title: 'Renamed', intakes: [] });
 
     const data = prismaMock.course.update.mock.calls[0][0].data;
-    expect(data.intakes).toBeUndefined();
+    expect(data.intakes.deleteMany).toEqual({});
+    expect(data.intakes.create).toEqual([]);
   });
 
+  // The other half of that contract, and the reason an absent key cannot be
+  // treated as an empty one: most saves say nothing about intakes at all.
   it('leaves intakes alone when the key is absent', async () => {
     await service.updateCourse('c1', { title: 'Renamed' });
 
