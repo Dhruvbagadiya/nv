@@ -2,7 +2,10 @@ import { z } from 'zod';
 import { ApplicationStage } from '@prisma/client';
 
 export const updateProfileBody = z.object({
-  nationality:  z.string().trim().max(80).optional(),
+  // Nullable like its four siblings and like the column itself. It was the one
+  // field with no way to express "clear this", so a student who emptied the box
+  // got a success message and the old value back.
+  nationality:  z.string().trim().max(80).optional().nullable(),
   dateOfBirth:  z.coerce.date().optional().nullable(),
   passportNo:   z.string().trim().max(40).optional().nullable(),
   phone:        z.string().trim().max(30).optional().nullable(),

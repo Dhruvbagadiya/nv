@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useSeededForm } from '../../hooks/useSeededForm.js';
+import { toDateInput } from '../../utils/format.js';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invalidateResource } from '../../hooks/useInvalidateResource.js';
@@ -6,7 +7,6 @@ import { fetchStudentProfile, updateStudentProfile } from '../../api/students.js
 import { useAuth } from '../../store/useAuth.js';
 import { toast } from '../../store/useToast.js';
 
-const EMPTY_FORM = { nationality: '', dateOfBirth: '', passportNo: '', phone: '', address: '' };
 
 export default function StudentProfile() {
   const queryClient = useQueryClient();
@@ -24,39 +24,30 @@ export default function StudentProfile() {
     queryFn: fetchStudentProfile,
   });
 
-  const [form, setForm] = useState(EMPTY_FORM);
-
-  // Seeded during render rather than from an effect. An effect renders twice and
-  // paints the empty form first, so the fields visibly fill in a beat late.
-  // react-query keeps a stable object while the data is unchanged, so this runs
-  // once per load. (The older "setState during render" this replaced warned
-  // because it was unconditional; keyed on the data's identity it does not.)
-  const [seededFrom, setSeededFrom] = useState(null);
-  if (profile && profile !== seededFrom) {
-    setSeededFrom(profile);
-    setForm({
-      nationality: profile.nationality  ?? '',
-      dateOfBirth: profile.dateOfBirth
-        ? new Date(profile.dateOfBirth).toISOString().slice(0, 10)
-        : '',
-      passportNo:  profile.passportNo  ?? '',
-      phone:       profile.phone       ?? '',
-      address:     profile.address     ?? '',
-    });
-  }
-
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  // The same hook the partner-side profile uses. This screen shares the
+  // ['student-profile'] cache with it, so a save on either side refetched here
+  // and reset whatever had been typed and not yet saved.
+  const { values: form, setField: set, markSaved } = useSeededForm(profile, (p) => ({
+    nationality: p.nationality ?? '',
+    dateOfBirth: toDateInput(p.dateOfBirth),
+    passportNo:  p.passportNo ?? '',
+    phone:       p.phone ?? '',
+    address:     p.address ?? '',
+  }));
 
   const mutation = useMutation({
     mutationFn: () => updateStudentProfile({
-      nationality: form.nationality  || undefined,
-      dateOfBirth: form.dateOfBirth  || undefined,
-      passportNo:  form.passportNo   || undefined,
-      phone:       form.phone        || undefined,
-      address:     form.address      || undefined,
+      // null, not undefined — JSON.stringify drops undefined, so a cleared box
+      // never reached the server and the old value came back on the refetch.
+      nationality: form.nationality  || null,
+      dateOfBirth: form.dateOfBirth  || null,
+      passportNo:  form.passportNo   || null,
+      phone:       form.phone        || null,
+      address:     form.address      || null,
     }),
     onSuccess: () => {
       invalidateResource(queryClient, 'profile');
+      markSaved();
       toast.success('Profile saved.');
     },
   });

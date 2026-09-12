@@ -7,10 +7,10 @@ import {
   restoreImportantUpdate,
 } from '../../api/admin.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
-import { formatDate } from '../../utils/format.js';
+import { formatDate, toDateInput } from '../../utils/format.js';
 
 // A date input needs yyyy-mm-dd; the API returns a full ISO timestamp.
-const toDateInput = (iso) => (iso ? new Date(iso).toISOString().slice(0, 10) : '');
+// Shared with the two profile forms; guards the Invalid Date that would throw.
 
 const FILTER_DEFAULTS = { countryId: '', institutionId: '', status: 'active', page: 1 };
 

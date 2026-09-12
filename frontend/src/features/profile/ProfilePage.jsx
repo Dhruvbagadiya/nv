@@ -10,6 +10,7 @@
  *   6. Role badge + account status
  */
 import { useState } from 'react';
+import { useSeededForm } from '../../hooks/useSeededForm.js';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../store/useAuth.js';
@@ -20,7 +21,7 @@ import {
   fetchStudentProfile,
   updateStudentProfile,
 } from '../../api/students.js';
-import { formatDate, errorMessage } from '../../utils/format.js';
+import { formatDate, errorMessage, toDateInput } from '../../utils/format.js';
 import Icon from '../../components/ui/Icon.jsx';
 import { toast } from '../../store/useToast.js';
 import { invalidateResource } from '../../hooks/useInvalidateResource.js';
@@ -109,20 +110,17 @@ function AvatarSection({ profile, onUpdated }) {
 
 // ── Basic info form ─────────────────────────────────────────────────────────
 function BasicInfoForm({ profile, onUpdated }) {
-  const [form, setForm] = useState({ name: '', phone: '', bio: '' });
   const patchUser = useAuth((s) => s.patchUser);
 
-  // Seeded during render rather than from an effect. Setting state inside an
-  // effect renders twice and paints the empty form first, so the fields visibly
-  // fill in a beat after the page appears. react-query keeps a stable object
-  // while the data is unchanged, so this runs once per load.
-  const [seededFrom, setSeededFrom] = useState(null);
-  if (profile && profile !== seededFrom) {
-    setSeededFrom(profile);
-    setForm({ name: profile.name ?? '', phone: profile.phone ?? '', bio: profile.bio ?? '' });
-  }
-
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  // useSeededForm, not a hand-rolled seed: saving the student section below
+  // invalidates BOTH profile caches, so this form was re-seeded from a refetch
+  // it had nothing to do with — and anything typed here and not yet saved was
+  // silently reverted.
+  const { values: form, setField: set, markSaved } = useSeededForm(profile, (p) => ({
+    name: p.name ?? '',
+    phone: p.phone ?? '',
+    bio: p.bio ?? '',
+  }));
 
   const mutation = useMutation({
     mutationFn: () => updateProfile({
@@ -133,6 +131,8 @@ function BasicInfoForm({ profile, onUpdated }) {
     onSuccess: (updated) => {
       patchUser({ name: updated.name, phone: updated.phone, bio: updated.bio });
       onUpdated(updated);
+      // Clean again, so the refetch this triggers is allowed to re-seed.
+      markSaved();
       toast.success('Profile updated.');
     },
   });
@@ -277,30 +277,32 @@ function ChangePasswordForm() {
 function StudentDetailsForm() {
   const queryClient = useQueryClient();
   const { data: sp, isLoading } = useQuery({ queryKey: ['student-profile'], queryFn: fetchStudentProfile });
-  const [form, setForm] = useState({ nationality: '', dateOfBirth: '', passportNo: '', address: '' });
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-
-  // Seeded during render — see BasicInfoForm above.
-  const [seededFrom, setSeededFrom] = useState(null);
-  if (sp && sp !== seededFrom) {
-    setSeededFrom(sp);
-    setForm({
-      nationality:  sp.nationality  ?? '',
-      dateOfBirth:  sp.dateOfBirth ? new Date(sp.dateOfBirth).toISOString().slice(0, 10) : '',
-      passportNo:   sp.passportNo   ?? '',
-      address:      sp.address      ?? '',
-    });
-  }
+  // Same hook as BasicInfoForm above, and for the same reason: saving that
+  // section invalidates this one's cache too.
+  const { values: form, setField: set, markSaved } = useSeededForm(sp, (p) => ({
+    nationality: p.nationality ?? '',
+    // Guarded: new Date(x).toISOString() throws RangeError on an Invalid Date,
+    // and this runs during render, where there is no handler to contain it.
+    dateOfBirth: toDateInput(p.dateOfBirth),
+    passportNo:  p.passportNo ?? '',
+    address:     p.address ?? '',
+  }));
 
   const mutation = useMutation({
     mutationFn: () => updateStudentProfile({
-      nationality:  form.nationality  || undefined,
-      dateOfBirth:  form.dateOfBirth  || undefined,
-      passportNo:   form.passportNo   || undefined,
-      address:      form.address      || undefined,
+      // null, not undefined. JSON.stringify drops an undefined value, so the
+      // field never reached the server and a partial update left the column
+      // untouched: clearing a passport number was impossible, and the old one
+      // reappeared in the box the moment the refetch landed — under a toast
+      // saying it had been updated.
+      nationality:  form.nationality  || null,
+      dateOfBirth:  form.dateOfBirth  || null,
+      passportNo:   form.passportNo   || null,
+      address:      form.address      || null,
     }),
     onSuccess: () => {
       invalidateResource(queryClient, 'profile');
+      markSaved();
       toast.success('Student info updated.');
     },
   });
@@ -417,7 +419,7 @@ function passwordStrength(pw) {
 // ── Main page ───────────────────────────────────────────────────────────────
 export default function ProfilePage() {
   const queryClient = useQueryClient();
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['my-profile'],
     queryFn: fetchProfile,
   });
@@ -428,6 +430,26 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return <div className="profile-loading">Loading profile…</div>;
+  }
+
+  // Without this, a failed fetch fell through to the full page: an empty name,
+  // an empty email, a '??' initials chip and two editable-but-blank forms, with
+  // nothing to say anything had gone wrong. Saving from there would have written
+  // a patch built from a form that never loaded.
+  if (isError || !profile) {
+    return (
+      <div className="profile-page">
+        <div className="profile-inner">
+          <div className="empty-state">
+            <span className="e-icon e-icon--danger" aria-hidden="true"><Icon name="alert" size={20} /></span>
+            <h3>{errorMessage(error, 'Could not load your profile.')}</h3>
+            <div style={{ marginTop: 'var(--sp-4)' }}>
+              <button type="button" className="btn btn-primary" onClick={() => refetch()}>Try again</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

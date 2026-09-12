@@ -69,3 +69,16 @@ export function formatDate(value) {
     ? '—'
     : d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
 }
+
+// A date column for an <input type="date">, which needs yyyy-mm-dd.
+//
+// `new Date(x).toISOString()` throws RangeError on an Invalid Date, and both
+// callers run it during render, where there is no handler to contain it. Prisma
+// types the column as DateTime so a malformed value cannot arrive through the
+// normal path today — this is the guard NewApplication.jsx already uses, applied
+// to the two places that parse a date where a throw would take the page down.
+export function toDateInput(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+}
