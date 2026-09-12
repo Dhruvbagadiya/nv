@@ -18,33 +18,123 @@
   .btn-ghost { background: transparent; color: var(--ink-600); }
   .btn-ghost:hover { background: var(--canvas); }
 
-  /* ===================== DASHBOARD FILTERS ===================== */
-  .filter-row {
-    display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; align-items: center;
-    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px; box-shadow: var(--shadow-xs);
+  /* ===================== DASHBOARD FILTERS =====================
+     Every size here comes from the token scale rather than a hand-picked pixel
+     value. The row used to mix 12px, 12.5px and 6/7/8px gaps, which is what made
+     the page read as slightly-off rather than as anything nameable. */
+  .cf-filters {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: var(--sp-3);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: var(--sp-4);
+    box-shadow: var(--shadow-xs);
+    margin-bottom: var(--sp-3);
   }
-  .filter-row input, .filter-row select {
-    height: 31px; border: 1px solid var(--border); border-radius: var(--radius-sm);
-    padding: 0 9px; font-size: 12.5px; background: var(--canvas); color: var(--ink-900); font-family: var(--font-sans);
-    transition: border-color .13s, box-shadow .13s;
-  }
-  .filter-row input:focus, .filter-row select:focus { outline: none; border-color: var(--accent-500); box-shadow: 0 0 0 3px var(--accent-100); background: var(--surface); }
-  .filter-row input[type="text"] { flex: 2; min-width: 180px; }
-  .filter-row select { flex: 1; min-width: 120px; }
+  @media (max-width: 1080px) { .cf-filters { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 640px)  { .cf-filters { grid-template-columns: 1fr; } }
 
-  .quick-filters { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
-  .quick-filters .label { font-size: 11.5px; color: var(--ink-500); margin-right: 2px; font-weight: 600; }
-  .chip {
-    border: 1px solid var(--border); color: var(--ink-700); background: var(--surface);
-    border-radius: var(--radius-pill); padding: 4px 10px; font-size: 11.5px; cursor: pointer; font-weight: 600;
-    transition: all .12s;
+  .cf-field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+  .cf-field > label {
+    font-size: var(--fs-3xs); font-weight: 700; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--ink-400);
   }
-  .chip:hover { border-color: var(--ink-300); }
-  .chip.chip-active { border-color: var(--accent-700); color: var(--accent-contrast); background: var(--accent-700); }
+  .cf-field select,
+  .cf-search input {
+    width: 100%; height: 38px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    /* background-COLOR, not the background shorthand: the select carries its
+       chevron as a background-image, and a shorthand here or in :focus below
+       resets it to none — so the arrow vanished the moment you focused it. */
+    background-color: var(--canvas); color: var(--ink-900);
+    font-family: var(--font-sans); font-size: var(--fs-sm);
+    transition: border-color .13s, box-shadow .13s, background-color .13s;
+  }
+  /* The native select arrow is drawn by the OS and cannot be styled, so it is
+     the one part of the row that stays visibly someone else's widget. Replaced
+     with a chevron on the same stroke weight as the icon set (1.7), which is
+     what makes the four controls read as one set. */
+  .cf-field select {
+    padding: 0 34px 0 var(--sp-3); cursor: pointer;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--sp-3) center;
+    background-size: 16px 16px;
+  }
+  .cf-field select:hover, .cf-search input:hover { border-color: var(--border-strong); }
+  .cf-field select:focus-visible,
+  .cf-search input:focus {
+    outline: none; border-color: var(--accent-500);
+    box-shadow: var(--ring); background-color: var(--surface);
+  }
 
-  .result-count { font-size: 12px; color: var(--ink-500); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .result-count b { color: var(--ink-950); font-weight: 700; }
-  .country-active-tag { font-size: 11px; font-weight: 700; color: var(--accent-700); background: var(--accent-50); border: 1px solid var(--accent-100); border-radius: var(--radius-pill); padding: 2px 9px; }
+  /* The icon sits inside the field rather than beside it, so the search box
+     reads as one control at any width. */
+  .cf-search { position: relative; display: flex; align-items: center; }
+  .cf-search > svg, .cf-search .icon-svg {
+    position: absolute; left: var(--sp-3); color: var(--ink-400); pointer-events: none;
+  }
+  .cf-search input { padding: 0 34px 0 36px; }
+  .cf-search__clear {
+    position: absolute; right: var(--sp-2);
+    width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;
+    border: none; border-radius: var(--radius-pill); background: var(--ink-100);
+    color: var(--ink-600); cursor: pointer;
+  }
+  .cf-search__clear:hover { background: var(--ink-200, var(--border-strong)); color: var(--ink-900); }
+
+  .cf-quick { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-bottom: var(--sp-4); }
+
+  /* ── Results toolbar ──────────────────────────────────────────────────
+     The count alone never said WHY it was that number. The destination in
+     particular is set from the country strip at the very top of the window,
+     nowhere near this list, so a filtered-down count read as missing data. */
+  .cf-toolbar {
+    display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap;
+    margin-bottom: var(--sp-3); min-height: 30px;
+  }
+  .cf-count { font-size: var(--fs-sm); color: var(--ink-500); }
+  .cf-count b {
+    color: var(--ink-950); font-weight: 700; font-size: var(--fs-md);
+    font-variant-numeric: tabular-nums;
+  }
+  .cf-active { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+  .cf-pill {
+    display: inline-flex; align-items: center; gap: var(--sp-1);
+    height: 26px; padding: 0 var(--sp-1) 0 var(--sp-3);
+    border: 1px solid var(--accent-100); border-radius: var(--radius-pill);
+    background: var(--accent-50); color: var(--accent-700);
+    font-size: var(--fs-xs); font-weight: 600; cursor: pointer;
+    max-width: 260px;
+  }
+  .cf-pill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cf-pill:hover { border-color: var(--accent-500); }
+  .cf-clear-all {
+    border: none; background: none; padding: 0 var(--sp-1);
+    font-size: var(--fs-xs); font-weight: 600; color: var(--ink-500);
+    cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+  }
+  .cf-clear-all:hover { color: var(--ink-900); }
+
+  /* Holds the grid's shape while the page loads, so results do not jump into
+     position underneath the filters. Matches .pcard's box exactly. */
+  .pcard-skeleton {
+    min-height: 316px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-md, 10px);
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+
+  /* Still used by AdminApplications; the dashboard has .cf-toolbar instead.
+     .country-active-tag went with the old dashboard toolbar — .cf-pill replaced
+     it and carries a clear action, which a bare tag never did. */
+  .result-count {
+    font-size: var(--fs-sm); color: var(--ink-500); margin-bottom: var(--sp-2);
+    display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;
+  }
+  .result-count b { color: var(--ink-950); font-weight: 700; font-variant-numeric: tabular-nums; }
 
   /* ============= RESULTS GRID & SHARED STATUS PILLS =============
      The card itself is .pcard below; what lives here is the grid it sits in
@@ -75,7 +165,7 @@
   .pcard {
     display: flex; flex-direction: column; height: 100%;
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius-md, 10px); padding: 14px;
+    border-radius: var(--radius-md, 10px); padding: var(--sp-4);
     transition: border-color .14s ease, box-shadow .14s ease, transform .14s ease;
   }
   .pcard:hover {
@@ -85,7 +175,7 @@
   }
 
   /* ── who ── */
-  .pcard__head { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
+  .pcard__head { display: flex; gap: var(--sp-3); align-items: flex-start; margin-bottom: var(--sp-3); }
   .pcard__logo {
     width: 34px; height: 34px; flex-shrink: 0; object-fit: contain;
     border: 1px solid var(--border); border-radius: 8px; padding: 3px;
@@ -94,35 +184,35 @@
   .pcard__logo--initials {
     display: flex; align-items: center; justify-content: center;
     background: var(--ink-900); color: #fff; border-color: transparent;
-    font-size: 12px; font-weight: 700; letter-spacing: .02em; padding: 0;
+    font-size: var(--fs-sm); font-weight: 700; letter-spacing: .02em; padding: 0;
   }
   .pcard__who { min-width: 0; }
   /* Two lines, then ellipsis. The institution is how a row is recognised, so
      truncating it to "Anglia…" at 11 characters cost more than the space saved. */
   .pcard__school {
-    font-size: 12.5px; font-weight: 650; color: var(--ink-900); line-height: 1.3;
+    font-size: var(--fs-sm); font-weight: 650; color: var(--ink-900); line-height: var(--lh-tight);
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
     overflow: hidden;
   }
   .pcard__place {
-    display: flex; align-items: center; gap: 5px; margin-top: 3px;
-    font-size: 11px; color: var(--ink-500);
+    display: flex; align-items: center; gap: var(--sp-1); margin-top: 3px;
+    font-size: var(--fs-xs); color: var(--ink-500);
   }
   .pcard__place span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* ── what ── */
   .pcard__level {
-    font-size: 9.5px; font-weight: 700; letter-spacing: .06em;
+    font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .06em;
     text-transform: uppercase; color: var(--accent-700, var(--ink-500));
     margin-bottom: 3px;
   }
   .pcard__title {
-    font-size: 14px; font-weight: 700; line-height: 1.3; color: var(--ink-950);
-    margin: 0 0 8px; text-wrap: balance;
+    font-size: var(--fs-md); font-weight: 700; line-height: var(--lh-tight); color: var(--ink-950);
+    margin: 0 0 var(--sp-2); text-wrap: balance;
   }
-  .pcard__highlights { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+  .pcard__highlights { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-bottom: var(--sp-3); }
   .pcard__highlight {
-    font-size: 9.5px; font-weight: 700; padding: 2.5px 8px;
+    font-size: var(--fs-3xs); font-weight: 700; padding: 3px var(--sp-2);
     border-radius: var(--radius-pill); background: var(--accent-50, var(--info-100));
     color: var(--accent-700, var(--info-700));
   }
@@ -137,21 +227,21 @@
      regardless of how long a title ran or how many highlights it carried. A
      second auto margin further down would split the slack between the two and
      leave a gap above this block instead. */
-  .pcard__price { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border); }
+  .pcard__price { margin-top: auto; padding-top: var(--sp-3); border-top: 1px solid var(--border); }
   .pcard__tuition {
-    font-size: 20px; font-weight: 700; line-height: 1.1; color: var(--ink-950);
+    font-size: var(--fs-2xl); font-weight: 700; line-height: 1.1; color: var(--ink-950); letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
   }
-  .pcard__from { font-size: 12px; font-weight: 600; color: var(--ink-500); }
+  .pcard__from { font-size: var(--fs-sm); font-weight: 600; color: var(--ink-500); }
   .pcard__tuition-note {
-    font-size: 10px; color: var(--ink-500); margin-top: 2px; letter-spacing: .01em;
+    font-size: var(--fs-2xs); color: var(--ink-500); margin-top: 2px; letter-spacing: .01em;
   }
 
-  .pcard__facts { margin: 10px 0 0; display: flex; flex-direction: column; gap: 5px; }
-  .pcard__fact { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-  .pcard__fact dt { font-size: 10.5px; color: var(--ink-500); }
+  .pcard__facts { margin: var(--sp-3) 0 0; display: flex; flex-direction: column; gap: var(--sp-1); }
+  .pcard__fact { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
+  .pcard__fact dt { font-size: var(--fs-2xs); color: var(--ink-500); }
   .pcard__fact dd {
-    margin: 0; font-size: 11.5px; font-weight: 650; color: var(--ink-900);
+    margin: 0; font-size: var(--fs-xs); font-weight: 650; color: var(--ink-900);
     font-variant-numeric: tabular-nums; text-align: right;
   }
   /* "Not published" is not a value — it should not read as one. */
@@ -159,14 +249,14 @@
   .pcard__commission { color: var(--success-700); }
 
   /* ── when ── */
-  .pcard__intakes { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .pcard__intakes { margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--border); }
   .pcard__intakes-label {
-    font-size: 9.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
-    color: var(--ink-400); margin-bottom: 5px;
+    font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--ink-400); margin-bottom: var(--sp-1);
   }
-  .pcard__intake-list { display: flex; flex-wrap: wrap; gap: 4px; }
+  .pcard__intake-list { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
   .pcard__intake {
-    font-size: 10px; font-weight: 600; padding: 2.5px 7px;
+    font-size: var(--fs-2xs); font-weight: 600; padding: 3px var(--sp-2);
     border: 1px solid var(--border); border-radius: var(--radius-sm);
     color: var(--ink-700); background: var(--canvas);
     font-variant-numeric: tabular-nums;
@@ -174,10 +264,10 @@
 
   /* ── act ── */
   /* A plain margin, not another auto one — see .pcard__price above. */
-  .pcard__actions { display: flex; gap: 6px; align-items: center; margin-top: 12px; }
-  .pcard__apply { flex: 1; justify-content: center; height: 34px; font-size: 12.5px; }
+  .pcard__actions { display: flex; gap: var(--sp-2); align-items: center; margin-top: var(--sp-3); }
+  .pcard__apply { flex: 1; justify-content: center; height: 36px; font-size: var(--fs-sm); }
   .pcard__detail {
-    width: 34px; height: 34px; flex-shrink: 0; display: inline-flex;
+    width: 36px; height: 36px; flex-shrink: 0; display: inline-flex;
     align-items: center; justify-content: center;
     border: 1px solid var(--border); border-radius: var(--radius-sm);
     background: var(--surface); color: var(--ink-500); cursor: pointer;

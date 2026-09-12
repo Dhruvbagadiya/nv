@@ -32,34 +32,69 @@
   }
   .brand small { display: block; font-size: 9px; font-weight: 600; color: var(--ink-400); letter-spacing: .06em; text-transform: uppercase; margin-top: 0px; }
 
-  /* ===== Country strip (sits in the header, where search used to be) ===== */
+  /* ===== Country strip (sits in the header, where search used to be) =====
+     Horizontal pills rather than the old stacked flag-over-9px-code, which read
+     as a dense ribbon of noise at the very top of every page. A destination is
+     the primary filter in this product, so the control that sets it is sized
+     like one: a real target, a legible label, and an active state you can find
+     without hunting. */
   .country-strip {
     flex: 1; min-width: 0; align-self: stretch;
-    display: flex; align-items: center; gap: 1px;
+    display: flex; align-items: center; gap: var(--sp-1);
     overflow-x: auto; white-space: nowrap;
     border-left: 1px solid var(--border); border-right: 1px solid var(--border);
-    padding: 0 8px;
+    padding: 0 var(--sp-3);
+    /* Fades the last chip out against the header instead of clipping it mid-pill,
+       so it reads as "there is more" rather than as a rendering bug. */
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
+            mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
+    scrollbar-width: none;
   }
-  .country-strip::-webkit-scrollbar { height: 3px; }
-  .country-strip::-webkit-scrollbar-thumb { background: var(--border-strong); }
+  .country-strip::-webkit-scrollbar { display: none; }
+  .country-strip--muted {
+    display: flex; align-items: center; padding-inline: var(--sp-3);
+    font-size: var(--fs-xs); color: var(--ink-400);
+  }
+
   .country-chip {
-    display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; flex-shrink: 0;
-    padding: 3px 7px; border-radius: var(--radius-sm); border: 1px solid transparent;
-    background: transparent; color: var(--ink-500); cursor: pointer;
-    font-size: 9px; font-weight: 700; line-height: 1; transition: background .12s, color .12s, border-color .12s;
+    display: inline-flex; align-items: center; gap: var(--sp-2); flex-shrink: 0;
+    height: 34px; padding: 0 var(--sp-3);
+    border-radius: var(--radius-pill); border: 1px solid transparent;
+    background: transparent; color: var(--ink-600); cursor: pointer;
+    font-size: var(--fs-xs); font-weight: 700; line-height: 1;
+    letter-spacing: .04em; text-transform: uppercase;
+    transition: background .13s ease, color .13s ease, border-color .13s ease;
   }
-  .country-chip .flag-svg { width: 18px; height: 18px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 1px var(--border); display: block; flex-shrink: 0; }
-  /* The "All" chip leads the country strip and needs to stay visible when the
-     strip scrolls horizontally. */
-  .country-chip.all-chip { position: sticky; left: 0; z-index: 1; background: var(--surface); }
-  .country-chip.all-chip.active { background: var(--accent-50); }
-  .country-chip .flag-globe { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; color: var(--accent-600); }
-  /* Flag emoji sit on a different baseline to the surrounding text and render at
-     inconsistent widths across platforms, so they get a fixed box and their own
-     line-height rather than being allowed to shift the chip's height. */
-  .country-chip .flag-emoji { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; flex-shrink: 0; }
-  .country-chip:hover { background: var(--canvas); color: var(--ink-800); }
-  .country-chip.active { background: var(--accent-50); color: var(--accent-700); border-color: var(--accent-100); }
+  .country-chip:hover { background: var(--canvas); color: var(--ink-900); }
+  .country-chip:focus-visible { outline: 2px solid var(--accent-500); outline-offset: 1px; }
+  .country-chip.is-active {
+    background: var(--accent-50); color: var(--accent-700);
+    border-color: var(--accent-100);
+  }
+
+  /* A fixed box for the flag: emoji sit on a different baseline to the
+     surrounding text and render at inconsistent widths across platforms, so
+     without this they shift each chip's height independently. */
+  .country-chip__flag {
+    width: 20px; height: 20px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .country-chip__flag .flag-img,
+  .country-chip__flag .flag-svg {
+    border-radius: 3px; box-shadow: 0 0 0 1px var(--border); display: block;
+  }
+  .country-chip__globe { color: var(--accent-600); }
+  .country-chip__globe svg { width: 17px; height: 17px; }
+  .country-chip__code { display: block; }
+
+  /* "All" leads the strip and stays put while the rest scrolls under it. The
+     background is opaque so the scrolling chips pass behind, not through. */
+  .country-chip--all {
+    position: sticky; left: 0; z-index: 1;
+    background: var(--surface);
+    box-shadow: 6px 0 6px -6px rgb(0 0 0 / .10);
+  }
+  .country-chip--all.is-active { background: var(--accent-50); }
 
   .header-search { flex-shrink: 0; width: 190px; position: relative; }
   .header-search input {
