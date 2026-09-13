@@ -118,3 +118,74 @@ export async function listUpcomingDeadlines({ agentId, limit = 10 }) {
     take: limit,
   });
 }
+
+// ============================================================================
+// Documents attached to an application
+// ============================================================================
+
+const DOCUMENT_SELECT = {
+    id: true,
+    kind: true,
+    label: true,
+    fileUrl: true,
+    fileName: true,
+    contentType: true,
+    sizeBytes: true,
+    createdAt: true,
+    uploadedBy: { select: { id: true, name: true } },
+};
+
+/**
+ * Resolve the application these documents belong to, applying the caller's
+ * scope.
+ *
+ * Every document operation goes through this first. The alternative — checking
+ * ownership on the DOCUMENT — would let an agent reach another agency's file by
+ * its id alone, because a document id carries no agent. Scoping the parent is
+ * the only check that cannot be bypassed by addressing the child directly.
+ */
+async function applicationForDocuments({ applicationId, agentId }) {
+    const application = await prisma.application.findFirst({
+        where: { id: applicationId, ...(agentId && { agentId }) },
+        select: { id: true },
+    });
+    // Deliberately the same 404 an unknown id produces. Telling an agent that an
+    // application exists but is not theirs is itself a disclosure.
+    if (!application) throw new NotFoundError('Application not found');
+    return application;
+}
+
+export async function listApplicationDocuments({ applicationId, agentId }) {
+    await applicationForDocuments({ applicationId, agentId });
+    return prisma.applicationDocument.findMany({
+        where: { applicationId, archivedAt: null },
+        select: DOCUMENT_SELECT,
+        orderBy: { createdAt: 'desc' },
+    });
+}
+
+export async function addApplicationDocument({ applicationId, agentId, uploadedById, file }) {
+    await applicationForDocuments({ applicationId, agentId });
+    return prisma.applicationDocument.create({
+        data: { applicationId, uploadedById, ...file },
+        select: DOCUMENT_SELECT,
+    });
+}
+
+/**
+ * Archived rather than deleted. An application is a record of what was
+ * submitted, so a document that was once attached is part of that record even
+ * after the agent replaces it — and the stored file is left in place, because
+ * removing bytes on a soft delete is how a "restore" becomes impossible.
+ */
+export async function archiveApplicationDocument({ applicationId, documentId, agentId }) {
+    await applicationForDocuments({ applicationId, agentId });
+    const { count } = await prisma.applicationDocument.updateMany({
+        // applicationId in the WHERE, not just the document id: without it, a
+        // document id from another application would archive on the strength of
+        // the caller owning *some* application.
+        where: { id: documentId, applicationId, archivedAt: null },
+        data: { archivedAt: new Date() },
+    });
+    if (!count) throw new NotFoundError('Document not found');
+}

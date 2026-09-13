@@ -691,3 +691,24 @@
   .password-strength-bar[data-strength="3"]::after { width: 75%; background: var(--accent-600); }
   .password-strength-bar[data-strength="4"]::after { width: 100%; background: var(--success-600); }
   .password-strength-label { font-size: 11px; color: var(--ink-500); font-weight: 600; white-space: nowrap; }
+
+  /* ── Documents attached to an application ─────────────────────────────── */
+  .appdoc-add {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
+  }
+  @media (max-width: 720px) { .appdoc-add { grid-template-columns: 1fr; } }
+
+  .appdoc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-1); }
+  .appdoc-row {
+    display: flex; align-items: center; gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--canvas);
+  }
+  .appdoc-icon { color: var(--ink-400); flex-shrink: 0; display: flex; }
+  .appdoc-main { min-width: 0; flex: 1; }
+  .appdoc-name { font-size: var(--fs-sm); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .appdoc-name a { color: var(--ink-950); text-decoration: none; }
+  .appdoc-name a:hover { text-decoration: underline; }
+  .appdoc-meta { font-size: var(--fs-2xs); color: var(--ink-500); margin-top: 1px; }

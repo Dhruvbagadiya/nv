@@ -33,7 +33,11 @@ const ALLOWED = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
 };
 
-const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
+// Exported because multer has to reject an oversized upload BEFORE the bytes are
+// buffered, which means every route with a file input needs this number. It was
+// re-declared in uploads.routes.js under a comment saying "matches MAX_BYTES in
+// storage.js" — which is the comment you write just before the two stop matching.
+export const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 
 // Avatars and logos: images only, and much smaller. Exported so the two callers
 // share one definition instead of each keeping their own drifting copy.

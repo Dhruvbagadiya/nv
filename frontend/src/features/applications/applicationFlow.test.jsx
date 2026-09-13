@@ -21,6 +21,9 @@ vi.mock('../../api/applications.js', () => ({
   createApplication: vi.fn(),
   fetchApplication: vi.fn(),
   advanceApplicationStage: vi.fn(),
+  fetchApplicationDocuments: vi.fn(),
+  uploadApplicationDocument: vi.fn(),
+  removeApplicationDocument: vi.fn(),
 }));
 vi.mock('../../api/countries.js', () => ({ fetchCountries: vi.fn() }));
 vi.mock('../../api/auth.js', () => ({ login: vi.fn(), refresh: vi.fn(), logout: vi.fn() }));
@@ -289,6 +292,7 @@ describe('advancing a stage without a mouse', () => {
 
   beforeEach(() => {
     applicationsApi.fetchApplication.mockResolvedValue(APP);
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue([]);
     useAuth.setState({ user: { id: 'u1', name: 'Admin', role: 'ADMIN' }, status: 'authenticated' });
   });
 
@@ -321,5 +325,93 @@ describe('advancing a stage without a mouse', () => {
     await waitFor(() => expect(screen.getByText('Test Student')).toBeTruthy());
 
     expect(screen.queryAllByRole('button', { name: /^Advance to / })).toHaveLength(0);
+  });
+});
+
+/**
+ * An agent had nowhere to attach a passport scan or the mandatory declaration
+ * form: the Application model carried no documents, and /api/uploads is
+ * ADMIN-only so there was no upload endpoint an agent could reach at all. The
+ * stage-note field on this same panel offers "pending document upload" as its
+ * example text, so the workflow had assumed these existed the whole time.
+ */
+describe('attaching documents to an application', () => {
+  afterEach(cleanup);
+
+  const APP_DOC = {
+    id: 'd1',
+    kind: 'DECLARATION_FORM',
+    label: 'Signed copy',
+    fileUrl: '/uploads/application-documents/abc.pdf',
+    fileName: 'declaration.pdf',
+    contentType: 'application/pdf',
+    sizeBytes: 240_000,
+    createdAt: '2026-09-01T00:00:00.000Z',
+    uploadedBy: { id: 'u1', name: 'Darshan' },
+  };
+
+  const APP = {
+    id: 'a1', reference: 41, studentName: 'Test Student', passportNo: 'P123',
+    intakeLabel: 'January 2027', stage: 'PROFILE_ASSESSMENT', stageNote: null,
+    deadlineAt: null, createdAt: '2026-08-09T00:00:00.000Z', agent: null,
+    course: {
+      id: 'p1', title: 'MBA (Project Management)',
+      institution: { id: 'i1', name: 'University of Hertfordshire', country: COUNTRY },
+    },
+  };
+
+  beforeEach(() => {
+    applicationsApi.fetchApplication.mockResolvedValue(APP);
+    useAuth.setState({ user: { id: 'u1', name: 'Darshan', role: 'AGENT' }, status: 'authenticated' });
+  });
+
+  it('offers a file picker on the application panel', async () => {
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue([]);
+    renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
+
+    await waitFor(() => expect(screen.getByLabelText('File')).toBeTruthy());
+    expect(screen.getByLabelText('Document type')).toBeTruthy();
+  });
+
+  it('sends the picked file with the chosen type', async () => {
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue([]);
+    applicationsApi.uploadApplicationDocument.mockResolvedValue(APP_DOC);
+
+    renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByLabelText('File')).toBeTruthy());
+
+    fireEvent.change(screen.getByLabelText('Document type'), { target: { value: 'PASSPORT' } });
+    const file = new File(['%PDF-1.4'], 'passport.pdf', { type: 'application/pdf' });
+    fireEvent.change(screen.getByLabelText('File'), { target: { files: [file] } });
+
+    await waitFor(() => expect(applicationsApi.uploadApplicationDocument).toHaveBeenCalled());
+    const [id, payload] = applicationsApi.uploadApplicationDocument.mock.calls[0];
+    expect(id).toBe('a1');
+    expect(payload.kind).toBe('PASSPORT');
+    expect(payload.file.name).toBe('passport.pdf');
+  });
+
+  it('lists an attached document by the name the agent gave it', async () => {
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue([APP_DOC]);
+
+    renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
+
+    await waitFor(() => expect(screen.getByText('declaration.pdf')).toBeTruthy());
+    // Scoped to the row: "Declaration form" is also one of the picker's options.
+    // The stored key is a uuid, so the type and description are what identify it.
+    const meta = document.querySelector('.appdoc-meta').textContent;
+    expect(meta).toContain('Declaration form');
+    expect(meta).toContain('Signed copy');
+  });
+
+  // A failed fetch rendering as "nothing attached yet" would have an agent
+  // re-upload files that are already there.
+  it('says the list failed rather than showing it as empty', async () => {
+    applicationsApi.fetchApplicationDocuments.mockRejectedValue(new Error('boom'));
+
+    renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
+
+    await waitFor(() => expect(screen.getByText(/Couldn.t load the documents/i)).toBeTruthy());
+    expect(screen.queryByText(/Nothing attached yet/i)).toBeNull();
   });
 });

@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invalidateResource } from '../../hooks/useInvalidateResource.js';
 import Modal from '../../components/ui/Modal.jsx';
+import ApplicationDocuments from './ApplicationDocuments.jsx';
 import { fetchApplication, advanceApplicationStage } from '../../api/applications.js';
 import { APPLICATION_STAGES, applicationStageLabel } from '../../constants/referenceData.js';
 import { useAuth } from '../../store/useAuth.js';
@@ -265,6 +266,11 @@ export default function ApplicationDetail({ applicationId, onClose }) {
               </div>
             ))}
           </div>
+
+          {/* Between the facts and the close button: an agent opens this panel to
+              see where an application stands, and "what have I sent" is part of
+              that. */}
+          <ApplicationDocuments applicationId={applicationId} />
 
           <div className="modal-foot" style={{ padding: 0, justifyContent: 'flex-start' }}>
             <button type="button" className="btn btn-outline" onClick={onClose}>Close</button>

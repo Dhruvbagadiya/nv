@@ -27,7 +27,7 @@ import { requireAuth } from '../../middleware/auth.js';
 import { requireRole } from '../../middleware/rbac.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { BadRequestError } from '../../utils/httpErrors.js';
-import { putObject, IMAGE_TYPES, storageStatus } from '../../utils/storage.js';
+import { putObject, IMAGE_TYPES, storageStatus, MAX_BYTES } from '../../utils/storage.js';
 
 const router = Router();
 const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
@@ -35,7 +35,7 @@ const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
 // Banners are wide header images and run larger than the 2 MB a square logo
 // needs, so the image cap is its own number rather than borrowing LOGO_MAX_BYTES.
 const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
-const FILE_MAX_BYTES = 25 * 1024 * 1024; // matches MAX_BYTES in storage.js
+const FILE_MAX_BYTES = MAX_BYTES;
 
 const IMAGE_MIME = Object.keys(IMAGE_TYPES);
 

@@ -1,6 +1,8 @@
 import * as applicationsService from './applications.service.js';
 import { agentScopeFor } from '../../utils/scope.js';
 import { prisma } from '../../utils/prisma.js';
+import { putObject } from '../../utils/storage.js';
+import { BadRequestError } from '../../utils/httpErrors.js';
 
 const scopeFor = agentScopeFor;
 
@@ -76,4 +78,62 @@ export async function updateStageHandler(req, res) {
   );
 
   res.json(application);
+}
+
+// ── Documents ───────────────────────────────────────────────────────────────
+
+export async function listDocumentsHandler(req, res) {
+  res.json({
+    items: await applicationsService.listApplicationDocuments({
+      applicationId: req.params.id,
+      agentId: agentScopeFor(req.user),
+    }),
+  });
+}
+
+/**
+ * The file and the authorisation decision happen in the same request.
+ *
+ * The alternative shape — upload to a generic endpoint, then POST the returned
+ * URL — was rejected: it stores bytes before anyone has checked the caller may
+ * write to this application, and a client that drops the second call leaves an
+ * orphan file nothing references. Here the scope check runs first and a refused
+ * request stores nothing.
+ */
+export async function addDocumentHandler(req, res) {
+  if (!req.file) throw new BadRequestError('No file provided.');
+
+  const { fileUrl } = await putObject(req.file.buffer, {
+    filename: req.file.originalname,
+    contentType: req.file.mimetype,
+    category: 'application-documents',
+  });
+
+  const document = await applicationsService.addApplicationDocument({
+    applicationId: req.params.id,
+    agentId: agentScopeFor(req.user),
+    uploadedById: req.user.sub,
+    file: {
+      kind: req.body.kind,
+      label: req.body.label ?? null,
+      fileUrl,
+      // From the upload, not from the client: a browser sends whatever it likes
+      // for these, and they are what the list renders and what a size limit
+      // would be checked against later.
+      fileName: req.file.originalname,
+      contentType: req.file.mimetype,
+      sizeBytes: req.file.size,
+    },
+  });
+
+  res.status(201).json(document);
+}
+
+export async function archiveDocumentHandler(req, res) {
+  await applicationsService.archiveApplicationDocument({
+    applicationId: req.params.id,
+    documentId: req.params.documentId,
+    agentId: agentScopeFor(req.user),
+  });
+  res.status(204).end();
 }

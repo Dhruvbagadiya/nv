@@ -50,13 +50,17 @@ model User {
   parentAgent   User?   @relation("AgencyHierarchy", fields: [parentAgentId], references: [id], onDelete: SetNull)
   subAgents     User[]  @relation("AgencyHierarchy")
 
-  applications    Application[]
-  courseInquiries CourseInquiry[]
-  refreshTokens   RefreshToken[]
-  passwordResets  PasswordResetToken[]
-  notifications   Notification[]
-  studentProfile  StudentProfile?
-  agencyProfile   AgencyProfile?
+  applications      Application[]
+  // Documents this user attached to an application. Named for the action rather
+  // than the object, because `documents` on a User would read as "their files"
+  // and these belong to an application.
+  uploadedDocuments ApplicationDocument[]
+  courseInquiries   CourseInquiry[]
+  refreshTokens     RefreshToken[]
+  passwordResets    PasswordResetToken[]
+  notifications     Notification[]
+  studentProfile    StudentProfile?
+  agencyProfile     AgencyProfile?
 
   @@index([parentAgentId])
   @@index([role])
@@ -416,11 +420,11 @@ model MoiAcceptance {
 
   institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
 
-  @@index([institutionId])
-  @@index([courseType])
   // One record per (institution, course type). Duplicates already split the
   // agent-facing dropdown into two options for the same award.
   @@unique([institutionId, courseType])
+  @@index([institutionId])
+  @@index([courseType])
 }
 
 // Commission structure per institution. `tiers` (legacy freeform) is preserved
@@ -450,6 +454,7 @@ model UniversityCommission {
   updatedAt  DateTime  @updatedAt
 
   institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
   // Every list on this model filters on archivedAt.
   @@index([archivedAt])
 }
@@ -639,6 +644,54 @@ model CourseInquiry {
 // The 8 stat tiles across the top of the Report screen, in order. Making this an
 // enum is what turns that screen into a single groupBy instead of eight
 // hand-counted queries.
+/// What an agent attaches to an application: the passport scan, transcripts,
+/// the declaration form. Distinct from `Document`, which is the admin-curated
+/// Document Bank -- reference material an agent READS (SOP templates, visa
+/// checklists, brochures), scoped by category and country rather than owned by
+/// anyone. These belong to one application and are written by the agent filing
+/// it, which is why they carry an uploader and their own access rules.
+model ApplicationDocument {
+  id            String                  @id @default(uuid())
+  applicationId String
+  kind          ApplicationDocumentKind @default(OTHER)
+  /// Free text, and the only way to name an OTHER document. Kept alongside the
+  /// enum rather than instead of it so the common types stay queryable -- a
+  /// "which applications are missing a declaration form" question is the whole
+  /// reason this is not just a label.
+  label         String?
+
+  fileUrl     String
+  /// The name the agent's own machine gave it. Shown in the list, because
+  /// "passport_final_v2.pdf" is how they recognise which file they sent, and
+  /// the stored key is a uuid that tells them nothing.
+  fileName    String
+  contentType String
+  sizeBytes   Int
+
+  uploadedById String
+  /// Soft-deleted, like every other file-bearing model here: an application is a
+  /// record of what was submitted, and a removed document is part of that.
+  archivedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  uploadedBy  User        @relation(fields: [uploadedById], references: [id])
+
+  @@index([applicationId, createdAt])
+  @@index([archivedAt])
+}
+
+enum ApplicationDocumentKind {
+  PASSPORT
+  ACADEMIC_TRANSCRIPT
+  ENGLISH_TEST
+  STATEMENT_OF_PURPOSE
+  LETTER_OF_RECOMMENDATION
+  DECLARATION_FORM
+  FINANCIAL
+  OTHER
+}
+
 enum ApplicationStage {
   PROFILE_ASSESSMENT
   APPLICATION
@@ -671,9 +724,10 @@ model Application {
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
 
-  agent         User           @relation(fields: [agentId], references: [id], onDelete: Cascade)
-  course        Course         @relation(fields: [courseId], references: [id])
+  agent         User                  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  course        Course                @relation(fields: [courseId], references: [id])
   notifications Notification[]
+  documents     ApplicationDocument[]
 
   @@index([agentId, createdAt])
   @@index([courseId])

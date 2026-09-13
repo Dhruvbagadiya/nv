@@ -45,3 +45,31 @@ export const updateStageBody = z
   .strict();
 
 export const idParam = z.object({ id: z.string().uuid() });
+
+// ── Documents ───────────────────────────────────────────────────────────────
+
+export const documentIdParam = z.object({
+    id: z.string().uuid(),
+    documentId: z.string().uuid(),
+});
+
+/**
+ * The metadata that rides alongside the file in the multipart body.
+ *
+ * Everything else about the document — its size, type and stored URL — is taken
+ * from the upload itself rather than the client, because a client-supplied size
+ * or content type is a claim, not a fact.
+ */
+export const addDocumentBody = z.object({
+    kind: z.enum([
+        'PASSPORT',
+        'ACADEMIC_TRANSCRIPT',
+        'ENGLISH_TEST',
+        'STATEMENT_OF_PURPOSE',
+        'LETTER_OF_RECOMMENDATION',
+        'DECLARATION_FORM',
+        'FINANCIAL',
+        'OTHER',
+    ]).default('OTHER'),
+    label: optionalBody(z.string().trim().max(160)),
+}).strict();
