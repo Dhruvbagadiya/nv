@@ -103,6 +103,28 @@ describe('PartnerDashboard', () => {
     expect(within(row).getByText('Profile Assessment')).toBeTruthy();
   });
 
+  // new Date(null) is the epoch rather than an Invalid Date, so a row with no
+  // deadline read "20710d overdue" — measured from 1970.
+  it('shows no deadline as a dash, not as decades overdue', async () => {
+    renderDash();
+    await waitFor(() => expect(screen.getByText('Dhruv')).toBeTruthy());
+
+    const row = screen.getByText('Dhruv').closest('tr');
+    expect(within(row).getByText('—')).toBeTruthy();
+    expect(within(row).queryByText(/overdue/)).toBeNull();
+  });
+
+  // A null deadline must not be counted as urgent either.
+  it('does not count an absent deadline as due this week', async () => {
+    refApi.fetchReportSummary.mockResolvedValue(SUMMARY({
+      deadlines: [{ id: 'd1', studentName: 'A', deadlineAt: null, course: null }],
+    }));
+
+    renderDash();
+    await waitFor(() => expect(kpi('due this week')).toBeTruthy());
+    expect(within(kpi('due this week')).getByText('0')).toBeTruthy();
+  });
+
   it('tells you how late a deadline is, in the row', async () => {
     renderDash();
     await waitFor(() => expect(screen.getByText('Srushti')).toBeTruthy());

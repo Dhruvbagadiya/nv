@@ -32,6 +32,10 @@ const OFFERED = ['CONDITIONAL_OFFER', 'UNCONDITIONAL_OFFER'];
 const sum = (counts, keys) => keys.reduce((n, k) => n + (counts[k] ?? 0), 0);
 
 function daysUntil(value) {
+  // The null check has to come FIRST. `new Date(null)` is the epoch, not an
+  // Invalid Date, so an application with no deadline measured from 1970 and
+  // rendered "20710d overdue" on every row. Same shape as Number(null) being 0.
+  if (!value) return null;
   const then = new Date(value);
   if (Number.isNaN(then.getTime())) return null;
   const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
