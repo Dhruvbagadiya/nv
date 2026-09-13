@@ -404,6 +404,38 @@ describe('attaching documents to an application', () => {
     expect(meta).toContain('Signed copy');
   });
 
+  // "01-hero.png" beside a generic page icon says nothing about whether the
+  // right file was sent, and half of what gets attached is a phone photo of a
+  // passport.
+  it('previews an image document with the image itself', async () => {
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue([APP_DOC]);
+
+    renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByText('declaration.pdf')).toBeTruthy());
+
+    // APP_DOC is a PDF, so it takes the typed tile rather than a preview.
+    expect(document.querySelector('img.appdoc-thumb')).toBeNull();
+    expect(document.querySelector('.appdoc-thumb--pdf')).toBeTruthy();
+    expect(document.querySelector('.appdoc-thumb__ext').textContent).toBe('PDF');
+  });
+
+  it('uses the file itself as the thumbnail when it is an image', async () => {
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue([{
+      ...APP_DOC,
+      fileName: 'passport.png',
+      contentType: 'image/png',
+      fileUrl: 'https://cdn.example.com/application-documents/abc.png',
+    }]);
+
+    renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByText('passport.png')).toBeTruthy());
+
+    const img = document.querySelector('img.appdoc-thumb');
+    expect(img.getAttribute('src')).toBe('https://cdn.example.com/application-documents/abc.png');
+    // Decorative: the filename beside it already names the document.
+    expect(img.getAttribute('alt')).toBe('');
+  });
+
   // A failed fetch rendering as "nothing attached yet" would have an agent
   // re-upload files that are already there.
   it('says the list failed rather than showing it as empty', async () => {

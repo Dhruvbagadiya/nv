@@ -43,6 +43,51 @@ function formatSize(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+/**
+ * What a row shows before the filename.
+ *
+ * An image gets its own preview, because that is the whole point: half of what
+ * an agent attaches is a phone photo of a passport, and "01-hero.png" next to a
+ * generic page icon tells them nothing about whether they sent the right one.
+ * The files are already public on the CDN, so this costs one <img> and no new
+ * endpoint.
+ *
+ * Everything else gets a TYPED tile carrying its extension rather than the same
+ * grey page for all of them. A real PDF thumbnail needs rendering the first page
+ * — pdf.js in the browser or a worker server-side — which is a much larger piece
+ * of work than this earns; "PDF" in a red tile already answers the question the
+ * icon was failing to answer.
+ */
+function DocumentThumb({ doc }) {
+  // Through state, never by swapping the node out from under React.
+  const [failed, setFailed] = useState(false);
+  const isImage = doc.contentType?.startsWith('image/');
+
+  if (isImage && !failed) {
+    return (
+      <img
+        className="appdoc-thumb"
+        src={doc.fileUrl}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  // "application/pdf" -> PDF, and the long Office types -> DOCX, XLSX.
+  const ext = (doc.fileName?.split('.').pop() ?? '').toUpperCase().slice(0, 4);
+  const isPdf = doc.contentType?.includes('pdf');
+
+  return (
+    <span className={`appdoc-thumb appdoc-thumb--file${isPdf ? ' appdoc-thumb--pdf' : ''}`} aria-hidden="true">
+      <Icon name={isPdf ? 'pdf' : 'document'} size={15} />
+      {ext && <span className="appdoc-thumb__ext">{ext}</span>}
+    </span>
+  );
+}
+
 export default function ApplicationDocuments({ applicationId, canEdit = true }) {
   const queryClient = useQueryClient();
   const fileRef = useRef(null);
@@ -140,9 +185,19 @@ export default function ApplicationDocuments({ applicationId, canEdit = true }) 
         <ul className="appdoc-list">
           {documents.map((doc) => (
             <li key={doc.id} className="appdoc-row">
-              <span className="appdoc-icon" aria-hidden="true">
-                <Icon name={doc.contentType?.includes('pdf') ? 'pdf' : 'document'} size={16} />
-              </span>
+              {/* The thumbnail opens the file too — it is the part of the row
+                  an eye goes to, so making it inert and the text clickable gets
+                  it the wrong way round. */}
+              <a
+                className="appdoc-thumb-link"
+                href={doc.fileUrl}
+                target="_blank"
+                rel="noreferrer"
+                tabIndex={-1}
+                aria-hidden="true"
+              >
+                <DocumentThumb doc={doc} />
+              </a>
 
               <div className="appdoc-main">
                 <div className="appdoc-name">
