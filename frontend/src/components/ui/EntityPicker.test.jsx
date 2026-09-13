@@ -84,8 +84,23 @@ describe('EntityPicker', () => {
 
     expect(screen.getByText('University of Hertfordshire')).toBeTruthy();
     expect(screen.getByText('Change')).toBeTruthy();
-    // No search box until Change is pressed.
-    expect(screen.queryByLabelText('Institution')).toBeNull();
+    // No search box until Change is pressed. Asserted on the combobox rather
+    // than on the label: this used to check that getByLabelText found NOTHING,
+    // which is a different claim and happened to pin a bug — with no element
+    // carrying the id in this branch, the <label htmlFor> pointed nowhere, so a
+    // screen reader announced a label with no control and clicking it did
+    // nothing. That is most of the time on most admin forms.
+    expect(screen.queryByRole('combobox')).toBeNull();
+  });
+
+  it('still gives the label a control to point at once a value is chosen', () => {
+    renderPicker({ value: 'i1', selectedLabel: 'University of Hertfordshire' });
+
+    const control = screen.getByLabelText(/Institution/);
+    expect(control).toBeTruthy();
+    // The Change button is what the label names here, because it is what the
+    // label's click should reach.
+    expect(control.tagName).toBe('BUTTON');
   });
 
   it('clears back to nothing', () => {

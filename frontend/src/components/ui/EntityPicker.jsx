@@ -100,6 +100,15 @@ export default function EntityPicker({
           <span className="entity-picker__chosen-name">{selectedLabel || value}</span>
           <button
             type="button"
+            // Carries the id in THIS branch, because the input that normally
+            // holds it is not rendered here — so the label above pointed at
+            // nothing whenever a value was set, which is most of the time on
+            // most of the admin forms. A screen reader announced a label with no
+            // control, and clicking the label did nothing.
+            id={id}
+            // Names the control it reopens, so "Change" is not the whole of what
+            // gets announced.
+            aria-label={`${label}: ${selectedLabel || value}. Change`}
             className="btn btn-ghost entity-picker__change"
             onClick={() => { setOpen(true); setSearch(''); setTimeout(() => inputRef.current?.focus(), 0); }}
           >

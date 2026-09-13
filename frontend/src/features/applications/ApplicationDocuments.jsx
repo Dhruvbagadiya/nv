@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Icon from '../../components/ui/Icon.jsx';
+import EntityPicker from '../../components/ui/EntityPicker.jsx';
+import { DOCUMENT_KIND_LABEL, searchDocumentKinds } from '../../constants/documentKinds.js';
 import { errorMessage, formatDate } from '../../utils/format.js';
 import { toast } from '../../store/useToast.js';
 import {
@@ -22,20 +24,6 @@ import {
  * Distinct from the Document Bank, which is reference material an agent reads.
  * These belong to one application.
  */
-
-// The kinds worth being able to ask "who is missing one of these?" about. OTHER
-// exists so an unusual document is still attachable rather than blocked.
-const KINDS = [
-  ['PASSPORT', 'Passport'],
-  ['ACADEMIC_TRANSCRIPT', 'Academic transcript'],
-  ['ENGLISH_TEST', 'English test result'],
-  ['STATEMENT_OF_PURPOSE', 'Statement of purpose'],
-  ['LETTER_OF_RECOMMENDATION', 'Letter of recommendation'],
-  ['DECLARATION_FORM', 'Declaration form'],
-  ['FINANCIAL', 'Financial document'],
-  ['OTHER', 'Other'],
-];
-const KIND_LABEL = Object.fromEntries(KINDS);
 
 function formatSize(bytes) {
   if (!bytes) return '';
@@ -131,12 +119,29 @@ export default function ApplicationDocuments({ applicationId, canEdit = true }) 
 
       {canEdit && (
         <div className="appdoc-add">
-          <div className="form-field">
-            <label className="flabel" htmlFor="appdoc-kind">Document type</label>
-            <select id="appdoc-kind" value={kind} onChange={(e) => setKind(e.target.value)}>
-              {KINDS.map(([value, text]) => <option key={value} value={value}>{text}</option>)}
-            </select>
-          </div>
+          {/* A searchable combobox, not a <select>: fifty-four options in a
+              native dropdown is a scroll, and the thing an agent knows is the
+              word — "bank", "TB", "CAS" — not where it sits in the list. The
+              group rides along as the hint so "Transcript", which matches four
+              kinds, stays tellable apart while searching. */}
+          <EntityPicker
+            id="appdoc-kind"
+            label="Document type"
+            value={kind}
+            selectedLabel={DOCUMENT_KIND_LABEL[kind]}
+            onChange={(value) => setKind(value || 'OTHER')}
+            queryKey={['document-kinds']}
+            fetchOptions={(search) =>
+              searchDocumentKinds(search).map((k) => ({
+                value: k.value,
+                label: k.label,
+                hint: k.group,
+              }))
+            }
+            placeholder="Search document types…"
+            emptyMessage="No document type matches that."
+            allowClear={false}
+          />
 
           <div className="form-field">
             <label className="flabel" htmlFor="appdoc-label">
@@ -206,7 +211,7 @@ export default function ApplicationDocuments({ applicationId, canEdit = true }) 
                   <a href={doc.fileUrl} target="_blank" rel="noreferrer">{doc.fileName}</a>
                 </div>
                 <div className="appdoc-meta">
-                  {KIND_LABEL[doc.kind] ?? doc.kind}
+                  {DOCUMENT_KIND_LABEL[doc.kind] ?? doc.kind}
                   {doc.label ? ` · ${doc.label}` : ''}
                   {doc.sizeBytes ? ` · ${formatSize(doc.sizeBytes)}` : ''}
                   {` · ${formatDate(doc.createdAt)}`}

@@ -60,6 +60,10 @@ const NOT_INVALIDATED_BY_DESIGN = {
   // Reports whether S3/R2 is configured. Read from the environment at boot; no
   // mutation in the app can change it.
   'storage-status': 'server configuration, not data',
+  // The document-type catalogue is a constant in the bundle, filtered locally.
+  // It goes through useQuery only because EntityPicker's search is built on one;
+  // there is no server call to go stale.
+  'document-kinds': 'a constant in the bundle, not fetched',
 };
 
 describe('RELATED_KEYS is wired to keys that exist', () => {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ApplicationDocumentKind } from '@prisma/client';
 import { optionalBody, optionalEnum, optionalText, optionalUuid } from '../../utils/queryTypes.js';
 
 export const APPLICATION_STAGES = [
@@ -61,15 +62,11 @@ export const documentIdParam = z.object({
  * or content type is a claim, not a fact.
  */
 export const addDocumentBody = z.object({
-    kind: z.enum([
-        'PASSPORT',
-        'ACADEMIC_TRANSCRIPT',
-        'ENGLISH_TEST',
-        'STATEMENT_OF_PURPOSE',
-        'LETTER_OF_RECOMMENDATION',
-        'DECLARATION_FORM',
-        'FINANCIAL',
-        'OTHER',
-    ]).default('OTHER'),
+    // nativeEnum against Prisma's own type, not a hand-written list. The list was
+    // written out once and would have needed editing again for each of the 46
+    // kinds added since -- and a zod enum that has drifted from the database
+    // rejects a value the column would happily store, with a 400 that names a
+    // field the client set correctly.
+    kind: z.nativeEnum(ApplicationDocumentKind).default(ApplicationDocumentKind.OTHER),
     label: optionalBody(z.string().trim().max(160)),
 }).strict();

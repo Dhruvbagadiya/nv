@@ -370,7 +370,36 @@ describe('attaching documents to an application', () => {
     renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
 
     await waitFor(() => expect(screen.getByLabelText('File')).toBeTruthy());
-    expect(screen.getByLabelText('Document type')).toBeTruthy();
+    // The type picker is a combobox with a value already set, so its control is
+    // the button that reopens it. getByLabelText finding anything at all is the
+    // assertion: it pointed at nothing until the picker carried the id in this
+    // branch.
+    expect(screen.getByLabelText(/Document type/)).toBeTruthy();
+    expect(screen.getByText('Passport')).toBeTruthy();
+  });
+
+  // Fifty-four options is a scroll, and the thing an agent knows is the word.
+  it('finds a document type by typing part of its name', async () => {
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue([]);
+    renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByLabelText('File')).toBeTruthy());
+
+    fireEvent.click(screen.getByText('Change'));
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'tb' } });
+
+    await waitFor(() => expect(screen.getByText('TB test certificate')).toBeTruthy());
+  });
+
+  // The group is searchable too, so knowing the category is enough.
+  it('finds a type by its group when the name is not known', async () => {
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue([]);
+    renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
+    await waitFor(() => expect(screen.getByLabelText('File')).toBeTruthy());
+
+    fireEvent.click(screen.getByText('Change'));
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'financial' } });
+
+    await waitFor(() => expect(screen.getByText('Loan sanction letter')).toBeTruthy());
   });
 
   it('sends the picked file with the chosen type', async () => {
@@ -380,7 +409,7 @@ describe('attaching documents to an application', () => {
     renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
     await waitFor(() => expect(screen.getByLabelText('File')).toBeTruthy());
 
-    fireEvent.change(screen.getByLabelText('Document type'), { target: { value: 'PASSPORT' } });
+    // Passport is the default, so no change is needed to assert what is sent.
     const file = new File(['%PDF-1.4'], 'passport.pdf', { type: 'application/pdf' });
     fireEvent.change(screen.getByLabelText('File'), { target: { files: [file] } });
 
