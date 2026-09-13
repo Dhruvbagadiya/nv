@@ -28,6 +28,11 @@ const SUMMARY = (over = {}) => ({
   deadlines: [],
   usefulInformation: [],
   recentNotifications: [],
+  byCountry: [],
+  topCourses: [],
+  monthly: { thisMonth: 0, lastMonth: 0 },
+  awaitingDocuments: 0,
+  recentInquiries: [],
   ...over,
 });
 
@@ -40,8 +45,8 @@ function renderDash() {
   );
 }
 
-/** The strip entry carrying a given word, so a figure is read beside its label. */
-const kpi = (label) => screen.getByText(label).closest('.pdash-kpi');
+/** The tile carrying a given label, so a figure is read beside the word it belongs to. */
+const kpi = (label) => screen.getByText(label).closest('.pdash-tile');
 
 const APPS = [
   {
@@ -73,21 +78,21 @@ describe('PartnerDashboard', () => {
   // is not a workload, so the finished ones come out.
   it('counts active applications as everything not yet approved', async () => {
     renderDash();
-    await waitFor(() => expect(kpi('active')).toBeTruthy());
+    await waitFor(() => expect(kpi('In progress')).toBeTruthy());
     // 16 filed in total, 4 approved.
-    expect(within(kpi('active')).getByText('12')).toBeTruthy();
+    expect(within(kpi('In progress')).getByText('12')).toBeTruthy();
   });
 
   it('adds conditional and unconditional into one offers figure', async () => {
     renderDash();
-    await waitFor(() => expect(kpi('offers')).toBeTruthy());
-    expect(within(kpi('offers')).getByText('3')).toBeTruthy();
+    await waitFor(() => expect(kpi('Offers received')).toBeTruthy());
+    expect(within(kpi('Offers received')).getByText('3')).toBeTruthy();
   });
 
   it('reports approved visas on their own', async () => {
     renderDash();
-    await waitFor(() => expect(kpi('visas approved')).toBeTruthy());
-    expect(within(kpi('visas approved')).getByText('4')).toBeTruthy();
+    await waitFor(() => expect(kpi('Visas approved')).toBeTruthy());
+    expect(within(kpi('Visas approved')).getByText('4')).toBeTruthy();
   });
 
   // The point of the rewrite: with three applications, the three applications
@@ -121,8 +126,8 @@ describe('PartnerDashboard', () => {
     }));
 
     renderDash();
-    await waitFor(() => expect(kpi('due this week')).toBeTruthy());
-    expect(within(kpi('due this week')).getByText('0')).toBeTruthy();
+    await waitFor(() => expect(kpi('Due this week')).toBeTruthy());
+    expect(within(kpi('Due this week')).getByText('0')).toBeTruthy();
   });
 
   it('tells you how late a deadline is, in the row', async () => {
@@ -134,7 +139,7 @@ describe('PartnerDashboard', () => {
   // An empty panel takes the same room as a full one and pays nothing back.
   it('renders no activity panel when there is no activity', async () => {
     renderDash();
-    await waitFor(() => expect(screen.getByText('Your applications')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Recent applications')).toBeTruthy());
     expect(screen.queryByText('Recent activity')).toBeNull();
   });
 
@@ -158,8 +163,8 @@ describe('PartnerDashboard', () => {
     }));
 
     renderDash();
-    await waitFor(() => expect(kpi('due this week')).toBeTruthy());
-    expect(within(kpi('due this week')).getByText('2')).toBeTruthy();
+    await waitFor(() => expect(kpi('Due this week')).toBeTruthy());
+    expect(within(kpi('Due this week')).getByText('2')).toBeTruthy();
   });
 
   // Eight segments, six of them zero-width, is a bar that describes nothing.
@@ -173,9 +178,73 @@ describe('PartnerDashboard', () => {
 
   it('makes every figure a way into the list behind it', async () => {
     renderDash();
-    await waitFor(() => expect(kpi('visas approved')).toBeTruthy());
+    await waitFor(() => expect(kpi('Visas approved')).toBeTruthy());
 
-    expect(kpi('visas approved').getAttribute('href')).toBe('/partner/app-history?stage=VISA_APPROVAL');
+    expect(kpi('Visas approved').getAttribute('href')).toBe('/partner/app-history?stage=VISA_APPROVAL');
+  });
+
+  // Every panel below the tiles disappears when it has nothing behind it, and
+  // each one is a separate `length > 0` in the component — so each is checked.
+  it('renders no breakdown, no top courses and no inquiries when there are none', async () => {
+    renderDash();
+    await waitFor(() => expect(screen.getByText('Recent applications')).toBeTruthy());
+
+    expect(screen.queryByText('By destination')).toBeNull();
+    expect(screen.queryByText('Most applied courses')).toBeNull();
+    expect(screen.queryByText('Recent inquiries')).toBeNull();
+    expect(screen.queryByText('Upcoming deadlines')).toBeNull();
+  });
+
+  it('ranks destinations by volume and labels every bar with its figure', async () => {
+    refApi.fetchReportSummary.mockResolvedValue(SUMMARY({
+      // Deliberately not pre-sorted: the ordering is the service's job, and the
+      // component renders what it is given rather than re-sorting.
+      byCountry: [
+        { id: 'uk', code: 'UK', name: 'United Kingdom', isoCode: 'gb', count: 9 },
+        { id: 'ca', code: 'CA', name: 'Canada', isoCode: 'ca', count: 3 },
+      ],
+    }));
+
+    renderDash();
+    await waitFor(() => expect(screen.getByText('By destination')).toBeTruthy());
+
+    const rows = document.querySelectorAll('.pdash-bars li');
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0]).getByText('United Kingdom')).toBeTruthy();
+    expect(within(rows[0]).getByText('9')).toBeTruthy();
+    // The largest is full width; the rest are a share of it.
+    expect(rows[0].querySelector('.pdash-bars__fill').style.width).toBe('100%');
+  });
+
+  // A row present in the data with an invisible bar reads as a rendering fault
+  // rather than as a small number.
+  it('gives a tiny share a bar you can still see', async () => {
+    refApi.fetchReportSummary.mockResolvedValue(SUMMARY({
+      byCountry: [
+        { id: 'uk', code: 'UK', name: 'United Kingdom', isoCode: 'gb', count: 400 },
+        { id: 'ca', code: 'CA', name: 'Canada', isoCode: 'ca', count: 1 },
+      ],
+    }));
+
+    renderDash();
+    await waitFor(() => expect(screen.getByText('By destination')).toBeTruthy());
+
+    const fills = document.querySelectorAll('.pdash-bars__fill');
+    expect(parseFloat(fills[1].style.width)).toBeGreaterThanOrEqual(4);
+  });
+
+  it('compares this month with last, and says nothing in a partner\'s first month', async () => {
+    refApi.fetchReportSummary.mockResolvedValue(SUMMARY({ monthly: { thisMonth: 6, lastMonth: 4 } }));
+    renderDash();
+    await waitFor(() => expect(screen.getByText(/50% on last month/)).toBeTruthy());
+
+    cleanup();
+    // No history to compare against — a "+600%" off a base of zero is not a
+    // trend, it is a division by nothing.
+    refApi.fetchReportSummary.mockResolvedValue(SUMMARY({ monthly: { thisMonth: 6, lastMonth: 0 } }));
+    renderDash();
+    await waitFor(() => expect(screen.getByText('Total applications')).toBeTruthy());
+    expect(screen.queryByText(/on last month/)).toBeNull();
   });
 
   // A dashboard that renders zeroes when the request failed is worse than one
@@ -190,6 +259,6 @@ describe('PartnerDashboard', () => {
     // so the heading is whatever the failure said. What matters is that no
     // number is rendered, because a zero looks like an answer.
     await waitFor(() => expect(screen.getByText('Try again')).toBeTruthy());
-    expect(document.querySelectorAll('.pdash-kpi')).toHaveLength(0);
+    expect(document.querySelectorAll('.pdash-tile')).toHaveLength(0);
   });
 });

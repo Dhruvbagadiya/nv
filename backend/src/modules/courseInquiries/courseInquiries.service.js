@@ -43,3 +43,13 @@ export async function countByStage({ agentId }) {
 export async function updateInquiryStage({ id, stage }) {
   return prisma.courseInquiry.update({ where: { id }, data: { stage }, include: INQUIRY_INCLUDE });
 }
+
+/** The newest few, for the dashboard. Not `listInquiries`, which returns a page envelope. */
+export async function listRecentInquiries({ agentId, limit = 5 }) {
+  return prisma.courseInquiry.findMany({
+    where: { ...(agentId && { agentId }) },
+    include: INQUIRY_INCLUDE,
+    orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+    take: limit,
+  });
+}

@@ -24,8 +24,19 @@ const withZeros = (counts, keys) => Object.fromEntries(keys.map((k) => [k, count
 // It is a dashboard: every panel is needed at once, and six round trips would
 // each pay their own latency and auth cost for no benefit.
 export async function getReportSummary({ agentId, userId }) {
-  const [applicationCounts, inquiryCounts, trending, deadlines, usefulInformation, recentNotifications] =
-    await Promise.all([
+  const [
+    applicationCounts,
+    inquiryCounts,
+    trending,
+    deadlines,
+    usefulInformation,
+    recentNotifications,
+    byCountry,
+    topCourses,
+    monthly,
+    awaitingDocuments,
+    recentInquiries,
+  ] = await Promise.all([
       applicationsService.countByStage({ agentId }),
       inquiriesService.countByStage({ agentId }),
       institutionsService.listTrending({ limit: 12 }),
@@ -50,6 +61,15 @@ export async function getReportSummary({ agentId, userId }) {
         orderBy: { createdAt: 'desc' },
         take: 8,
       }),
+      // The dashboard aggregates. Added to this payload rather than given
+      // endpoints of their own for the reason the docblock above gives: the
+      // screen needs all of them at once, and five more round trips would each
+      // pay their own latency and auth cost to render one panel.
+      applicationsService.countByCountry({ agentId }),
+      applicationsService.topCourses({ agentId, limit: 5 }),
+      applicationsService.monthOverMonth({ agentId }),
+      applicationsService.countAwaitingDocuments({ agentId }),
+      inquiriesService.listRecentInquiries({ agentId, limit: 5 }),
     ]);
 
   return {
@@ -59,6 +79,11 @@ export async function getReportSummary({ agentId, userId }) {
     deadlines,
     usefulInformation,
     recentNotifications,
+    byCountry,
+    topCourses,
+    monthly,
+    awaitingDocuments,
+    recentInquiries,
   };
 }
 

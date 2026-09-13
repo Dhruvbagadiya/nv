@@ -43,6 +43,17 @@
     --accent-100:#FFF3E3;
     --accent-50:#FFF8F0;
 
+    /* Chart ramp — sequential, one hue, light to dark. Recomputed from the
+       agency's own accent by useTheme, exactly like the slots above; these are
+       the NV orange defaults. Kept out of the --accent-* family on purpose:
+       700/600/500 are three names for one colour, so a chart drawn from them
+       has no steps at all. */
+    --chart-1:#F3C087;
+    --chart-2:#EDA554;
+    --chart-3:#E88A21;
+    --chart-4:#BD6D14;
+    --chart-5:#8B500E;
+
     /* Readable foreground on an accent fill. Static defaults for the NV orange;
        useTheme recomputes both from the agency's own colour at runtime, so a
        light accent flips these to dark text instead of vanishing into white. */

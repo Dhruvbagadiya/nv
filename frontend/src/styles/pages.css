@@ -741,76 +741,120 @@
   /* ═════════════ PARTNER DASHBOARD ═════════════
      Dense on purpose. The first version gave four numbers four hundred-pixel
      cards, and on a real account that reads 3 / 0 / 0 / 0 — all chrome, no
-     information. A dashboard's ordinary state is nearly empty, so the numbers
-     are a strip and the data is the page. */
+     information. A dashboard's ordinary state is nearly empty, so a tile is
+     sized to be scanned in a row of six, not to fill a screen on its own, and
+     every panel below them disappears entirely when it has no rows. */
 
-  .pdash-strip {
-    display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-1);
-    padding: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-3);
+  /* ---- KPI tiles ---- */
+  .pdash-tiles {
+    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--sp-2); margin-bottom: var(--sp-3);
+  }
+  @media (max-width: 1100px) { .pdash-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 620px)  { .pdash-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+  .pdash-tile {
+    display: flex; flex-direction: column; gap: 2px;
+    padding: var(--sp-3); min-height: 92px;
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    text-decoration: none; transition: border-color .15s, box-shadow .15s;
   }
-  .pdash-strip--skeleton { height: 46px; animation: skeleton-pulse 1.4s ease-in-out infinite; }
-  .pdash-kpi {
-    display: inline-flex; align-items: baseline; gap: var(--sp-1);
-    padding: var(--sp-1) var(--sp-3); border-radius: var(--radius-sm);
-    font-size: var(--fs-xs); color: var(--ink-500); text-decoration: none;
+  .pdash-tile:hover { border-color: var(--border-strong); box-shadow: var(--shadow-xs); }
+  .pdash-tile--skeleton { animation: skeleton-pulse 1.4s ease-in-out infinite; }
+  .pdash-tile__value {
+    font-size: var(--fs-2xl); font-weight: 800; line-height: 1.1;
+    color: var(--ink-950); font-variant-numeric: tabular-nums;
   }
-  .pdash-kpi b {
-    font-size: var(--fs-lg); font-weight: 800; color: var(--ink-950);
-    font-variant-numeric: tabular-nums;
-  }
-  .pdash-kpi:hover { background: var(--canvas); color: var(--ink-800); }
-  .pdash-kpi--alert b { color: var(--warning-700); }
-  .pdash-strip__more {
-    margin-left: auto; font-size: var(--fs-xs); font-weight: 600;
-    color: var(--accent-700); text-decoration: none;
-  }
-  .pdash-strip__more:hover { text-decoration: underline; }
+  .pdash-tile__label { font-size: var(--fs-2xs); color: var(--ink-500); }
+  /* The state lives in the NUMBER, not in the tile's background. A card washed
+     amber for "6 due this week" makes the whole row shout; colouring the figure
+     keeps the alert where the alert is. */
+  .pdash-tile--warning .pdash-tile__value { color: var(--warning-700); }
+  .pdash-tile--good    .pdash-tile__value { color: var(--success-700); }
 
+  .pdash-delta {
+    font-size: var(--fs-3xs); font-weight: 600; margin-top: auto;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .pdash-delta--up   { color: var(--success-700); }
+  .pdash-delta--down { color: var(--danger-700); }
+  .pdash-delta--flat { color: var(--ink-400); font-weight: 500; }
+
+  /* ---- The chart ramp ----
+     One hue, light to dark, recomputed from the agency accent by useTheme. Used
+     by the pipeline bar, its legend dots and every horizontal bar, so a colour
+     means the same thing in all three. */
+  .pdash-fill--1 { background: var(--chart-1); }
+  .pdash-fill--2 { background: var(--chart-2); }
+  .pdash-fill--3 { background: var(--chart-3); }
+  .pdash-fill--4 { background: var(--chart-4); }
+  .pdash-fill--5 { background: var(--chart-5); }
+
+  /* ---- Pipeline ---- */
+  .pdash-pipeline { margin-bottom: var(--sp-3); }
   .pdash-bar {
-    display: flex; gap: 2px; height: 8px; margin-bottom: var(--sp-2);
-    border-radius: var(--radius-pill); overflow: hidden;
+    display: flex; height: 12px; border-radius: var(--radius-pill); overflow: hidden;
+    background: var(--ink-100); margin-bottom: var(--sp-3);
+    /* A 2px surface gap between segments, so two adjacent steps of one ramp read
+       as two segments rather than as a gradient. */
+    gap: 2px;
   }
   .pdash-bar__seg { display: block; min-width: 4px; }
-  /* Four steps along one hue, not four different colours: these are stages of
-     one process, not unrelated categories. */
-  .pdash-bar__seg--0 { background: var(--accent-700); }
-  .pdash-bar__seg--1 { background: var(--accent-600, #E78518); }
-  .pdash-bar__seg--2 { background: var(--accent-500); }
-  .pdash-bar__seg--3 { background: var(--accent-100); }
 
-  .pdash-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); margin-bottom: var(--sp-4); }
+  .pdash-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); }
   .pdash-legend__item {
     display: inline-flex; align-items: center; gap: var(--sp-1);
     font-size: var(--fs-2xs); color: var(--ink-500); text-decoration: none;
   }
   .pdash-legend__item:hover { color: var(--ink-900); }
-  .pdash-legend__item b { color: var(--ink-950); font-weight: 700; }
+  .pdash-legend__item b { color: var(--ink-950); font-weight: 700; font-variant-numeric: tabular-nums; }
   .pdash-legend__dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
-  .pdash-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: var(--sp-3); }
-  @media (max-width: 900px) { .pdash-grid { grid-template-columns: 1fr; } }
+  /* ---- Layout ---- */
+  .pdash-grid { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: var(--sp-3); align-items: start; }
+  @media (max-width: 1000px) { .pdash-grid { grid-template-columns: 1fr; } }
+  .pdash-main { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
   .pdash-side { display: flex; flex-direction: column; gap: var(--sp-3); }
+  .pdash-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  @media (max-width: 760px) { .pdash-pair { grid-template-columns: 1fr; } }
 
   .pdash-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: var(--sp-3) var(--sp-4) var(--sp-4);
+    border-radius: var(--radius); padding: var(--sp-3); min-width: 0;
   }
   .pdash-card--skeleton { height: 220px; animation: skeleton-pulse 1.4s ease-in-out infinite; }
   .pdash-card__head {
-    display: flex; align-items: baseline; justify-content: space-between;
-    gap: var(--sp-3); margin-bottom: var(--sp-2);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--sp-2); margin-bottom: var(--sp-2);
   }
   .pdash-card__head h2 { font-size: var(--fs-sm); font-weight: 700; color: var(--ink-950); margin: 0; }
-  .pdash-card__more { font-size: var(--fs-xs); font-weight: 600; color: var(--accent-700); text-decoration: none; }
+  .pdash-card__more { font-size: var(--fs-xs); font-weight: 600; color: var(--accent-700); text-decoration: none; white-space: nowrap; }
   .pdash-card__more:hover { text-decoration: underline; }
 
+  /* ---- Horizontal bars ----
+     Name on the left, bar in the middle, number on the right, sorted. The number
+     is always visible, which is what lets the ramp's pale steps be pale. */
+  .pdash-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+  .pdash-bars li { display: grid; grid-template-columns: minmax(0, 1fr) 34% auto; align-items: center; gap: var(--sp-2); }
+  @media (max-width: 520px) { .pdash-bars li { grid-template-columns: minmax(0, 1fr) 26% auto; } }
+  .pdash-bars__label {
+    display: flex; align-items: center; gap: var(--sp-1); min-width: 0;
+    font-size: var(--fs-2xs); color: var(--ink-800);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pdash-bars__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pdash-bars__sub { color: var(--ink-400); flex-shrink: 0; }
+  .pdash-bars__track { height: 8px; background: var(--ink-100); border-radius: var(--radius-pill); overflow: hidden; }
+  .pdash-bars__fill { display: block; height: 100%; border-radius: var(--radius-pill); }
+  .pdash-bars__value { font-size: var(--fs-xs); font-weight: 700; color: var(--ink-950); font-variant-numeric: tabular-nums; }
+
+  /* ---- Applications table ---- */
   .pdash-table { width: 100%; border-collapse: collapse; }
   .pdash-table tr + tr td { border-top: 1px solid var(--border); }
   .pdash-table td { padding: var(--sp-2) var(--sp-2) var(--sp-2) 0; vertical-align: middle; }
   .pdash-table__ref {
-    width: 1%; white-space: nowrap; font-family: var(--font-mono);
-    font-size: var(--fs-2xs); color: var(--ink-400);
+    width: 1%; white-space: nowrap; font-size: var(--fs-2xs);
+    color: var(--ink-400); font-variant-numeric: tabular-nums;
   }
   .pdash-table__name { font-size: var(--fs-sm); font-weight: 600; color: var(--ink-950); }
   .pdash-table__sub {
@@ -818,24 +862,41 @@
     font-size: var(--fs-2xs); color: var(--ink-500); margin-top: 1px;
   }
   .pdash-table__stage {
-    width: 1%; white-space: nowrap; font-size: var(--fs-2xs);
-    color: var(--ink-700); font-weight: 600;
+    font-size: var(--fs-2xs); color: var(--ink-600); white-space: nowrap;
   }
   .pdash-table__due { width: 1%; text-align: right; }
 
   .pdash-due {
-    display: inline-block; font-size: var(--fs-3xs); font-weight: 700;
-    padding: 2px var(--sp-2); border-radius: var(--radius-pill); white-space: nowrap;
+    display: inline-block; padding: 2px var(--sp-2); border-radius: var(--radius-pill);
+    font-size: var(--fs-3xs); font-weight: 700; white-space: nowrap;
   }
   .pdash-due--none    { background: transparent;        color: var(--ink-300); }
   .pdash-due--neutral { background: var(--ink-100);     color: var(--ink-600); }
   .pdash-due--warning { background: var(--warning-100); color: var(--warning-700); }
   .pdash-due--danger  { background: var(--danger-100);  color: var(--danger-700); }
 
-  /* The one empty state that earns its room: no applications at all is the
-     moment to say what to do about it. */
   .pdash-blank { text-align: center; padding: var(--sp-5) var(--sp-3); }
   .pdash-blank p { font-size: var(--fs-sm); color: var(--ink-500); margin: 0 0 var(--sp-3); }
+
+  /* ---- Side lists ---- */
+  .pdash-list { list-style: none; margin: 0; padding: 0; }
+  .pdash-list li {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--sp-2); padding: var(--sp-2) 0;
+  }
+  .pdash-list li + li { border-top: 1px solid var(--border); }
+  .pdash-list__main { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .pdash-list__title {
+    display: flex; align-items: center; gap: var(--sp-1);
+    font-size: var(--fs-xs); font-weight: 600; color: var(--ink-900);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pdash-list__sub { font-size: var(--fs-3xs); color: var(--ink-400); }
+  .pdash-pill {
+    flex-shrink: 0; padding: 2px var(--sp-2); border-radius: var(--radius-pill);
+    background: var(--accent-50); color: var(--accent-800);
+    font-size: var(--fs-3xs); font-weight: 700; white-space: nowrap;
+  }
 
   .pdash-feed { list-style: none; margin: 0; padding: 0; }
   .pdash-feed li { padding: var(--sp-2) 0; display: flex; flex-direction: column; gap: 1px; }
@@ -846,8 +907,7 @@
   .pdash-shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-1); }
   .pdash-shortcut {
     display: flex; align-items: center; gap: var(--sp-2);
-    padding: var(--sp-2) var(--sp-3); border-radius: var(--radius-sm);
-    background: var(--canvas); color: var(--ink-700);
-    font-size: var(--fs-2xs); font-weight: 600; text-decoration: none;
+    padding: var(--sp-2); border-radius: var(--radius-sm);
+    font-size: var(--fs-2xs); font-weight: 600; color: var(--ink-700); text-decoration: none;
   }
   .pdash-shortcut:hover { background: var(--accent-50); color: var(--accent-700); }

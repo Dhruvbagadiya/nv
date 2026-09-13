@@ -189,3 +189,100 @@ export async function archiveApplicationDocument({ applicationId, documentId, ag
     });
     if (!count) throw new NotFoundError('Document not found');
 }
+
+// ============================================================================
+// Dashboard aggregates
+// ============================================================================
+
+/**
+ * Applications per destination country.
+ *
+ * Two queries rather than one groupBy, because the country is two joins away
+ * (Application -> Course -> Institution -> Country) and Prisma's groupBy only
+ * groups by columns on the model itself. The first fetches the pairing, the
+ * second names the countries; the counting is done here.
+ */
+export async function countByCountry({ agentId }) {
+    const rows = await prisma.application.findMany({
+        where: { ...(agentId && { agentId }) },
+        select: { course: { select: { institution: { select: { countryId: true } } } } },
+    });
+    if (!rows.length) return [];
+
+    const tally = new Map();
+    for (const r of rows) {
+        const id = r.course?.institution?.countryId;
+        if (id) tally.set(id, (tally.get(id) ?? 0) + 1);
+    }
+
+    const countries = await prisma.country.findMany({
+        where: { id: { in: [...tally.keys()] } },
+        select: { id: true, code: true, name: true, isoCode: true },
+    });
+
+    return countries
+        .map((c) => ({ ...c, count: tally.get(c.id) ?? 0 }))
+        .sort((a, b) => b.count - a.count);
+}
+
+/** The courses this agent files into most, with the institution that runs them. */
+export async function topCourses({ agentId, limit = 5 }) {
+    const rows = await prisma.application.groupBy({
+        by: ['courseId'],
+        where: { ...(agentId && { agentId }) },
+        _count: { _all: true },
+        orderBy: { _count: { courseId: 'desc' } },
+        take: limit,
+    });
+    if (!rows.length) return [];
+
+    const courses = await prisma.course.findMany({
+        where: { id: { in: rows.map((r) => r.courseId) } },
+        select: { id: true, title: true, institution: { select: { name: true } } },
+    });
+    const byId = new Map(courses.map((c) => [c.id, c]));
+
+    // Ordered by the groupBy, not by the findMany, which returns whatever order
+    // the planner likes.
+    return rows
+        .map((r) => ({ ...byId.get(r.courseId), count: r._count._all }))
+        .filter((c) => c.id);
+}
+
+/**
+ * How the month is going against the one before it.
+ *
+ * Computed from createdAt rather than stored, so there is no snapshot table to
+ * keep in step — and no history to backfill. The cost is that it only ever
+ * compares two calendar months, which is what the tile says it is.
+ */
+export async function monthOverMonth({ agentId }) {
+    const now = new Date();
+    const startOfThis = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLast = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    const [thisMonth, lastMonth] = await Promise.all([
+        prisma.application.count({
+            where: { ...(agentId && { agentId }), createdAt: { gte: startOfThis } },
+        }),
+        prisma.application.count({
+            where: { ...(agentId && { agentId }), createdAt: { gte: startOfLast, lt: startOfThis } },
+        }),
+    ]);
+    return { thisMonth, lastMonth };
+}
+
+/**
+ * Applications carrying no document at all.
+ *
+ * The one number on the dashboard that names work rather than progress: an
+ * application with nothing attached cannot move, whatever stage it is sitting in.
+ */
+export async function countAwaitingDocuments({ agentId }) {
+    return prisma.application.count({
+        where: {
+            ...(agentId && { agentId }),
+            documents: { none: { archivedAt: null } },
+        },
+    });
+}

@@ -156,6 +156,11 @@ export function buildAccentScale(hex) {
   const tint = (lightness) =>
     rgbToHex(hslToRgb({ h: base.h, s: Math.min(100, base.s + 10), l: lightness }));
 
+  // Chart steps hold the base saturation rather than the tints' boosted one: a
+  // pale step needs the extra chroma to keep its hue, but a mid or dark step at
+  // s+10 reads as a different, more garish colour than the buttons beside it.
+  const ramp = (lightness) => rgbToHex(hslToRgb({ h: base.h, s: base.s, l: lightness }));
+
   const accent800 = slot(-12, +4);   // darker — hover on primary button
   const accent700 = slot(0);          // base
 
@@ -166,6 +171,29 @@ export function buildAccentScale(hex) {
     '--accent-500': accent700,        // same (focus ring)
     '--accent-100': tint(94),        // very light tint for chip backgrounds
     '--accent-50':  tint(97),        // lightest tint for hover fills
+
+    // The chart ramp: five steps of the accent hue, light to dark.
+    //
+    // Charts could not use the accent slots above, because 700, 600 and 500 are
+    // the SAME hex — they exist to name three uses of one colour, not three
+    // colours. The dashboard's pipeline bar was drawn from them and rendered as
+    // one solid orange block with a pale tail: four segments, two visible edges.
+    //
+    // Sequential, one hue, light→dark, which is the safe default for magnitude
+    // and the only honest encoding for a ramp that has to survive the agency
+    // picking its own accent. Anchored at ABSOLUTE lightness rather than as
+    // deltas from the base, for the reason `tint` gives: a light accent collapses
+    // an additive ramp against the clamp, and a ramp whose steps have converged
+    // is worse than no ramp, because it still looks like it means something.
+    //
+    // The light end stops at 74, not at the 88 the first version used: a step
+    // that pale is 1.2:1 against a white surface, which is a fill you cannot see
+    // is there. Even at 74 the first two steps are under 3:1, so every chart
+    // drawn from this ramp direct-labels its bars — the contrast is carried by
+    // the label, not by the fill.
+    ...Object.fromEntries(
+      [74, 63, 52, 41, 30].map((l, i) => [`--chart-${i + 1}`, ramp(l)])
+    ),
 
     // Foregrounds. 600/500 are identical to 700, so one token covers all three;
     // 800 is a different fill and gets its own, since a mid-light accent can
@@ -192,6 +220,10 @@ export function resetTheme() {
   const props = [
     '--accent-800','--accent-700','--accent-600','--accent-500','--accent-100','--accent-50',
     '--accent-contrast','--accent-contrast-800',
+    // The chart ramp is applied by applyTheme, so it has to be removed here too
+    // — otherwise "revert to default" leaves every chart in the old agency's
+    // colour while the buttons around them go back to NV orange.
+    '--chart-1','--chart-2','--chart-3','--chart-4','--chart-5',
   ];
   for (const prop of props) {
     ROOT().style.removeProperty(prop);
