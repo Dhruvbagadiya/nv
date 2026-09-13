@@ -13,6 +13,7 @@ export const navConfig = [
     label: null,
     items: [
       { path: '/partner/dashboard',       label: 'Dashboard',              icon: 'dashboard' },
+      { path: '/partner/courses',         label: 'Browse courses',         icon: 'course' },
       { path: '/partner/ask-team',        label: 'Ask our team',           icon: 'headset' },
       { path: '/partner/history',         label: 'Course inquiry history', icon: 'clock' },
       { path: '/partner/add-application', label: 'Add new application',    icon: 'application' },

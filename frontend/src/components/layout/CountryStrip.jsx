@@ -3,7 +3,9 @@ import { useCountryFilter } from '../../store/useCountryFilter.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 import Flag from '../ui/Flag.jsx';
 
-const DASHBOARD = '/partner/dashboard';
+// The catalogue, not the dashboard: picking a destination is a request to see
+// those universities, and a summary screen has nothing to filter.
+const CATALOGUE = '/partner/courses';
 
 // The 15 chips used to be a hardcoded array in this file rendering plain text
 // codes — the scaffold left a "paste the flag SVG here" note that was never
@@ -24,11 +26,11 @@ export default function CountryStrip() {
   // Picking a destination is a request to see those universities, and until now
   // it only wrote to the store — so from Applications or Document Bank the strip
   // appeared to do nothing at all, and the filter silently took effect later,
-  // whenever the user happened to reach the dashboard. Selecting now takes you
+  // whenever the user happened to reach the catalogue. Selecting now takes you
   // there, which is what the click looks like it promises.
   const select = (code) => {
     setSelectedCountry(code);
-    if (pathname !== DASHBOARD) navigate(DASHBOARD);
+    if (pathname !== CATALOGUE) navigate(CATALOGUE);
     else window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

@@ -8,6 +8,7 @@ import ErrorBoundary from './components/ui/ErrorBoundary.jsx';
 import Header from './components/layout/Header.jsx';
 import Sidebar from './components/layout/Sidebar.jsx';
 import CourseFinder from './features/courseFinder/CourseFinder.jsx';
+import PartnerDashboard from './features/partner/PartnerDashboard.jsx';
 import CourseInquiryForm from './features/courseInquiries/CourseInquiryForm.jsx';
 import CourseInquiryHistory from './features/courseInquiries/CourseInquiryHistory.jsx';
 import NewApplication from './features/applications/NewApplication.jsx';
@@ -142,7 +143,10 @@ export default function App() {
           <PartnerShell>
             <Routes>
               <Route path="/" element={<Navigate to="/partner/dashboard" replace />} />
-              <Route path="dashboard"       element={<CourseFinder />} />
+              <Route path="dashboard"       element={<PartnerDashboard />} />
+              {/* The catalogue is a task, not a summary. It lived at
+                  /partner/dashboard under a heading that said Dashboard. */}
+              <Route path="courses"         element={<CourseFinder />} />
               <Route path="ask-team"         element={<CourseInquiryForm />} />
               <Route path="history"          element={<CourseInquiryHistory />} />
               <Route path="add-application"  element={<NewApplication />} />

@@ -28,7 +28,7 @@ function renderStrip(route = '/partner/app-history') {
       <MemoryRouter initialEntries={[route]}>
         <CountryStrip />
         <Routes>
-          <Route path="/partner/dashboard" element={<p>DASHBOARD</p>} />
+          <Route path="/partner/courses" element={<p>CATALOGUE</p>} />
           <Route path="/partner/app-history" element={<p>APPLICATIONS</p>} />
         </Routes>
       </MemoryRouter>
@@ -44,31 +44,31 @@ describe('CountryStrip', () => {
     useCountryFilter.setState({ selectedCountry: 'ALL' });
   });
 
-  it('opens the dashboard when a country is picked from another screen', async () => {
+  it('opens the catalogue when a country is picked from another screen', async () => {
     renderStrip('/partner/app-history');
     await waitFor(() => expect(screen.getByText('UK')).toBeTruthy());
     expect(screen.getByText('APPLICATIONS')).toBeTruthy();
 
     fireEvent.click(screen.getByText('UK'));
 
-    await waitFor(() => expect(screen.getByText('DASHBOARD')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('CATALOGUE')).toBeTruthy());
     // …and the filter the dashboard reads is the one that was clicked.
     expect(useCountryFilter.getState().selectedCountry).toBe('UK');
   });
 
-  it('sets the filter without navigating when already on the dashboard', async () => {
-    renderStrip('/partner/dashboard');
+  it('sets the filter without navigating when already on the catalogue', async () => {
+    renderStrip('/partner/courses');
     await waitFor(() => expect(screen.getByText('CA')).toBeTruthy());
 
     fireEvent.click(screen.getByText('CA'));
 
     expect(useCountryFilter.getState().selectedCountry).toBe('CA');
-    expect(screen.getByText('DASHBOARD')).toBeTruthy();
+    expect(screen.getByText('CATALOGUE')).toBeTruthy();
   });
 
   it('clears the filter through the All chip', async () => {
     useCountryFilter.setState({ selectedCountry: 'UK' });
-    renderStrip('/partner/dashboard');
+    renderStrip('/partner/courses');
     await waitFor(() => expect(screen.getByText('All')).toBeTruthy());
 
     fireEvent.click(screen.getByText('All'));
@@ -78,7 +78,7 @@ describe('CountryStrip', () => {
 
   it('marks the selected destination as pressed, for the row and for screen readers', async () => {
     useCountryFilter.setState({ selectedCountry: 'UK' });
-    renderStrip('/partner/dashboard');
+    renderStrip('/partner/courses');
     await waitFor(() => expect(screen.getByText('UK')).toBeTruthy());
 
     expect(screen.getByRole('button', { name: /UK/ }).getAttribute('aria-pressed')).toBe('true');
@@ -89,7 +89,7 @@ describe('CountryStrip', () => {
   // which is indistinguishable from a catalogue with no destinations in it.
   it('says so when the destinations cannot be loaded', async () => {
     countriesApi.fetchCountries.mockRejectedValue(new Error('network'));
-    renderStrip('/partner/dashboard');
+    renderStrip('/partner/courses');
 
     // useCountries hardcodes retry: 1 (useReferenceData.js), which the test
     // client's retry:false cannot override — so the failure takes a retry plus

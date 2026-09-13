@@ -54,7 +54,7 @@ export default function CourseInquiryForm() {
       subtitle="Let’s start by setting your preferences"
       actions={
         <>
-          <button className="btn btn-outline" onClick={() => navigate('/partner/dashboard')}>
+          <button className="btn btn-outline" onClick={() => navigate('/partner/courses')}>
             Course search
           </button>
           <button className="btn btn-outline" onClick={() => navigate('/partner/add-application')}>

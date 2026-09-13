@@ -66,7 +66,7 @@ export default function NewApplication() {
       title="New application"
       subtitle="Let’s start by setting your preferences"
       actions={
-        <Link className="btn btn-outline" to="/partner/dashboard">
+        <Link className="btn btn-outline" to="/partner/courses">
           Browse courses
         </Link>
       }

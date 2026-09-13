@@ -84,7 +84,7 @@ export default function Header() {
     if (!term) return;
     // The dashboard is the course catalogue, and its search covers course title,
     // institution and city.
-    navigate(`/partner/dashboard?search=${encodeURIComponent(term)}`);
+    navigate(`/partner/courses?search=${encodeURIComponent(term)}`);
     setSearch('');
     searchRef.current?.blur();
   };
