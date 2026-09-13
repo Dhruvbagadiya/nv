@@ -614,3 +614,19 @@
   .logo-cropper-actions {
     display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;
   }
+
+  /* ── Document Bank thumbnails ─────────────────────────────────────────
+     A fixed box whatever the page proportions are, so a grid of A4 portraits
+     and the odd landscape scan keeps its rows aligned. */
+  .doc-tile-thumb {
+    display: block; width: 100%; aspect-ratio: 3 / 4; max-height: 132px;
+    margin-inline: auto; overflow: hidden;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: #fff;
+  }
+  .doc-tile-thumb img {
+    width: 100%; height: 100%; display: block;
+    /* Top-anchored, not centred: the first thing on a form or a letter is its
+       heading, which is what identifies it. Centring crops that away. */
+    object-fit: cover; object-position: top center;
+  }

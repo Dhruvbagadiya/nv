@@ -32,9 +32,20 @@ export function DocumentTile({ document: doc }) {
       // read the full text; the title attribute at least makes it recoverable.
       title={doc.title}
     >
-      <span className="doc-tile-icon">
-        <PdfIcon />
-      </span>
+      {/* The rendered first page, when there is one. The titles in this grid are
+          things like "FD Cover Letter" beside "Loan Cover Letter" — easy to tell
+          apart on sight, much less so by name, and 87 identical glyphs told a
+          reader neither. Falls back to the glyph for anything poppler could not
+          draw, and for every document uploaded before this existed. */}
+      {doc.thumbnailUrl ? (
+        <span className="doc-tile-thumb">
+          <img src={doc.thumbnailUrl} alt="" loading="lazy" decoding="async" />
+        </span>
+      ) : (
+        <span className="doc-tile-icon">
+          <PdfIcon />
+        </span>
+      )}
       <span className="doc-tile-title">{doc.title}</span>
     </a>
   );

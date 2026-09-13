@@ -8,8 +8,12 @@
 FROM node:20-slim AS base
 # Prisma's engine links against libssl; ca-certificates is needed for outbound
 # HTTPS (S3/R2 uploads and the transactional-mail API).
+# poppler-utils supplies pdftoppm, which renders the first page of an uploaded
+# PDF into the thumbnail the Document Bank grid shows. ~15 MB, and a subprocess
+# rather than the alternative: pdfjs-dist plus a canvas implementation means
+# native bindings that break whenever this base image moves.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      openssl ca-certificates \
+      openssl ca-certificates poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production

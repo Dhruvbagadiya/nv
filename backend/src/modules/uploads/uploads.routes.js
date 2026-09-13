@@ -26,8 +26,9 @@ import multer from 'multer';
 import { requireAuth } from '../../middleware/auth.js';
 import { requireRole } from '../../middleware/rbac.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
+import { renderPdfThumbnail, thumbnailKeyFor } from '../../utils/pdfThumbnail.js';
 import { BadRequestError } from '../../utils/httpErrors.js';
-import { putObject, IMAGE_TYPES, storageStatus, MAX_BYTES } from '../../utils/storage.js';
+import { putObject, IMAGE_TYPES, storageStatus, MAX_BYTES, putGeneratedObject } from '../../utils/storage.js';
 
 const router = Router();
 const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
@@ -83,13 +84,28 @@ router.post(
 
     // No `allowed` override: putObject's default list is the documents one, and
     // duplicating it here is how the two drift apart.
-    const { fileUrl, storage } = await putObject(req.file.buffer, {
+    const { key, fileUrl, storage } = await putObject(req.file.buffer, {
       filename: req.file.originalname,
       contentType: req.file.mimetype,
       category: req.body?.category ?? 'files',
     });
 
-    res.json({ fileUrl, storage });
+    // A preview for the Document Bank grid, which otherwise shows one identical
+    // glyph per file. Best-effort on purpose: renderPdfThumbnail returns null
+    // for anything it cannot draw, and refusing a perfectly good upload because
+    // a picture of it could not be made would be the wrong trade.
+    let thumbnailUrl = null;
+    if (req.file.mimetype === 'application/pdf') {
+      const jpeg = await renderPdfThumbnail(req.file.buffer);
+      if (jpeg) {
+        ({ fileUrl: thumbnailUrl } = await putGeneratedObject(jpeg, {
+          key: thumbnailKeyFor(key),
+          contentType: 'image/jpeg',
+        }));
+      }
+    }
+
+    res.json({ fileUrl, thumbnailUrl, storage });
   })
 );
 

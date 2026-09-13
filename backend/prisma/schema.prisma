@@ -531,6 +531,10 @@ model Document {
   category      DocumentCategory
   title         String
   fileUrl       String
+  /// First page of the PDF, rendered once on upload. Nullable because it is
+  /// best-effort: a file poppler cannot draw still uploads, and the grid falls
+  /// back to the typed tile. Same shape as SchoolPhoto.thumbnailUrl.
+  thumbnailUrl  String?
   countryId     String?
   institutionId String?
   sortOrder     Int              @default(0)

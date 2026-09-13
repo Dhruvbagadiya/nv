@@ -42,6 +42,10 @@ function DocumentForm({ initial, onClose, onSaved, storage }) {
     category: initial?.category ?? 'VISA_DOCUMENT',
     title: initial?.title ?? '',
     fileUrl: initial?.fileUrl ?? '',
+    // Carried so editing a document's title does not drop the thumbnail it
+    // already has — the payload sends every field, and an unseeded one is
+    // sent as null.
+    thumbnailUrl: initial?.thumbnailUrl ?? null,
     countryId: initial?.countryId ?? '',
     institutionId: initial?.institutionId ?? '',
     sortOrder: initial?.sortOrder ?? 0,
@@ -52,9 +56,12 @@ function DocumentForm({ initial, onClose, onSaved, storage }) {
 
   const upload = useMutation({
     mutationFn: (file) => uploadFile(file, values.category),
-    onSuccess: (fileUrl, file) => {
+    onSuccess: ({ fileUrl, thumbnailUrl }, file) => {
       setUploadError(null);
       set('fileUrl', fileUrl);
+      // Rendered server-side from the first page. Null for anything poppler
+      // could not draw, which the grid handles by falling back to the tile.
+      set('thumbnailUrl', thumbnailUrl ?? null);
       // Saves retyping the name; still editable, since a filename is rarely the
       // label you want agents to read.
       if (!values.title) set('title', file.name.replace(/\.[^.]+$/, ''));
@@ -74,6 +81,7 @@ function DocumentForm({ initial, onClose, onSaved, storage }) {
       category: values.category,
       title: values.title,
       fileUrl: values.fileUrl,
+      thumbnailUrl: values.thumbnailUrl ?? null,
       countryId: values.countryId || null,
       institutionId: values.institutionId || null,
       sortOrder: Number(values.sortOrder) || 0,

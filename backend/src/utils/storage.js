@@ -190,6 +190,37 @@ export async function putObject(
   return { key, fileUrl: `/uploads/${key}`, storage: 'local' };
 }
 
+/**
+ * Store bytes this server generated, at a key it chose.
+ *
+ * putObject is for a file a USER handed us: it validates the content type,
+ * checks the declared extension, and invents a random key. None of that applies
+ * to a thumbnail — we produced the JPEG, we know what it is, and the key has to
+ * be derivable from the original's so the pair stays together.
+ *
+ * Kept beside putObject rather than inlined at the call site because it has the
+ * same local-disk fallback, and that branch is the thing that must not drift
+ * between the two.
+ */
+export async function putGeneratedObject(buffer, { key, contentType }) {
+  if (config.storage.enabled) {
+    await getClient().send(
+      new PutObjectCommand({
+        Bucket: config.storage.bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+      })
+    );
+    return { key, fileUrl: `${config.storage.publicBaseUrl}/${key}`, storage: 's3' };
+  }
+
+  const dir = path.join(LOCAL_UPLOAD_ROOT, path.dirname(key));
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(path.join(LOCAL_UPLOAD_ROOT, key), buffer);
+  return { key, fileUrl: `/uploads/${key}`, storage: 'local' };
+}
+
 export const storageStatus = () => ({
   enabled: config.storage.enabled,
   maxBytes: MAX_BYTES,

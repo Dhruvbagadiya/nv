@@ -63,7 +63,10 @@ async function upload(path, file, category) {
   const { data } = await api.post(path, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
-  return data.fileUrl;
+  // The whole response, not just data.fileUrl. A PDF upload also comes back with
+  // a rendered thumbnailUrl, and a helper that threw that away meant the one
+  // caller who wants it could not have it.
+  return data;
 }
 
 /** Logos, banners — anything that ends up in an <img>. PNG/JPEG/WebP, 5 MB. */

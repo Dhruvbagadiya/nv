@@ -32,6 +32,10 @@ export const createDocumentBody = z
     // an opaque locator so that switching between local paths and S3/R2 presigned
     // URLs stays a service-layer decision rather than a schema migration.
     fileUrl: z.string().trim().min(1).max(1000),
+    // Written by the server, not typed by an admin, and null whenever the
+    // render did not produce one — so optional and nullable rather than required
+    // alongside fileUrl.
+    thumbnailUrl: z.string().trim().max(500).nullable().optional(),
     countryId: z.string().uuid().nullable().optional(),
     institutionId: z.string().uuid().nullable().optional(),
     sortOrder: z.number().int().min(0).max(9999).optional(),

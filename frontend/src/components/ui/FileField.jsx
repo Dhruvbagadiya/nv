@@ -33,7 +33,9 @@ export default function FileField({
 
   const upload = useMutation({
     mutationFn: (file) => (kind === 'image' ? uploadImage : uploadFile)(file, category),
-    onSuccess: (fileUrl) => onChange(fileUrl),
+    // The uploader returns the whole response now; this field only stores a
+    // URL, so it takes the one it needs.
+    onSuccess: ({ fileUrl }) => onChange(fileUrl),
   });
 
   const error = upload.error

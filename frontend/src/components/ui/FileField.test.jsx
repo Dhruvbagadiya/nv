@@ -38,7 +38,9 @@ const pick = (name = 'logo.png', type = 'image/png') => {
  */
 describe('FileField', () => {
   it('uploads the picked file and reports back the stored URL', async () => {
-    adminApi.uploadImage.mockResolvedValue('https://cdn.example.com/institution-logos/a.png');
+    // The uploader returns the whole response — a PDF also comes back with a
+    // rendered thumbnailUrl — and this field takes the one URL it stores.
+    adminApi.uploadImage.mockResolvedValue({ fileUrl: 'https://cdn.example.com/institution-logos/a.png' });
     const { onChange } = renderField({ kind: 'image', category: 'institution-logos' });
 
     pick();
@@ -51,7 +53,7 @@ describe('FileField', () => {
   });
 
   it('sends a non-image through the file endpoint, not the image one', async () => {
-    adminApi.uploadFile.mockResolvedValue('/uploads/files/x.pdf');
+    adminApi.uploadFile.mockResolvedValue({ fileUrl: '/uploads/files/x.pdf', thumbnailUrl: null });
     renderField({ kind: 'file', category: 'update-attachments' });
 
     pick('circular.pdf', 'application/pdf');
