@@ -136,6 +136,33 @@
   }
   .result-count b { color: var(--ink-950); font-weight: 700; font-variant-numeric: tabular-nums; }
 
+  /* ===================== CHIPS =====================
+     A toggle that is one of a short set: the dashboard's quick filters, the
+     Document Bank's category tabs, the UG/PG switch on entry requirements.
+
+     This was deleted along with the old dashboard filter block it happened to
+     sit inside, and nothing noticed for three screens, because an unstyled
+     <button> still works — it just renders as a grey OS button in the middle of
+     a designed page. Four call sites use it; it does not belong to any one of
+     them, which is why it sits here rather than beside a screen's own rules. */
+  .chip {
+    display: inline-flex; align-items: center; gap: var(--sp-1);
+    height: 30px; padding: 0 var(--sp-3);
+    border: 1px solid var(--border); border-radius: var(--radius-pill);
+    background: var(--surface); color: var(--ink-700);
+    font-family: var(--font-sans); font-size: var(--fs-xs); font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    transition: background .13s, border-color .13s, color .13s;
+  }
+  .chip:hover { border-color: var(--border-strong); color: var(--ink-900); }
+  .chip:focus-visible { outline: 2px solid var(--accent-500); outline-offset: 1px; }
+  /* The selected one reads as selected on its own, without needing the others
+     beside it for contrast. */
+  .chip.chip-active {
+    background: var(--accent-50); border-color: var(--accent-100); color: var(--accent-700);
+  }
+  .chip.chip-active:hover { border-color: var(--accent-500); }
+
   /* ============= RESULTS GRID & SHARED STATUS PILLS =============
      The card itself is .pcard below; what lives here is the grid it sits in
      and the two pill styles the admin tables share with it. */
@@ -284,6 +311,10 @@
   .page-btn:hover:not(:disabled) { border-color: var(--ink-300); }
   .page-btn.active { background:var(--accent-700); color: var(--accent-contrast); border-color:var(--accent-700); }
   .page-btn:disabled { opacity:.4; cursor:not-allowed; }
+  /* "browsable to page 834 — filter or search to reach the rest". An aside about
+     the control, not part of the count beside it, and it inherited the count's
+     weight and colour until this existed. */
+  .pagination-capped { color: var(--ink-400); font-size: var(--fs-xs); }
 
   /* ===================== FORM CARD (inquiry / new application) ===================== */
   .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 22px; max-width: 560px; margin: 0 auto; text-align: center; box-shadow: var(--shadow-xs); }

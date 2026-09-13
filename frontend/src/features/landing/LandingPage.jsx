@@ -384,7 +384,7 @@ export default function LandingPage() {
           to fire last. */}
       <section className="lp-hero" id="top">
         <div className="lp-wrap lp-hero-inner">
-          <div className="lp-hero-copy">
+          <div>
             <Reveal>
               <div className="lp-eyebrow lp-eyebrow-live">
                 <span className="lp-live-dot" aria-hidden="true" />
@@ -538,7 +538,7 @@ export default function LandingPage() {
             </div>
           </Reveal>
 
-          <div className="lp-about-copy">
+          <div>
             <Reveal><Eyebrow>Who are NV Immigration</Eyebrow></Reveal>
             <Reveal delay={80}><h2 className="lp-h2">Professional visa consulting services</h2></Reveal>
             <Reveal delay={140}>
@@ -839,7 +839,7 @@ export default function LandingPage() {
       {/* ── Contact ─────────────────────────────────────────────────── */}
       <section className="lp-contact" id="contact">
         <div className="lp-wrap lp-contact-inner">
-          <div className="lp-contact-copy">
+          <div>
             <Reveal><h2 className="lp-h2 lp-h2-onaccent">Feel free to enquire about any question you have</h2></Reveal>
             <Reveal delay={100}>
               <p className="lp-body lp-body-onaccent">
