@@ -57,14 +57,18 @@ export const RELATED_KEYS = {
   // The Report panel is composed from applications, inquiries, deadlines,
   // notifications and these notes, so each of them has to re-derive it.
   'useful-information': [['useful-information'], ['report-summary']],
-  'course-inquiries': [['course-inquiries'], ['report-summary']],
+  'course-inquiries': [['course-inquiries'], ['report-summary'], ['activity']],
   applications: [
     ['applications'], ['application'],
     ['admin-applications'],
     ['student-applications'], ['student-application'],
     ['report-summary'], ['admin-stats'],
+    ['activity'], ['agent-summary'],
   ],
   notifications: [['notifications'], ['report-summary']],
+  // The cross-agency feed and the agency roster are both derived from
+  // applications, documents and inquiries, so each of those re-derives them.
+  activity: [['activity'], ['agent-summary']],
   // A person's own profile, under either portal's key.
   profile: [['my-profile'], ['student-profile']],
 };

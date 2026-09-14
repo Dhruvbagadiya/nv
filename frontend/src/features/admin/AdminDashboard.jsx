@@ -1,129 +1,225 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Page from '../../components/ui/Page.jsx';
-import { fetchAdminStats } from '../../api/admin.js';
+import Icon from '../../components/ui/Icon.jsx';
+import Flag from '../../components/ui/Flag.jsx';
+import { useAuth } from '../../store/useAuth.js';
+import { fetchAdminStats, fetchActivity, fetchAgentSummary } from '../../api/admin.js';
+import { fetchApplications } from '../../api/applications.js';
+import { applicationStageLabel } from '../../constants/referenceData.js';
+import { errorMessage, formatDate } from '../../utils/format.js';
 
-// Stat card with an icon, count, label and a link.
-function StatCard({ icon, label, value, to, color = 'var(--accent-700)' }) {
-  const body = (
-    <div className="admin-stat-card" style={{ '--card-color': color }}>
-      <div className="admin-stat-icon">{icon}</div>
-      <div className="admin-stat-body">
-        <div className="admin-stat-value">{value ?? '—'}</div>
-        <div className="admin-stat-label">{label}</div>
-      </div>
-    </div>
-  );
-  return to ? <Link to={to} style={{ textDecoration: 'none' }}>{body}</Link> : body;
-}
+/**
+ * The admin landing screen.
+ *
+ * It was six stat cards over eight quick-action tiles: fourteen boxes, every one
+ * of them a link, and not one row of anything that had happened. An admin opens
+ * this to find out what needs doing — the sidebar is already a complete list of
+ * where to go, so a grid of links restating it is a second navigation menu
+ * wearing a dashboard's clothes.
+ *
+ * So the counts stay (they are the only cross-cutting numbers in the product)
+ * and the quick-action grid is replaced by the two things an admin actually
+ * needs: the applications waiting on them, and what the agencies have been
+ * doing. It shares the partner dashboard's language deliberately — same hero,
+ * same tiles, same cards — because they are the same product.
+ */
 
-// Quick-action tile
-function ActionTile({ icon, label, to, description }) {
+function Stat({ to, icon, value, label, tone = 'neutral', loading }) {
   return (
-    <Link to={to} className="admin-action-tile">
-      <div className="admin-action-icon">{icon}</div>
-      <div>
-        <div className="admin-action-label">{label}</div>
-        <div className="admin-action-desc">{description}</div>
-      </div>
+    <Link className="pdash-tile" to={to}>
+      <span className={`pdash-tile__icon pdash-tile__icon--${tone}`} aria-hidden="true">
+        <Icon name={icon} size={16} />
+      </span>
+      <span className="pdash-tile__body">
+        <span className="pdash-tile__value">{loading ? '…' : value ?? '—'}</span>
+        <span className="pdash-tile__label">{label}</span>
+      </span>
     </Link>
   );
 }
 
-const INSTITUTION_ICON = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 21v-4h6v4"/><path d="M9 7h1M14 7h1M9 11h1M14 11h1"/>
-  </svg>
-);
-const COURSE_ICON = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-  </svg>
-);
-const USER_ICON = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="18" cy="9" r="2.5"/>
-  </svg>
-);
-const APP_ICON = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
-    <polyline points="14 3 14 8 19 8"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9.5" y1="14.5" x2="14.5" y2="14.5"/>
-  </svg>
-);
-const ANNOUNCE_ICON = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 6h16v9H8l-4 4z"/>
-  </svg>
-);
-const DOC_ICON = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-  </svg>
-);
-const COMMISSION_ICON = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="5" y1="19" x2="19" y2="5"/><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/>
-  </svg>
-);
-const MOI_ICON = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
-    <polyline points="14 3 14 8 19 8"/><polyline points="9.5 14 11 15.5 14.5 12"/>
-  </svg>
-);
+const ACT_TYPE = {
+  APPLICATION: { icon: 'clipboard', tone: 'accent' },
+  DOCUMENT: { icon: 'document', tone: 'teal' },
+  INQUIRY: { icon: 'chat', tone: 'purple' },
+};
 
 export default function AdminDashboard() {
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['admin-stats'],
-    queryFn: fetchAdminStats,
-    staleTime: 2 * 60 * 1000,
+  const navigate = useNavigate();
+  const user = useAuth((s) => s.user);
+
+  const stats = useQuery({ queryKey: ['admin-stats'], queryFn: fetchAdminStats, staleTime: 2 * 60 * 1000 });
+  const recent = useQuery({
+    queryKey: ['admin-applications', { dashboard: true }],
+    queryFn: () => fetchApplications({ page: 1, pageSize: 6 }),
+  });
+  const activity = useQuery({
+    queryKey: ['activity', { dashboard: true }],
+    queryFn: () => fetchActivity({ page: 1, pageSize: 8 }),
+  });
+  const agents = useQuery({ queryKey: ['agent-summary'], queryFn: fetchAgentSummary });
+
+  const today = new Date().toLocaleDateString(undefined, {
+    weekday: 'long', day: 'numeric', month: 'long',
   });
 
+  const s = stats.data;
+  const applications = recent.data?.items ?? [];
+  const events = activity.data?.items ?? [];
+  const roster = agents.data ?? [];
+
   return (
-    <Page title="Admin Panel" subtitle="Manage content, users and settings">
+    <Page>
+      <div className="pdash">
+        <header className="pdash-hero">
+          <div className="pdash-hero__text">
+            <p className="pdash-hero__date">{today} · Admin</p>
+            <h1>Welcome back, {user?.name ?? 'admin'}</h1>
+            <p className="pdash-hero__line">
+              {stats.isError
+                ? 'Some figures could not be loaded.'
+                : `${s?.institutions ?? '—'} institutions · ${s?.courses ?? '—'} courses · ${s?.users ?? '—'} users`}
+            </p>
+          </div>
+          <div className="pdash-hero__actions">
+            <button className="btn btn-ghost-light" onClick={() => navigate('/admin/activity')}>
+              Agency activity
+            </button>
+            <button className="btn btn-light" onClick={() => navigate('/admin/applications')}>
+              <Icon name="clipboard" size={15} /> Review applications
+            </button>
+          </div>
+        </header>
 
-      {/* ── Stats row ─────────────────────────────────────── */}
-      <div className="admin-stats-grid">
-        <StatCard icon={INSTITUTION_ICON} label="Institutions"
-          value={isLoading ? '…' : stats?.institutions}
-          to="/admin/institutions" color="var(--info-700)" />
-        <StatCard icon={COURSE_ICON} label="Courses"
-          value={isLoading ? '…' : stats?.courses}
-          to="/admin/courses" color="var(--success-700)" />
-        <StatCard icon={USER_ICON} label="Users"
-          value={isLoading ? '…' : stats?.users}
-          to="/admin/users" color="var(--purple-700)" />
-        <StatCard icon={APP_ICON} label="Applications"
-          value={isLoading ? '…' : stats?.applications}
-          to="/partner/app-history" color="var(--accent-700)" />
-        <StatCard icon={ANNOUNCE_ICON} label="Active banners"
-          value={isLoading ? '…' : stats?.activeBanners}
-          to="/admin/announcements" color="var(--warning-700)" />
-        <StatCard icon={DOC_ICON} label="Documents"
-          value={isLoading ? '…' : stats?.documents}
-          to="/admin/documents" color="var(--teal-700)" />
-      </div>
+        {stats.isError ? (
+          <div className="empty-state">
+            <span className="e-icon e-icon--danger" aria-hidden="true"><Icon name="alert" size={20} /></span>
+            <h3>{errorMessage(stats.error, 'Could not load the admin figures.')}</h3>
+            <div style={{ marginTop: 'var(--sp-4)' }}>
+              <button type="button" className="btn btn-primary" onClick={() => stats.refetch()}>Try again</button>
+            </div>
+          </div>
+        ) : (
+          <div className="pdash-tiles">
+            <Stat to="/admin/applications" icon="clipboard" tone="accent" value={s?.applications} label="Applications" loading={stats.isLoading} />
+            <Stat to="/admin/institutions"  icon="institution" tone="info" value={s?.institutions} label="Institutions" loading={stats.isLoading} />
+            <Stat to="/admin/courses"       icon="course" tone="good" value={s?.courses} label="Courses" loading={stats.isLoading} />
+            <Stat to="/admin/users"         icon="users" value={s?.users} label="Users" loading={stats.isLoading} />
+            <Stat to="/admin/documents"     icon="folder" tone="info" value={s?.documents} label="Documents" loading={stats.isLoading} />
+            <Stat to="/admin/announcements" icon="megaphone" tone="warning" value={s?.activeBanners} label="Active banners" loading={stats.isLoading} />
+          </div>
+        )}
 
-      {/* ── Quick actions ─────────────────────────────────── */}
-      <h2 className="admin-section-heading">Quick actions</h2>
-      <div className="admin-actions-grid">
-        <ActionTile icon={INSTITUTION_ICON} label="Institutions"
-          to="/admin/institutions" description="Add, edit and blacklist partner universities" />
-        <ActionTile icon={COURSE_ICON} label="Courses"
-          to="/admin/courses" description="Manage the programme catalogue and intakes" />
-        <ActionTile icon={COMMISSION_ICON} label="Commission rates"
-          to="/admin/commissions" description="Set per-institution commission tiers" />
-        <ActionTile icon={MOI_ICON} label="MOI acceptances"
-          to="/admin/moi" description="Track Ministry of Interior acceptance records" />
-        <ActionTile icon={USER_ICON} label="Users"
-          to="/admin/users" description="Create accounts and manage roles" />
-        <ActionTile icon={ANNOUNCE_ICON} label="Banners"
-          to="/admin/announcements" description="Control the portal-wide announcement bars" />
-        <ActionTile icon={DOC_ICON} label="Document bank"
-          to="/admin/documents" description="Upload visa documents, SOPs, LORs and brochures" />
-        <ActionTile icon={APP_ICON} label="Applications"
-          to="/partner/app-history" description="Review and advance student applications" />
+        <div className="pdash-row pdash-row--wide">
+          <section className="pdash-card">
+            <div className="pdash-card__head">
+              <h2>Latest applications</h2>
+              <Link className="pdash-card__more" to="/admin/applications">All applications</Link>
+            </div>
+
+            {recent.isLoading && <p className="field-hint">Loading…</p>}
+            {recent.isError && <p className="form-error">Couldn’t load applications.</p>}
+            {!recent.isLoading && !recent.isError && applications.length === 0 && (
+              <p className="pdash-quiet">Nothing filed yet.</p>
+            )}
+
+            {applications.length > 0 && (
+              <table className="pdash-table">
+                <tbody>
+                  {applications.map((a) => (
+                    <tr key={a.id}>
+                      <td className="pdash-table__ref">#{a.reference}</td>
+                      <td>
+                        <div className="pdash-table__name">{a.studentName}</div>
+                        <div className="pdash-table__sub">
+                          <Flag
+                            isoCode={a.course?.institution?.country?.isoCode}
+                            code={a.course?.institution?.country?.code}
+                            size={13}
+                          />
+                          {a.course?.institution?.name ?? '—'}
+                        </div>
+                      </td>
+                      {/* The column an admin screen needs and the partner one
+                          does not: whose application this is. */}
+                      <td className="pdash-table__stage">{a.agent?.name ?? '—'}</td>
+                      <td className="pdash-table__stage">{applicationStageLabel(a.stage)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+
+          <section className="pdash-card">
+            <div className="pdash-card__head">
+              <h2>Agencies</h2>
+              <Link className="pdash-card__more" to="/admin/activity">Activity</Link>
+            </div>
+
+            {agents.isLoading && <p className="field-hint">Loading…</p>}
+            {agents.isError && <p className="form-error">Couldn’t load the agency list.</p>}
+            {!agents.isLoading && !agents.isError && roster.length === 0 && (
+              <p className="pdash-quiet">No active agencies.</p>
+            )}
+
+            {roster.length > 0 && (
+              <ul className="pdash-list">
+                {roster.slice(0, 6).map((a) => (
+                  <li key={a.id}>
+                    <span className="pdash-list__main">
+                      <span className="pdash-list__title">{a.name}</span>
+                      <span className="pdash-list__sub">
+                        {a.lastActiveAt ? `Last filed ${formatDate(a.lastActiveAt)}` : 'Nothing filed yet'}
+                      </span>
+                    </span>
+                    <span className="pdash-pill">{a.applications}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        <section className="pdash-card">
+          <div className="pdash-card__head">
+            <h2>Recent activity</h2>
+            <Link className="pdash-card__more" to="/admin/activity">Full feed</Link>
+          </div>
+
+          {activity.isLoading && <p className="field-hint">Loading…</p>}
+          {activity.isError && <p className="form-error">Couldn’t load the activity feed.</p>}
+          {!activity.isLoading && !activity.isError && events.length === 0 && (
+            <p className="pdash-quiet">
+              Nothing yet. This feed is built from applications, document uploads and
+              course inquiries — edits and sign-ins are not recorded anywhere.
+            </p>
+          )}
+
+          {events.length > 0 && (
+            <ul className="act-feed">
+              {events.map((e) => {
+                const t = ACT_TYPE[e.type] ?? { icon: 'bell', tone: 'neutral' };
+                return (
+                  <li key={e.id}>
+                    <span className={`n-icon n-icon--${t.tone}`} aria-hidden="true">
+                      <Icon name={t.icon} size={15} />
+                    </span>
+                    <span className="act-feed__main">
+                      <span className="act-feed__title">{e.title}</span>
+                      <span className="act-feed__sub">
+                        {e.actor?.name ?? 'Unknown'}
+                        {e.subject && <> · {e.subject}</>}
+                      </span>
+                    </span>
+                    <span className="act-feed__when">{formatDate(e.createdAt)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
       </div>
     </Page>
   );

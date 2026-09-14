@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invalidateResource } from '../../hooks/useInvalidateResource.js';
 import { toast } from '../../store/useToast.js';
@@ -195,6 +195,13 @@ export default function NotificationDropdown() {
             </div>
             );
           })}
+
+          {/* The panel asks for ten rows and cannot reach an eleventh, so
+              anything older than your last ten events was unreachable — the API
+              has paged since it was built and nothing called it with a page. */}
+          <Link className="notif-panel-foot" to="/partner/notifications" onClick={() => setOpen(false)}>
+            See all notifications
+          </Link>
         </div>
       )}
     </div>

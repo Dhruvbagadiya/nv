@@ -13,6 +13,7 @@ import CourseInquiryForm from './features/courseInquiries/CourseInquiryForm.jsx'
 import CourseInquiryHistory from './features/courseInquiries/CourseInquiryHistory.jsx';
 import NewApplication from './features/applications/NewApplication.jsx';
 import ApplicationHistory from './features/applications/ApplicationHistory.jsx';
+import NotificationsPage from './features/partner/NotificationsPage.jsx';
 import MoiAccepted from './features/moiAccepted/MoiAccepted.jsx';
 import Commission from './features/commission/Commission.jsx';
 import EntryRequirements from './features/entryRequirements/EntryRequirements.jsx';
@@ -29,6 +30,7 @@ import AdminLoginPage from './features/auth/AdminLoginPage.jsx';
 import ForgotPasswordPage from './features/auth/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './features/auth/ResetPasswordPage.jsx';
 import AdminDashboard from './features/admin/AdminDashboard.jsx';
+import AdminActivity from './features/admin/AdminActivity.jsx';
 import AdminCountries from './features/admin/AdminCountries.jsx';
 import AdminInstitutions from './features/admin/AdminInstitutions.jsx';
 import AdminCourses from './features/admin/AdminCourses.jsx';
@@ -151,6 +153,7 @@ export default function App() {
               <Route path="history"          element={<CourseInquiryHistory />} />
               <Route path="add-application"  element={<NewApplication />} />
               <Route path="app-history"      element={<ApplicationHistory />} />
+              <Route path="notifications"    element={<NotificationsPage />} />
               <Route path="moi-accepted"     element={<MoiAccepted />} />
               <Route path="commission"       element={<Commission />} />
               <Route path="entry-requirements" element={<Navigate to="/partner/entry-requirements/ug" replace />} />
@@ -196,6 +199,7 @@ export default function App() {
               <Route path="support-contacts"  element={<AdminSupportContacts />} />
               <Route path="applications"      element={<AdminApplications />} />
               <Route path="course-inquiries"  element={<AdminCourseInquiries />} />
+              <Route path="activity"          element={<AdminActivity />} />
               <Route path="useful-information" element={<AdminUsefulInformation />} />
               <Route path="users" element={
                 <ProtectedRoute allowedRoles={SUPER_ADMIN_ROLES} loginPath="/admin/login" redirectPath="/admin">

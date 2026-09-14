@@ -977,3 +977,99 @@
     font-size: var(--fs-2xs); font-weight: 600; color: var(--ink-700); text-decoration: none;
   }
   .pdash-shortcut:hover { background: var(--accent-50); color: var(--accent-700); }
+
+  /* ═════════════ NOTIFICATIONS PAGE & ACTIVITY FEED ═════════════
+     The icon badge existed only as `.notif-item .n-icon` — scoped to the bell
+     dropdown, so the same markup on a full page resolved nothing and rendered as
+     a bare glyph. Restated unscoped here; the dropdown's more specific rules
+     still win and carry identical values. */
+  .n-icon {
+    flex-shrink: 0; display: grid; place-items: center;
+    width: 30px; height: 30px; border-radius: var(--radius-sm);
+    background: var(--ink-100); color: var(--ink-600);
+  }
+  .n-icon--accent  { background: var(--accent-50);   color: var(--accent-700); }
+  .n-icon--info    { background: var(--info-100);    color: var(--info-700); }
+  .n-icon--teal    { background: var(--teal-100);    color: var(--teal-700); }
+  .n-icon--purple  { background: var(--purple-100);  color: var(--purple-700); }
+  .n-icon--neutral { background: var(--ink-100);     color: var(--ink-600); }
+
+  .notif-panel-foot {
+    display: block; padding: var(--sp-2); text-align: center;
+    font-size: var(--fs-2xs); font-weight: 600; color: var(--accent-700);
+    text-decoration: none; border-top: 1px solid var(--border);
+  }
+  .notif-panel-foot:hover { background: var(--accent-50); }
+
+  .notif-feed { list-style: none; margin: 0 0 var(--sp-3); padding: 0; }
+  .notif-row {
+    display: flex; align-items: flex-start; gap: var(--sp-3);
+    padding: var(--sp-3);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); margin-bottom: var(--sp-2);
+  }
+  /* Read rows stay full-strength text on a recessive ground. The dropdown drops
+     them to 60% opacity, which also fades the icon and the date into
+     illegibility — acceptable in a 10-row panel you glance at, not on a page
+     you read. */
+  .notif-row--read { background: var(--canvas); border-color: transparent; }
+  .notif-row__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+  .notif-row__title { font-size: var(--fs-sm); font-weight: 600; color: var(--ink-950); }
+  .notif-row__body { font-size: var(--fs-xs); color: var(--ink-600); }
+  .notif-row__meta { font-size: var(--fs-3xs); color: var(--ink-400); margin-top: 2px; }
+  .notif-row__meta a { color: var(--accent-700); text-decoration: none; }
+  .notif-row__meta a:hover { text-decoration: underline; }
+  .notif-row__done {
+    flex-shrink: 0; font-size: var(--fs-3xs); font-weight: 700;
+    color: var(--ink-300); text-transform: uppercase; letter-spacing: .06em;
+  }
+
+  .act-grid { display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr); gap: var(--sp-3); align-items: start; }
+  @media (max-width: 1000px) { .act-grid { grid-template-columns: minmax(0, 1fr); } }
+  .act-total { font-size: var(--fs-2xs); color: var(--ink-400); font-variant-numeric: tabular-nums; }
+
+  .act-feed { list-style: none; margin: 0; padding: 0; }
+  .act-feed li {
+    display: flex; align-items: center; gap: var(--sp-3);
+    padding: var(--sp-2) 0;
+  }
+  .act-feed li + li { border-top: 1px solid var(--border); }
+  .act-feed__main { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+  .act-feed__title {
+    font-size: var(--fs-xs); font-weight: 600; color: var(--ink-950);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .act-feed__sub {
+    display: flex; align-items: center; gap: 3px; flex-wrap: wrap;
+    font-size: var(--fs-3xs); color: var(--ink-500);
+  }
+  .act-feed__when {
+    flex-shrink: 0; font-size: var(--fs-3xs); color: var(--ink-400);
+    display: flex; align-items: center; gap: var(--sp-2);
+  }
+
+  .act-roster { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .act-agent {
+    width: 100%; display: flex; align-items: center; gap: var(--sp-2);
+    padding: var(--sp-2); border-radius: var(--radius-sm);
+    background: transparent; border: 1px solid transparent;
+    font-family: var(--font-sans); text-align: left; cursor: pointer;
+  }
+  .act-agent:hover { background: var(--canvas); }
+  .act-agent--on { background: var(--accent-50); border-color: var(--accent-100); }
+  .act-avatar {
+    flex-shrink: 0; display: grid; place-items: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--brand-700); color: #fff;
+    font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .02em;
+  }
+  .act-agent__main { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+  .act-agent__name {
+    font-size: var(--fs-xs); font-weight: 600; color: var(--ink-900);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .act-agent__meta { font-size: var(--fs-3xs); color: var(--ink-400); }
+  .act-agent__count {
+    flex-shrink: 0; font-size: var(--fs-xs); font-weight: 700;
+    color: var(--ink-950); font-variant-numeric: tabular-nums;
+  }

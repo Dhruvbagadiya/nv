@@ -18,6 +18,7 @@ export const navConfig = [
       { path: '/partner/history',         label: 'Course inquiry history', icon: 'clock' },
       { path: '/partner/add-application', label: 'Add new application',    icon: 'application' },
       { path: '/partner/app-history',     label: 'Application history',    icon: 'list' },
+      { path: '/partner/notifications',   label: 'Notifications',          icon: 'bell' },
     ],
   },
   {
@@ -73,6 +74,7 @@ export const navConfig = [
       { path: '/admin/support-contacts',   label: 'Support team',       icon: 'users' },
       { path: '/admin/applications',       label: 'All applications',   icon: 'list' },
       { path: '/admin/course-inquiries',   label: 'Course inquiries',   icon: 'help' },
+      { path: '/admin/activity',           label: 'Agency activity',    icon: 'clock' },
       { path: '/admin/useful-information', label: 'Useful information', icon: 'info' },
       { path: '/admin/users', roles: ['SUPER_ADMIN'], label: 'Users',   icon: 'userPlus' },
     ],

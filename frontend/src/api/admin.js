@@ -125,3 +125,7 @@ export async function uploadFileSigned(file, category) {
 export const createCountry = (b) => api.post('/countries', b).then((r) => r.data);
 export const updateCountry = (id, b) => api.put(`/countries/${id}`, b).then((r) => r.data);
 export const deleteCountry = (id) => api.delete(`/countries/${id}`);
+
+// ---- cross-agency activity (staff only) ----
+export const fetchActivity     = (p) => api.get('/reports/activity', { params: p }).then((r) => r.data);
+export const fetchAgentSummary = ()  => api.get('/reports/agent-summary').then((r) => r.data.items);
