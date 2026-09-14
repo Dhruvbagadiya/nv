@@ -23,9 +23,9 @@ export async function advanceApplicationStage(id, payload) {
 
 // ── Documents attached to an application ────────────────────────────────────
 
-export async function fetchApplicationDocuments(id) {
-  const { data } = await api.get(`/applications/${id}/documents`);
-  return data.items;
+export async function fetchApplicationDocuments(id, params = {}) {
+  const { data } = await api.get(`/applications/${id}/documents`, { params });
+  return data; // { items, meta }
 }
 
 /**

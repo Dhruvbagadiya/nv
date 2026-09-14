@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import Icon from '../../components/ui/Icon.jsx';
+import Pagination from '../../components/ui/Pagination.jsx';
 import EntityPicker from '../../components/ui/EntityPicker.jsx';
 import { DOCUMENT_KIND_LABEL, searchDocumentKinds } from '../../constants/documentKinds.js';
 import { errorMessage, formatDate } from '../../utils/format.js';
@@ -83,19 +84,33 @@ export default function ApplicationDocuments({ applicationId, canEdit = true }) 
   const [label, setLabel] = useState('');
   const [error, setError] = useState(null);
 
-  const { data: documents = [], isLoading, isError } = useQuery({
-    queryKey: ['applications', 'documents', applicationId],
-    queryFn: () => fetchApplicationDocuments(applicationId),
-    enabled: Boolean(applicationId),
-  });
+  const [page, setPage] = useState(1);
 
-  const invalidate = () =>
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['applications', 'documents', applicationId, { page }],
+    queryFn: () => fetchApplicationDocuments(applicationId, { page, pageSize: 24 }),
+    enabled: Boolean(applicationId),
+    placeholderData: keepPreviousData,
+  });
+  const documents = data?.items ?? [];
+  const meta = data?.meta ?? {};
+
+  // The applicationId prefix, so both pages of this application's documents go
+  // stale on an upload — and the applications list with them, since its rows
+  // carry a document count that an upload has just changed.
+  const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['applications', 'documents', applicationId] });
+    queryClient.invalidateQueries({ queryKey: ['applications'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-applications'] });
+  };
 
   const upload = useMutation({
     mutationFn: (file) => uploadApplicationDocument(applicationId, { file, kind, label: label.trim() }),
     onSuccess: () => {
       invalidate();
+      // Back to the newest page: the upload is sorted newest-first, so leaving
+      // the reader on page 3 hides the file they just added.
+      setPage(1);
       setLabel('');
       // The input is uncontrolled, so clearing it is what lets the same file be
       // picked twice — a re-upload after a rejection otherwise fires no change
@@ -233,6 +248,15 @@ export default function ApplicationDocuments({ applicationId, canEdit = true }) 
           ))}
         </ul>
       )}
+
+      <Pagination
+        page={meta.page ?? page}
+        totalPages={meta.totalPages}
+        total={meta.total}
+        pageSize={meta.pageSize}
+        maxPage={meta.maxPage}
+        onChange={setPage}
+      />
     </div>
   );
 }

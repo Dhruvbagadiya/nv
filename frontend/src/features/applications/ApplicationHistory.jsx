@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { fetchApplications } from '../../api/applications.js';
 import Flag from '../../components/ui/Flag.jsx';
+import Icon from '../../components/ui/Icon.jsx';
 import Page from '../../components/ui/Page.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
 import DataTable from '../../components/ui/DataTable.jsx';
@@ -125,6 +126,31 @@ export default function ApplicationHistory() {
           {a.stageNote && <div className="picker-sub">{a.stageNote}</div>}
         </>
       ),
+    },
+    {
+      key: 'documents',
+      header: 'Docs',
+      className: 'cell-docs',
+      // A count, not a yes/no. "Has documents" is answered by the same glance
+      // either way, and the number also answers "is anything still missing" —
+      // an application at one attachment is not an application that is ready.
+      render: (a) => {
+        const n = a._count?.documents ?? 0;
+        if (!n) return <span className="docs-none">—</span>;
+        return (
+          <button
+            type="button"
+            className="docs-chip"
+            title={`${n} document${n === 1 ? '' : 's'} attached`}
+            // The row opens the same panel, so without this the click is handled
+            // twice and the modal opens, closes and reopens.
+            onClick={(e) => { e.stopPropagation(); setSelectedId(a.id); }}
+          >
+            <Icon name="document" size={13} />
+            {n}
+          </button>
+        );
+      },
     },
     {
       key: 'deadline',

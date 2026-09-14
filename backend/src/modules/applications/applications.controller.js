@@ -83,12 +83,17 @@ export async function updateStageHandler(req, res) {
 // ── Documents ───────────────────────────────────────────────────────────────
 
 export async function listDocumentsHandler(req, res) {
-  res.json({
-    items: await applicationsService.listApplicationDocuments({
+  // Already `{ items, meta }` from paginateQuery, so it is returned as-is rather
+  // than wrapped again — the handler used to build the envelope itself, which is
+  // how a second `items` key gets nested inside the first.
+  res.json(
+    await applicationsService.listApplicationDocuments({
       applicationId: req.params.id,
       agentId: agentScopeFor(req.user),
-    }),
-  });
+      page: req.query.page,
+      pageSize: req.query.pageSize,
+    })
+  );
 }
 
 /**

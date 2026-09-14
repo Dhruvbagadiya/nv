@@ -35,6 +35,15 @@ vi.mock('../../api/institutions.js', () => ({
 
 const coursesApi = await import('../../api/courses.js');
 const applicationsApi = await import('../../api/applications.js');
+
+/**
+ * The documents endpoint is paged now — an application accumulates attachments
+ * for as long as it is open, and it used to return all of them in one array.
+ */
+const docPage = (items) => ({
+  items,
+  meta: { total: items.length, page: 1, pageSize: 24, totalPages: 1, maxPage: 1 },
+});
 const countriesApi = await import('../../api/countries.js');
 const institutionsApi = await import('../../api/institutions.js');
 const { useAuth } = await import('../../store/useAuth.js');
@@ -292,7 +301,7 @@ describe('advancing a stage without a mouse', () => {
 
   beforeEach(() => {
     applicationsApi.fetchApplication.mockResolvedValue(APP);
-    applicationsApi.fetchApplicationDocuments.mockResolvedValue([]);
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue(docPage([]));
     useAuth.setState({ user: { id: 'u1', name: 'Admin', role: 'ADMIN' }, status: 'authenticated' });
   });
 
@@ -366,7 +375,7 @@ describe('attaching documents to an application', () => {
   });
 
   it('offers a file picker on the application panel', async () => {
-    applicationsApi.fetchApplicationDocuments.mockResolvedValue([]);
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue(docPage([]));
     renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
 
     await waitFor(() => expect(screen.getByLabelText('File')).toBeTruthy());
@@ -380,7 +389,7 @@ describe('attaching documents to an application', () => {
 
   // Fifty-four options is a scroll, and the thing an agent knows is the word.
   it('finds a document type by typing part of its name', async () => {
-    applicationsApi.fetchApplicationDocuments.mockResolvedValue([]);
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue(docPage([]));
     renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
     await waitFor(() => expect(screen.getByLabelText('File')).toBeTruthy());
 
@@ -392,7 +401,7 @@ describe('attaching documents to an application', () => {
 
   // The group is searchable too, so knowing the category is enough.
   it('finds a type by its group when the name is not known', async () => {
-    applicationsApi.fetchApplicationDocuments.mockResolvedValue([]);
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue(docPage([]));
     renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
     await waitFor(() => expect(screen.getByLabelText('File')).toBeTruthy());
 
@@ -403,7 +412,7 @@ describe('attaching documents to an application', () => {
   });
 
   it('sends the picked file with the chosen type', async () => {
-    applicationsApi.fetchApplicationDocuments.mockResolvedValue([]);
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue(docPage([]));
     applicationsApi.uploadApplicationDocument.mockResolvedValue(APP_DOC);
 
     renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
@@ -421,7 +430,7 @@ describe('attaching documents to an application', () => {
   });
 
   it('lists an attached document by the name the agent gave it', async () => {
-    applicationsApi.fetchApplicationDocuments.mockResolvedValue([APP_DOC]);
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue(docPage([APP_DOC]));
 
     renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
 
@@ -437,7 +446,7 @@ describe('attaching documents to an application', () => {
   // right file was sent, and half of what gets attached is a phone photo of a
   // passport.
   it('previews an image document with the image itself', async () => {
-    applicationsApi.fetchApplicationDocuments.mockResolvedValue([APP_DOC]);
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue(docPage([APP_DOC]));
 
     renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
     await waitFor(() => expect(screen.getByText('declaration.pdf')).toBeTruthy());
@@ -449,12 +458,12 @@ describe('attaching documents to an application', () => {
   });
 
   it('uses the file itself as the thumbnail when it is an image', async () => {
-    applicationsApi.fetchApplicationDocuments.mockResolvedValue([{
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue(docPage([{
       ...APP_DOC,
       fileName: 'passport.png',
       contentType: 'image/png',
       fileUrl: 'https://cdn.example.com/application-documents/abc.png',
-    }]);
+    }]));
 
     renderAt(<ApplicationDetail applicationId="a1" onClose={() => {}} />);
     await waitFor(() => expect(screen.getByText('passport.png')).toBeTruthy());
@@ -474,5 +483,60 @@ describe('attaching documents to an application', () => {
 
     await waitFor(() => expect(screen.getByText(/Couldn.t load the documents/i)).toBeTruthy());
     expect(screen.queryByText(/Nothing attached yet/i)).toBeNull();
+  });
+});
+
+/**
+ * The document count on a row.
+ *
+ * "Which of these has anything attached" was unanswerable without opening each
+ * application in turn, and the count is carried on the list payload precisely so
+ * that it costs no request per row.
+ */
+describe('the documents chip on an applications row', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    applicationsApi.fetchApplicationDocuments.mockResolvedValue(docPage([]));
+  });
+
+  const row = (over = {}) => ({
+    id: 'a1', reference: 14, studentName: 'Dhruv', passportNo: 'X1', stage: 'APPLICATION',
+    deadlineAt: null, stageNote: null, intakeLabel: null,
+    course: { title: 'BSc', institution: { name: 'EUBA', country: { code: 'SK', isoCode: 'sk', name: 'Slovakia', flagEmoji: null } } },
+    _count: { documents: 0 },
+    ...over,
+  });
+
+  const renderList = async (rows) => {
+    applicationsApi.fetchApplications.mockResolvedValue({
+      items: rows,
+      meta: { total: rows.length, page: 1, pageSize: 20, totalPages: 1, maxPage: 1 },
+    });
+    renderAt(<ApplicationHistory />, '/app-history');
+    await waitFor(() => expect(screen.getByText('Dhruv')).toBeTruthy());
+  };
+
+  it('shows the count when something is attached', async () => {
+    await renderList([row({ _count: { documents: 3 } })]);
+    expect(screen.getByText('3')).toBeTruthy();
+    expect(document.querySelector('.docs-chip')).toBeTruthy();
+  });
+
+  it('shows a dash, not a zero, when nothing is', async () => {
+    await renderList([row()]);
+    // A "0" in a column of counts reads as a figure worth comparing. It is not —
+    // it is the absence of any, and a dash says that without competing.
+    expect(document.querySelector('.docs-chip')).toBeNull();
+    expect(document.querySelector('.docs-none')).toBeTruthy();
+  });
+
+  it('opens the panel once, not twice', async () => {
+    await renderList([row({ _count: { documents: 2 } })]);
+
+    // The row is clickable too, so without stopPropagation the click is handled
+    // twice and the panel opens, closes and reopens.
+    fireEvent.click(document.querySelector('.docs-chip'));
+    await waitFor(() => expect(screen.getByText('Documents')).toBeTruthy());
   });
 });

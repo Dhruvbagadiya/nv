@@ -70,3 +70,8 @@ export const addDocumentBody = z.object({
     kind: z.nativeEnum(ApplicationDocumentKind).default(ApplicationDocumentKind.OTHER),
     label: optionalBody(z.string().trim().max(160)),
 }).strict();
+
+export const documentListQuery = z.object({
+    page: z.coerce.number().int().positive().default(1),
+    pageSize: z.coerce.number().int().positive().max(100).default(24),
+});

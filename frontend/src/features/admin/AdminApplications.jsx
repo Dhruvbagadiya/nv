@@ -15,6 +15,7 @@ import DataTable from '../../components/ui/DataTable.jsx';
 import FilterBar from '../../components/ui/FilterBar.jsx';
 import ApplicationDetail from '../applications/ApplicationDetail.jsx';
 import Flag from '../../components/ui/Flag.jsx';
+import Icon from '../../components/ui/Icon.jsx';
 import { fetchApplications } from '../../api/applications.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 import { useUrlFilters } from '../../hooks/useUrlFilters.js';
@@ -132,6 +133,31 @@ export default function AdminApplications() {
           )}
         </div>
       ),
+    },
+    {
+      key: 'documents',
+      header: 'Docs',
+      className: 'cell-docs',
+      // A count, not a yes/no. "Has documents" is answered by the same glance
+      // either way, and the number also answers "is anything still missing" —
+      // an application at one attachment is not an application that is ready.
+      render: (a) => {
+        const n = a._count?.documents ?? 0;
+        if (!n) return <span className="docs-none">—</span>;
+        return (
+          <button
+            type="button"
+            className="docs-chip"
+            title={`${n} document${n === 1 ? '' : 's'} attached`}
+            // The row opens the same panel, so without this the click is handled
+            // twice and the modal opens, closes and reopens.
+            onClick={(e) => { e.stopPropagation(); setSelectedId(a.id); }}
+          >
+            <Icon name="document" size={13} />
+            {n}
+          </button>
+        );
+      },
     },
     {
       key: 'deadline',

@@ -661,3 +661,18 @@
        heading, which is what identifies it. Centring crops that away. */
     object-fit: cover; object-position: top center;
   }
+
+  /* ---- Attached-document count, in an applications row ----
+     A chip rather than a plain number: it is a control, and the row it sits in
+     is also clickable, so it has to look like the more specific of the two. */
+  .cell-docs { width: 1%; white-space: nowrap; }
+  .docs-none { color: var(--ink-300); }
+  .docs-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px var(--sp-2); border-radius: var(--radius-pill);
+    background: var(--accent-50); border: 1px solid var(--accent-100);
+    color: var(--accent-800); font-family: var(--font-sans);
+    font-size: var(--fs-2xs); font-weight: 700; cursor: pointer;
+    font-variant-numeric: tabular-nums;
+  }
+  .docs-chip:hover { background: var(--accent-100); }

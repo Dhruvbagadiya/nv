@@ -5,6 +5,11 @@ import { paginateQuery } from '../../utils/pagination.js';
 const APPLICATION_INCLUDE = {
   course: { include: { institution: { include: { country: true } } } },
   agent: { select: { id: true, name: true } },
+  // So a row can say whether anything is attached without a request per row.
+  // Counted live rather than denormalised onto the Application: a stored counter
+  // has to be kept in step by every upload, archive and restore, and the index
+  // on (applicationId, createdAt) makes this cheap.
+  _count: { select: { documents: { where: { archivedAt: null } } } },
 };
 
 // The note shown on the second line of the status cell. Free text by design —
@@ -155,13 +160,28 @@ async function applicationForDocuments({ applicationId, agentId }) {
     return application;
 }
 
-export async function listApplicationDocuments({ applicationId, agentId }) {
+/**
+ * Paged, because an application accumulates documents for as long as it is open
+ * — a passport, ten transcripts, the financials, then a revised set of each —
+ * and this returned every one of them in a single array with the thumbnails
+ * attached. Fine at four documents, a slow screen at eighty.
+ *
+ * The ownership check stays a separate query rather than folding into a `where`
+ * on the relation, because the two have to be distinguishable: an application
+ * that is not yours must 404, and one of yours with nothing attached must be an
+ * empty page. One query cannot say which of those it found.
+ */
+export async function listApplicationDocuments({ applicationId, agentId, page, pageSize = 24 }) {
     await applicationForDocuments({ applicationId, agentId });
-    return prisma.applicationDocument.findMany({
-        where: { applicationId, archivedAt: null },
-        select: DOCUMENT_SELECT,
-        orderBy: { createdAt: 'desc' },
-    });
+    return paginateQuery(
+        prisma.applicationDocument,
+        {
+            where: { applicationId, archivedAt: null },
+            select: DOCUMENT_SELECT,
+            orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        },
+        { page, pageSize }
+    );
 }
 
 export async function addApplicationDocument({ applicationId, agentId, uploadedById, file }) {

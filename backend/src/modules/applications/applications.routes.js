@@ -11,6 +11,7 @@ import {
   addDocumentBody,
   documentIdParam,
   idParam,
+  documentListQuery,
 } from './applications.schemas.js';
 import {
   createApplicationHandler,
@@ -74,6 +75,7 @@ router.get(
   '/:id/documents',
   ...partnerAuth,
   validate(idParam, 'params'),
+  validate(documentListQuery, 'query'),
   asyncHandler(listDocumentsHandler)
 );
 
