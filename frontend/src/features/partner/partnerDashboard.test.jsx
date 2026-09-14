@@ -192,7 +192,34 @@ describe('PartnerDashboard', () => {
     expect(screen.queryByText('By destination')).toBeNull();
     expect(screen.queryByText('Most applied courses')).toBeNull();
     expect(screen.queryByText('Recent inquiries')).toBeNull();
-    expect(screen.queryByText('Upcoming deadlines')).toBeNull();
+  });
+
+  // The one panel that stays when it is empty, because its row is two cells
+  // wide: dropping it stretches the applications table across the whole page and
+  // leaves its four columns adrift in it.
+  it('keeps the deadlines panel as a held place, and says why it is empty', async () => {
+    renderDash();
+    await waitFor(() => expect(screen.getByText('Upcoming deadlines')).toBeTruthy());
+    expect(screen.getByText(/Deadlines you set on an application/)).toBeTruthy();
+  });
+
+  // Three panels close the page and any of them can be missing. A fixed
+  // three-column grid would leave a gap where each absent one used to be, which
+  // is the two-column layout's void again, only sideways.
+  it('sizes the closing row to however many panels survive', async () => {
+    renderDash();
+    await waitFor(() => expect(screen.getByText('Shortcuts')).toBeTruthy());
+    // Nothing but shortcuts in this fixture: no activity, no inquiries.
+    expect(document.querySelector('.pdash-row--1')).toBeTruthy();
+
+    cleanup();
+    refApi.fetchReportSummary.mockResolvedValue(SUMMARY({
+      recentNotifications: [{ id: 'n1', title: 'POEC #14', createdAt: day(0) }],
+      recentInquiries: [{ id: 'q1', stage: 'INQUIRY', intake: 'Sep 2026', courseType: 'DIPLOMA', country: null }],
+    }));
+    renderDash();
+    await waitFor(() => expect(screen.getByText('Recent activity')).toBeTruthy());
+    expect(document.querySelector('.pdash-row--3')).toBeTruthy();
   });
 
   it('ranks destinations by volume and labels every bar with its figure', async () => {

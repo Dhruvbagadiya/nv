@@ -16,22 +16,26 @@ import { errorMessage, formatDate } from '../../utils/format.js';
 /**
  * The partner's landing screen.
  *
- * Two things this screen has already been got wrong, both worth keeping in view.
+ * Three things this screen has been got wrong, all worth keeping in view because
+ * the first two are the same mistake made twice.
  *
- * The FIRST version led with four large cards holding four numbers, and on a real
- * account it read 3 / 0 / 0 / 0 — four hundred-pixel cards of nothing, then two
- * panels saying there was nothing to show. The mistake was designing for a busy
- * agency. A dashboard's ordinary state is NEARLY EMPTY, and it has to look
- * deliberate then, not only when the numbers are big. So: anything with no rows
- * behind it is not rendered at all, and the applications themselves outrank any
- * count of them.
+ * ONE. The original led with four large cards holding four numbers, and on a real
+ * account it read 3 / 0 / 0 / 0. TWO. The rewrite fixed the panels underneath and
+ * then did the identical thing to the tiles — six of them, 120px tall, holding a
+ * figure that occupies forty. A tile is sized by the room its content needs, not
+ * by the room available, and four of any six read zero on a normal account.
  *
- * The SECOND is the reason every panel here maps to a query. A dashboard is the
- * easiest screen in any product to fill with plausible furniture — a client
- * count, commission earned to date, a conversion rate — and the furniture is
- * indistinguishable from the real figures beside it. Every number on this page
- * comes from a row someone entered. Where the data does not exist, the panel
- * does not exist.
+ * THREE, and the structural one: it was built as two independent tall columns.
+ * Columns do not end together. The left ran out at "Most applied courses" while
+ * the right carried on through activity and shortcuts, leaving six hundred pixels
+ * of white nothing down the left of the page. So the layout is ROWS now — each
+ * row is its own grid, its cells stretch to the same height, and a row with no
+ * content does not exist rather than leaving a hole where it was.
+ *
+ * And the standing rule from the rebuild: every number here comes from a row
+ * someone entered. A dashboard is the easiest screen in any product to fill with
+ * plausible furniture, and the furniture is indistinguishable from the real
+ * figures beside it. Where the data does not exist, the panel does not exist.
  */
 
 const WON = ['VISA_APPROVAL'];
@@ -44,9 +48,7 @@ const sum = (counts, keys) => keys.reduce((n, k) => n + (counts[k] ?? 0), 0);
  * Spread across the whole series rather than taken one step at a time, because
  * the series is longer than the ramp: there are eight pipeline stages and five
  * steps, and `i % 5` would have painted stage 6 the same colour as stage 1 —
- * the darkest part of the bar back at its lightest, halfway along. Spreading
- * keeps the ramp monotonic at any length, which is the only thing a sequential
- * ramp promises.
+ * the darkest part of the bar back at its lightest, halfway along.
  */
 const rampStep = (i, of) => `pdash-fill--${Math.min(5, Math.floor((i / Math.max(1, of)) * 5) + 1)}`;
 
@@ -74,24 +76,29 @@ function Due({ value }) {
 }
 
 /**
- * A KPI tile.
+ * A KPI tile: icon badge, figure, label. Sized by its content.
  *
  * `delta` is optional and almost always absent, which is the point. Only the
  * application count has a time dimension to compare against — every other figure
  * here is a live count of rows in a state, with no history stored anywhere, so a
  * "+12% on last month" beside it would be a number this product does not know.
  */
-function Kpi({ to, value, label, delta, tone }) {
+function Kpi({ to, icon, value, label, delta, tone = 'neutral' }) {
   return (
-    <Link className={`pdash-tile${tone ? ` pdash-tile--${tone}` : ''}`} to={to}>
-      <span className="pdash-tile__value">{value}</span>
-      <span className="pdash-tile__label">{label}</span>
+    <Link className="pdash-tile" to={to}>
+      <span className={`pdash-tile__icon pdash-tile__icon--${tone}`} aria-hidden="true">
+        <Icon name={icon} size={16} />
+      </span>
+      <span className="pdash-tile__body">
+        <span className={`pdash-tile__value pdash-tile__value--${tone}`}>{value}</span>
+        <span className="pdash-tile__label">{label}</span>
+      </span>
       {delta}
     </Link>
   );
 }
 
-/** "+3 on last month", or nothing at all in a partner's first month. */
+/** "▲ 50% on last month", or nothing at all in a partner's first month. */
 function Delta({ now, before }) {
   if (before === 0) return null;
   const diff = now - before;
@@ -110,7 +117,7 @@ function Delta({ now, before }) {
  * The design this was drawn from used a donut. A donut asks the reader to compare
  * arc lengths around a circle and then match each one to a legend swatch; bars
  * put the name, the bar and the number on one line and sort them, so the ranking
- * is read rather than worked out. Same data, no decoding step.
+ * is read rather than worked out.
  *
  * Bars are labelled on both sides because the ramp's light steps sit under 3:1
  * against the surface — the label carries the contrast, not the fill.
@@ -133,6 +140,19 @@ function Bars({ rows, max }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** A panel. Own component so a row can be assembled from a list. */
+function Card({ title, more, moreTo, children, className = '' }) {
+  return (
+    <section className={`pdash-card ${className}`.trim()}>
+      <div className="pdash-card__head">
+        <h2>{title}</h2>
+        {more && <Link className="pdash-card__more" to={moreTo}>{more}</Link>}
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -160,40 +180,64 @@ export default function PartnerDashboard() {
     queryFn: () => fetchApplications({ page: 1, pageSize: 6 }),
   });
 
-  const actions = (
-    <>
-      <button className="btn btn-outline" onClick={() => navigate('/partner/ask-team')}>
-        Ask our team
-      </button>
-      <button className="btn btn-primary" onClick={() => navigate('/partner/add-application')}>
-        + Add new application
-      </button>
-    </>
-  );
+  const today = new Date().toLocaleDateString(undefined, {
+    weekday: 'long', day: 'numeric', month: 'long',
+  });
 
-  const subtitle = `Welcome back, ${user?.name ?? 'partner'}`;
+  /**
+   * The hero. It replaces Page's own head rather than sitting under it — two
+   * headings stacked is how a banner turns into chrome.
+   *
+   * `line` is the only copy on this screen assembled from the data rather than
+   * written, so it is built from clauses that are non-zero and nothing else. A
+   * greeting that reads "0 in progress · 0 due this week" is worse than no
+   * greeting: it is a sentence whose content is the absence of content.
+   */
+  const hero = (line) => (
+    <header className="pdash-hero">
+      <div className="pdash-hero__text">
+        <p className="pdash-hero__date">{today}</p>
+        <h1>Welcome back, {user?.name ?? 'partner'}</h1>
+        {line && <p className="pdash-hero__line">{line}</p>}
+      </div>
+      <div className="pdash-hero__actions">
+        <button className="btn btn-ghost-light" onClick={() => navigate('/partner/ask-team')}>
+          Ask our team
+        </button>
+        <button className="btn btn-light" onClick={() => navigate('/partner/add-application')}>
+          <Icon name="plus" size={15} /> Add new application
+        </button>
+      </div>
+    </header>
+  );
 
   if (summary.isLoading) {
     return (
-      <Page title="Dashboard" subtitle={subtitle} actions={actions}>
-        <div className="pdash-tiles" aria-busy="true">
-          {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="pdash-tile pdash-tile--skeleton" />)}
+      <Page>
+        <div className="pdash">
+          {hero(null)}
+          <div className="pdash-tiles" aria-busy="true">
+            {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="pdash-tile pdash-tile--skeleton" />)}
+          </div>
+          <div className="pdash-card pdash-card--skeleton" />
         </div>
-        <div className="pdash-card pdash-card--skeleton" />
       </Page>
     );
   }
 
   if (summary.isError || !summary.data) {
     return (
-      <Page title="Dashboard" subtitle={subtitle} actions={actions}>
-        <div className="empty-state">
-          <span className="e-icon e-icon--danger" aria-hidden="true"><Icon name="alert" size={20} /></span>
-          <h3>{errorMessage(summary.error, 'Could not load your dashboard.')}</h3>
-          <div style={{ marginTop: 'var(--sp-4)' }}>
-            <button type="button" className="btn btn-primary" onClick={() => summary.refetch()}>
-              Try again
-            </button>
+      <Page>
+        <div className="pdash">
+          {hero(null)}
+          <div className="empty-state">
+            <span className="e-icon e-icon--danger" aria-hidden="true"><Icon name="alert" size={20} /></span>
+            <h3>{errorMessage(summary.error, 'Could not load your dashboard.')}</h3>
+            <div style={{ marginTop: 'var(--sp-4)' }}>
+              <button type="button" className="btn btn-primary" onClick={() => summary.refetch()}>
+                Try again
+              </button>
+            </div>
           </div>
         </div>
       </Page>
@@ -226,75 +270,129 @@ export default function PartnerDashboard() {
   const countryMax = Math.max(1, ...byCountry.map((c) => c.count));
   const courseMax = Math.max(1, ...topCourses.map((c) => c.count));
 
-  return (
-    <Page title="Dashboard" subtitle={subtitle} actions={actions}>
-      <div className="pdash-tiles">
-        <Kpi
-          to="/partner/app-history"
-          value={total}
-          label="Total applications"
-          delta={<Delta now={monthly.thisMonth} before={monthly.lastMonth} />}
-        />
-        <Kpi to="/partner/app-history" value={total - approved} label="In progress" />
-        <Kpi to="/partner/app-history?stage=CONDITIONAL_OFFER" value={sum(counts, OFFERED)} label="Offers received" />
-        <Kpi to="/partner/app-history?stage=VISA_APPROVAL" value={approved} label="Visas approved" tone="good" />
-        <Kpi
-          to="/partner/app-history"
-          value={dueSoon}
-          label="Due this week"
-          tone={dueSoon ? 'warning' : undefined}
-        />
-        {/* The one tile that names work rather than progress: an application with
-            nothing attached cannot move, whatever stage it is sitting in. */}
-        <Kpi
-          to="/partner/app-history"
-          value={awaiting}
-          label="Awaiting documents"
-          tone={awaiting ? 'warning' : undefined}
-        />
+  const clauses = [
+    total - approved > 0 && `${total - approved} applications in progress`,
+    dueSoon > 0 && `${dueSoon} due this week`,
+    awaiting > 0 && `${awaiting} awaiting documents`,
+  ].filter(Boolean);
+  const line = total === 0
+    ? 'Nothing filed yet — add your first application to get started.'
+    : clauses.join(' · ');
+
+  /**
+   * The bottom row is whichever of these three has rows. Assembled rather than
+   * written out, because the row's column count has to match how many survive:
+   * three `&&` blocks in a fixed three-column grid leaves a gap where each
+   * missing one used to be, which is the same void the two-column layout had,
+   * only sideways.
+   */
+  const closers = [
+    activity.length > 0 && (
+      <Card key="activity" title="Recent activity">
+        <ul className="pdash-feed">
+          {activity.slice(0, 5).map((n) => (
+            <li key={n.id}>
+              <span className="pdash-feed__title">{n.title}</span>
+              <span className="pdash-feed__meta">{formatDate(n.createdAt)}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    ),
+    recentInquiries.length > 0 && (
+      <Card key="inquiries" title="Recent inquiries" more={`${inquiries} total`} moreTo="/partner/history">
+        <ul className="pdash-list">
+          {recentInquiries.map((q) => (
+            <li key={q.id}>
+              <span className="pdash-list__main">
+                <span className="pdash-list__title">
+                  <Flag isoCode={q.country?.isoCode} code={q.country?.code} size={14} />
+                  {q.country?.name ?? q.nationality ?? '—'}
+                </span>
+                <span className="pdash-list__sub">{q.intake ?? '—'} · {q.courseType ?? '—'}</span>
+              </span>
+              <span className="pdash-pill">{courseInquiryStageLabel(q.stage)}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    ),
+    <Card key="shortcuts" title="Shortcuts">
+      <div className="pdash-shortcuts">
+        {SHORTCUTS.map(([to, label, icon]) => (
+          <Link key={to} className="pdash-shortcut" to={to}>
+            <Icon name={icon} size={15} />
+            {label}
+          </Link>
+        ))}
       </div>
+    </Card>,
+  ].filter(Boolean);
 
-      {/* The distribution as ONE bar. Eight cards flattened the shape into a row
-          of equal boxes; a bar shows where the work actually sits. */}
-      {occupied.length > 0 && (
-        <section className="pdash-card pdash-pipeline">
-          <div className="pdash-card__head">
-            <h2>Pipeline</h2>
-            <Link className="pdash-card__more" to="/partner/report">Full report</Link>
-          </div>
-          <div
-            className="pdash-bar"
-            role="img"
-            aria-label={`Pipeline: ${occupied.map((s) => `${counts[s.value]} in ${s.label}`).join(', ')}`}
-          >
-            {occupied.map((s, i) => (
-              <span
-                key={s.value}
-                className={`pdash-bar__seg ${rampStep(i, occupied.length)}`}
-                style={{ flexGrow: counts[s.value] }}
-                title={`${s.label}: ${counts[s.value]}`}
-              />
-            ))}
-          </div>
-          <div className="pdash-legend">
-            {occupied.map((s, i) => (
-              <Link key={s.value} className="pdash-legend__item" to={`/partner/app-history?stage=${s.value}`}>
-                <span className={`pdash-legend__dot ${rampStep(i, occupied.length)}`} aria-hidden="true" />
-                {s.label} <b>{counts[s.value]}</b>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+  return (
+    <Page>
+      <div className="pdash">
+        {hero(line)}
 
-      <div className="pdash-grid">
-        <div className="pdash-main">
-          <section className="pdash-card">
-            <div className="pdash-card__head">
-              <h2>Recent applications</h2>
-              <Link className="pdash-card__more" to="/partner/app-history">All applications</Link>
+        <div className="pdash-tiles">
+          <Kpi
+            to="/partner/app-history" icon="application" tone="accent"
+            value={total} label="Total applications"
+            delta={<Delta now={monthly.thisMonth} before={monthly.lastMonth} />}
+          />
+          <Kpi to="/partner/app-history" icon="refresh" value={total - approved} label="In progress" />
+          <Kpi
+            to="/partner/app-history?stage=CONDITIONAL_OFFER" icon="inbox" tone="info"
+            value={sum(counts, OFFERED)} label="Offers received"
+          />
+          <Kpi
+            to="/partner/app-history?stage=VISA_APPROVAL" icon="check" tone="good"
+            value={approved} label="Visas approved"
+          />
+          <Kpi
+            to="/partner/app-history" icon="clock" tone={dueSoon ? 'warning' : 'neutral'}
+            value={dueSoon} label="Due this week"
+          />
+          {/* The one tile that names work rather than progress: an application
+              with nothing attached cannot move, whatever stage it sits in. */}
+          <Kpi
+            to="/partner/app-history" icon="document" tone={awaiting ? 'warning' : 'neutral'}
+            value={awaiting} label="Awaiting documents"
+          />
+        </div>
+
+        {/* The distribution as ONE bar. Eight cards flattened the shape into a
+            row of equal boxes; a bar shows where the work actually sits. */}
+        {occupied.length > 0 && (
+          <Card title="Pipeline" more="Full report" moreTo="/partner/report" className="pdash-pipeline">
+            <div
+              className="pdash-bar"
+              role="img"
+              aria-label={`Pipeline: ${occupied.map((s) => `${counts[s.value]} in ${s.label}`).join(', ')}`}
+            >
+              {occupied.map((s, i) => (
+                <span
+                  key={s.value}
+                  className={`pdash-bar__seg ${rampStep(i, occupied.length)}`}
+                  style={{ flexGrow: counts[s.value] }}
+                  title={`${s.label}: ${counts[s.value]}`}
+                />
+              ))}
             </div>
+            <div className="pdash-legend">
+              {occupied.map((s, i) => (
+                <Link key={s.value} className="pdash-legend__item" to={`/partner/app-history?stage=${s.value}`}>
+                  <span className={`pdash-legend__dot ${rampStep(i, occupied.length)}`} aria-hidden="true" />
+                  {s.label} <b>{counts[s.value]}</b>
+                </Link>
+              ))}
+            </div>
+          </Card>
+        )}
 
+        {/* Row: the work itself, and what is about to be late. */}
+        <div className="pdash-row pdash-row--wide">
+          <Card title="Recent applications" more="All applications" moreTo="/partner/app-history">
             {recent.isLoading && <p className="field-hint">Loading…</p>}
             {recent.isError && <p className="form-error">Couldn’t load your applications.</p>}
 
@@ -331,12 +429,36 @@ export default function PartnerDashboard() {
                 </tbody>
               </table>
             )}
-          </section>
+          </Card>
 
-          <div className="pdash-pair">
+          {deadlines.length > 0 ? (
+            <Card title="Upcoming deadlines" more="All" moreTo="/partner/app-history">
+              <ul className="pdash-list">
+                {deadlines.map((d) => (
+                  <li key={d.id}>
+                    <span className="pdash-list__main">
+                      <span className="pdash-list__title">{d.studentName}</span>
+                      <span className="pdash-list__sub">{d.course?.institution?.name ?? '—'}</span>
+                    </span>
+                    <Due value={d.deadlineAt} />
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : (
+            // Not omitted like the other empty panels, because this row is two
+            // cells wide: dropping one stretches "Recent applications" across
+            // the full page and leaves the table's four columns adrift in it.
+            <Card title="Upcoming deadlines">
+              <p className="pdash-quiet">Nothing due. Deadlines you set on an application show up here.</p>
+            </Card>
+          )}
+        </div>
+
+        {(byCountry.length > 0 || topCourses.length > 0) && (
+          <div className="pdash-row">
             {byCountry.length > 0 && (
-              <section className="pdash-card">
-                <div className="pdash-card__head"><h2>By destination</h2></div>
+              <Card title="By destination">
                 <Bars
                   max={countryMax}
                   rows={byCountry.slice(0, 6).map((c) => ({
@@ -350,12 +472,10 @@ export default function PartnerDashboard() {
                     value: c.count,
                   }))}
                 />
-              </section>
+              </Card>
             )}
-
             {topCourses.length > 0 && (
-              <section className="pdash-card">
-                <div className="pdash-card__head"><h2>Most applied courses</h2></div>
+              <Card title="Most applied courses">
                 <Bars
                   max={courseMax}
                   rows={topCourses.map((c) => ({
@@ -369,83 +489,12 @@ export default function PartnerDashboard() {
                     value: c.count,
                   }))}
                 />
-              </section>
+              </Card>
             )}
           </div>
-        </div>
+        )}
 
-        <div className="pdash-side">
-          {deadlines.length > 0 && (
-            <section className="pdash-card">
-              <div className="pdash-card__head">
-                <h2>Upcoming deadlines</h2>
-                <Link className="pdash-card__more" to="/partner/app-history">All</Link>
-              </div>
-              <ul className="pdash-list">
-                {deadlines.map((d) => (
-                  <li key={d.id}>
-                    <span className="pdash-list__main">
-                      <span className="pdash-list__title">{d.studentName}</span>
-                      <span className="pdash-list__sub">{d.course?.institution?.name ?? '—'}</span>
-                    </span>
-                    <Due value={d.deadlineAt} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {recentInquiries.length > 0 && (
-            <section className="pdash-card">
-              <div className="pdash-card__head">
-                <h2>Recent inquiries</h2>
-                <Link className="pdash-card__more" to="/partner/history">
-                  {inquiries} total
-                </Link>
-              </div>
-              <ul className="pdash-list">
-                {recentInquiries.map((q) => (
-                  <li key={q.id}>
-                    <span className="pdash-list__main">
-                      <span className="pdash-list__title">
-                        <Flag isoCode={q.country?.isoCode} code={q.country?.code} size={14} />
-                        {q.country?.name ?? q.nationality ?? '—'}
-                      </span>
-                      <span className="pdash-list__sub">{q.intake ?? '—'} · {q.courseType ?? '—'}</span>
-                    </span>
-                    <span className="pdash-pill">{courseInquiryStageLabel(q.stage)}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {activity.length > 0 && (
-            <section className="pdash-card">
-              <div className="pdash-card__head"><h2>Recent activity</h2></div>
-              <ul className="pdash-feed">
-                {activity.slice(0, 5).map((n) => (
-                  <li key={n.id}>
-                    <span className="pdash-feed__title">{n.title}</span>
-                    <span className="pdash-feed__meta">{formatDate(n.createdAt)}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          <section className="pdash-card">
-            <div className="pdash-card__head"><h2>Shortcuts</h2></div>
-            <div className="pdash-shortcuts">
-              {SHORTCUTS.map(([to, label, icon]) => (
-                <Link key={to} className="pdash-shortcut" to={to}>
-                  <Icon name={icon} size={15} />
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </section>
-        </div>
+        <div className={`pdash-row pdash-row--${closers.length}`}>{closers}</div>
       </div>
     </Page>
   );

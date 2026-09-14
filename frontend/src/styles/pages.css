@@ -739,41 +739,103 @@
   .appdoc-meta { font-size: var(--fs-2xs); color: var(--ink-500); margin-top: 1px; }
 
   /* ═════════════ PARTNER DASHBOARD ═════════════
-     Dense on purpose. The first version gave four numbers four hundred-pixel
-     cards, and on a real account that reads 3 / 0 / 0 / 0 — all chrome, no
-     information. A dashboard's ordinary state is nearly empty, so a tile is
-     sized to be scanned in a row of six, not to fill a screen on its own, and
-     every panel below them disappears entirely when it has no rows. */
+     Two rules this screen has had to learn the hard way.
+
+     A tile is sized by the room its CONTENT needs. Twice now it has been built
+     the other way — four cards at 160px, then six at 120px — and on a real
+     account four of any six read zero, so the page became a wall of boxes
+     holding nothing. Everything here is sized tight and the page is capped, so
+     content does not stretch to fill a 1900px monitor.
+
+     And the layout is ROWS, not columns. Two independent tall columns do not end
+     together: the left ran out at "Most applied courses" while the right carried
+     on through activity and shortcuts, leaving six hundred pixels of white down
+     the left of the page. A row's cells stretch to each other's height, and a
+     row with nothing in it is not rendered. */
+
+  .pdash {
+    /* Capped and centred. Uncapped, the six tiles were 300px each and the
+       pipeline bar was a 1750px stripe encoding "2 and 1". */
+    max-width: 1480px; margin: 0 auto;
+    display: flex; flex-direction: column; gap: var(--sp-3);
+  }
+
+  /* ---- Hero ----
+     Replaces Page's own head rather than sitting under it: two headings stacked
+     is how a banner turns into chrome. */
+  .pdash-hero {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    flex-wrap: wrap; gap: var(--sp-3);
+    padding: var(--sp-5) var(--sp-5) var(--sp-5);
+    border-radius: var(--radius-lg); color: #fff;
+    background:
+      radial-gradient(1100px 260px at 88% -40%, color-mix(in srgb, var(--accent-700) 52%, transparent), transparent 70%),
+      linear-gradient(135deg, var(--brand-950) 0%, var(--brand-800) 48%, var(--brand-600) 100%);
+    box-shadow: var(--shadow-sm);
+  }
+  .pdash-hero__text { min-width: 0; }
+  .pdash-hero__date {
+    margin: 0 0 var(--sp-1); font-size: var(--fs-3xs); font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: color-mix(in srgb, #fff 62%, transparent);
+  }
+  .pdash-hero h1 {
+    margin: 0; font-size: var(--fs-2xl); font-weight: 800;
+    letter-spacing: -0.02em; line-height: var(--lh-tight); color: #fff;
+  }
+  .pdash-hero__line {
+    margin: var(--sp-2) 0 0; font-size: var(--fs-sm);
+    color: color-mix(in srgb, #fff 80%, transparent);
+  }
+  .pdash-hero__actions { display: flex; gap: var(--sp-2); flex-shrink: 0; }
+  /* Two light buttons rather than the usual outline/primary pair: on a dark band
+     an --ink-700 outline button is invisible and the accent primary fights the
+     accent already in the gradient. */
+  .btn-light { background: #fff; color: var(--brand-900); box-shadow: var(--shadow-xs); }
+  .btn-light:hover { background: var(--canvas); }
+  .btn-ghost-light {
+    background: color-mix(in srgb, #fff 12%, transparent); color: #fff;
+    border-color: color-mix(in srgb, #fff 26%, transparent);
+  }
+  .btn-ghost-light:hover { background: color-mix(in srgb, #fff 22%, transparent); }
 
   /* ---- KPI tiles ---- */
-  .pdash-tiles {
-    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: var(--sp-2); margin-bottom: var(--sp-3);
-  }
-  @media (max-width: 1100px) { .pdash-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .pdash-tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--sp-2); }
+  @media (max-width: 1180px) { .pdash-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (max-width: 620px)  { .pdash-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
   .pdash-tile {
-    display: flex; flex-direction: column; gap: 2px;
-    padding: var(--sp-3); min-height: 92px;
-    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-    text-decoration: none; transition: border-color .15s, box-shadow .15s;
+    display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2);
+    padding: var(--sp-3); text-decoration: none;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow-xs);
+    transition: border-color .15s, box-shadow .15s, transform .08s;
   }
-  .pdash-tile:hover { border-color: var(--border-strong); box-shadow: var(--shadow-xs); }
-  .pdash-tile--skeleton { animation: skeleton-pulse 1.4s ease-in-out infinite; }
+  .pdash-tile:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+  .pdash-tile--skeleton { height: 74px; animation: skeleton-pulse 1.4s ease-in-out infinite; }
+  .pdash-tile__icon {
+    display: grid; place-items: center; flex-shrink: 0;
+    width: 34px; height: 34px; border-radius: var(--radius-sm);
+  }
+  .pdash-tile__body { display: flex; flex-direction: column; min-width: 0; }
   .pdash-tile__value {
-    font-size: var(--fs-2xl); font-weight: 800; line-height: 1.1;
+    font-size: var(--fs-2xl); font-weight: 800; line-height: 1.05;
     color: var(--ink-950); font-variant-numeric: tabular-nums;
   }
   .pdash-tile__label { font-size: var(--fs-2xs); color: var(--ink-500); }
-  /* The state lives in the NUMBER, not in the tile's background. A card washed
-     amber for "6 due this week" makes the whole row shout; colouring the figure
-     keeps the alert where the alert is. */
-  .pdash-tile--warning .pdash-tile__value { color: var(--warning-700); }
-  .pdash-tile--good    .pdash-tile__value { color: var(--success-700); }
+
+  /* The state lives in the icon and the figure, not in the tile's background: a
+     card washed amber for "2 awaiting documents" makes the whole row shout. */
+  .pdash-tile__icon--neutral { background: var(--ink-100);     color: var(--ink-500); }
+  .pdash-tile__icon--accent  { background: var(--accent-50);   color: var(--accent-700); }
+  .pdash-tile__icon--info    { background: var(--info-100);    color: var(--info-700); }
+  .pdash-tile__icon--good    { background: var(--success-100); color: var(--success-700); }
+  .pdash-tile__icon--warning { background: var(--warning-100); color: var(--warning-700); }
+  .pdash-tile__value--good    { color: var(--success-700); }
+  .pdash-tile__value--warning { color: var(--warning-700); }
 
   .pdash-delta {
-    font-size: var(--fs-3xs); font-weight: 600; margin-top: auto;
+    flex-basis: 100%; font-size: var(--fs-3xs); font-weight: 600;
     display: inline-flex; align-items: center; gap: 3px;
   }
   .pdash-delta--up   { color: var(--success-700); }
@@ -790,52 +852,56 @@
   .pdash-fill--4 { background: var(--chart-4); }
   .pdash-fill--5 { background: var(--chart-5); }
 
+  /* ---- Rows ---- */
+  .pdash-row { display: grid; gap: var(--sp-3); align-items: stretch; }
+  .pdash-row            { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pdash-row--wide      { grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr); }
+  .pdash-row--1         { grid-template-columns: minmax(0, 1fr); }
+  .pdash-row--3         { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 1000px) {
+    .pdash-row, .pdash-row--wide, .pdash-row--3 { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  .pdash-card {
+    display: flex; flex-direction: column; min-width: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: var(--sp-3);
+    box-shadow: var(--shadow-xs);
+  }
+  .pdash-card--skeleton { height: 220px; animation: skeleton-pulse 1.4s ease-in-out infinite; }
+  .pdash-card__head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--sp-2); margin-bottom: var(--sp-3);
+  }
+  .pdash-card__head h2 {
+    font-size: var(--fs-xs); font-weight: 700; margin: 0; color: var(--ink-600);
+    letter-spacing: .06em; text-transform: uppercase;
+  }
+  .pdash-card__more { font-size: var(--fs-xs); font-weight: 600; color: var(--accent-700); text-decoration: none; white-space: nowrap; }
+  .pdash-card__more:hover { text-decoration: underline; }
+  .pdash-quiet { margin: 0; font-size: var(--fs-2xs); color: var(--ink-400); }
+
   /* ---- Pipeline ---- */
-  .pdash-pipeline { margin-bottom: var(--sp-3); }
   .pdash-bar {
-    display: flex; height: 12px; border-radius: var(--radius-pill); overflow: hidden;
-    background: var(--ink-100); margin-bottom: var(--sp-3);
-    /* A 2px surface gap between segments, so two adjacent steps of one ramp read
-       as two segments rather than as a gradient. */
-    gap: 2px;
+    display: flex; gap: 2px; height: 20px; margin-bottom: var(--sp-3);
+    border-radius: var(--radius-pill); overflow: hidden; background: var(--ink-100);
   }
   .pdash-bar__seg { display: block; min-width: 4px; }
 
-  .pdash-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); }
+  .pdash-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); }
   .pdash-legend__item {
     display: inline-flex; align-items: center; gap: var(--sp-1);
     font-size: var(--fs-2xs); color: var(--ink-500); text-decoration: none;
   }
   .pdash-legend__item:hover { color: var(--ink-900); }
   .pdash-legend__item b { color: var(--ink-950); font-weight: 700; font-variant-numeric: tabular-nums; }
-  .pdash-legend__dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-
-  /* ---- Layout ---- */
-  .pdash-grid { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: var(--sp-3); align-items: start; }
-  @media (max-width: 1000px) { .pdash-grid { grid-template-columns: 1fr; } }
-  .pdash-main { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
-  .pdash-side { display: flex; flex-direction: column; gap: var(--sp-3); }
-  .pdash-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
-  @media (max-width: 760px) { .pdash-pair { grid-template-columns: 1fr; } }
-
-  .pdash-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: var(--sp-3); min-width: 0;
-  }
-  .pdash-card--skeleton { height: 220px; animation: skeleton-pulse 1.4s ease-in-out infinite; }
-  .pdash-card__head {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: var(--sp-2); margin-bottom: var(--sp-2);
-  }
-  .pdash-card__head h2 { font-size: var(--fs-sm); font-weight: 700; color: var(--ink-950); margin: 0; }
-  .pdash-card__more { font-size: var(--fs-xs); font-weight: 600; color: var(--accent-700); text-decoration: none; white-space: nowrap; }
-  .pdash-card__more:hover { text-decoration: underline; }
+  .pdash-legend__dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
   /* ---- Horizontal bars ----
      Name on the left, bar in the middle, number on the right, sorted. The number
      is always visible, which is what lets the ramp's pale steps be pale. */
   .pdash-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
-  .pdash-bars li { display: grid; grid-template-columns: minmax(0, 1fr) 34% auto; align-items: center; gap: var(--sp-2); }
+  .pdash-bars li { display: grid; grid-template-columns: minmax(0, 1fr) 38% auto; align-items: center; gap: var(--sp-2); }
   @media (max-width: 520px) { .pdash-bars li { grid-template-columns: minmax(0, 1fr) 26% auto; } }
   .pdash-bars__label {
     display: flex; align-items: center; gap: var(--sp-1); min-width: 0;
@@ -844,7 +910,7 @@
   }
   .pdash-bars__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pdash-bars__sub { color: var(--ink-400); flex-shrink: 0; }
-  .pdash-bars__track { height: 8px; background: var(--ink-100); border-radius: var(--radius-pill); overflow: hidden; }
+  .pdash-bars__track { height: 9px; background: var(--ink-100); border-radius: var(--radius-pill); overflow: hidden; }
   .pdash-bars__fill { display: block; height: 100%; border-radius: var(--radius-pill); }
   .pdash-bars__value { font-size: var(--fs-xs); font-weight: 700; color: var(--ink-950); font-variant-numeric: tabular-nums; }
 
@@ -861,9 +927,7 @@
     display: flex; align-items: center; gap: var(--sp-1);
     font-size: var(--fs-2xs); color: var(--ink-500); margin-top: 1px;
   }
-  .pdash-table__stage {
-    font-size: var(--fs-2xs); color: var(--ink-600); white-space: nowrap;
-  }
+  .pdash-table__stage { font-size: var(--fs-2xs); color: var(--ink-600); white-space: nowrap; }
   .pdash-table__due { width: 1%; text-align: right; }
 
   .pdash-due {
@@ -878,12 +942,13 @@
   .pdash-blank { text-align: center; padding: var(--sp-5) var(--sp-3); }
   .pdash-blank p { font-size: var(--fs-sm); color: var(--ink-500); margin: 0 0 var(--sp-3); }
 
-  /* ---- Side lists ---- */
+  /* ---- Lists ---- */
   .pdash-list { list-style: none; margin: 0; padding: 0; }
   .pdash-list li {
     display: flex; align-items: center; justify-content: space-between;
     gap: var(--sp-2); padding: var(--sp-2) 0;
   }
+  .pdash-list li:first-child { padding-top: 0; }
   .pdash-list li + li { border-top: 1px solid var(--border); }
   .pdash-list__main { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
   .pdash-list__title {
@@ -900,6 +965,7 @@
 
   .pdash-feed { list-style: none; margin: 0; padding: 0; }
   .pdash-feed li { padding: var(--sp-2) 0; display: flex; flex-direction: column; gap: 1px; }
+  .pdash-feed li:first-child { padding-top: 0; }
   .pdash-feed li + li { border-top: 1px solid var(--border); }
   .pdash-feed__title { font-size: var(--fs-xs); font-weight: 600; color: var(--ink-900); }
   .pdash-feed__meta { font-size: var(--fs-3xs); color: var(--ink-400); }
