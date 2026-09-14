@@ -16,6 +16,7 @@ const COLUMNS = [
     render: (c) => (
       <span>
         <Flag
+          isoCode={c.institution.country.isoCode}
           emoji={c.institution.country.flagEmoji}
           code={c.institution.country.code}
           name={c.institution.country.name}

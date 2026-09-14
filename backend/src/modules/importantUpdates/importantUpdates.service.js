@@ -4,7 +4,7 @@ import { paginateQuery } from '../../utils/pagination.js';
 import { NotFoundError } from '../../utils/httpErrors.js';
 
 const UPDATE_INCLUDE = {
-  country: { select: { id: true, code: true, name: true, flagEmoji: true } },
+  country: { select: { id: true, code: true, name: true, flagEmoji: true, isoCode: true } },
   institution: { select: { id: true, name: true } },
 };
 

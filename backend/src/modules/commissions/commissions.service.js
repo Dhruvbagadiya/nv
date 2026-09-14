@@ -24,7 +24,7 @@ export async function listCommissions({ country, search, status, page, pageSize 
       where,
       include: {
         institution: {
-          include: { country: { select: { code: true, name: true, flagEmoji: true } } },
+          include: { country: { select: { code: true, name: true, flagEmoji: true, isoCode: true } } },
         },
       },
       orderBy: [{ institution: { country: { sortOrder: 'asc' } } }, { institution: { name: 'asc' } }],

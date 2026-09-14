@@ -347,7 +347,7 @@ export async function getUserDetail(id) {
     select: {
       id: true, nationality: true, stage: true, intake: true, courseType: true,
       createdAt: true,
-      country: { select: { name: true, flagEmoji: true } },
+      country: { select: { name: true, flagEmoji: true, isoCode: true, code: true } },
     },
     orderBy: { createdAt: 'desc' },
     take: 5,

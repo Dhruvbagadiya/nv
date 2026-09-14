@@ -40,6 +40,7 @@ export default function AdminMoiAcceptances() {
             <div className="cell-strong">{r.institution.name}</div>
             <div style={{ fontSize: 11, color: 'var(--ink-500)' }}>
               <Flag
+                isoCode={r.institution.country?.isoCode}
                 emoji={r.institution.country?.flagEmoji}
                 code={r.institution.country?.code}
                 name={r.institution.country?.name}

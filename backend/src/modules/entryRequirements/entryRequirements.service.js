@@ -39,7 +39,7 @@ export async function listEntryRequirements({
       where,
       include: {
         institution: {
-          include: { country: { select: { code: true, name: true, flagEmoji: true } } },
+          include: { country: { select: { code: true, name: true, flagEmoji: true, isoCode: true } } },
         },
       },
       orderBy: [{ institution: { name: 'asc' } }],

@@ -4,7 +4,7 @@ import { paginateQuery } from '../../utils/pagination.js';
 const INQUIRY_INCLUDE = {
   // countryId was a bare scalar with no relation, so the history table had no way
   // to show a country name — only the raw id it never rendered.
-  country: { select: { id: true, code: true, name: true, flagEmoji: true } },
+  country: { select: { id: true, code: true, name: true, flagEmoji: true, isoCode: true } },
   agent: { select: { id: true, name: true } },
 };
 

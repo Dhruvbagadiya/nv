@@ -102,6 +102,7 @@ export default function ApplicationHistory() {
         <>
           <div>
             <Flag
+              isoCode={a.course.institution.country.isoCode}
               emoji={a.course.institution.country.flagEmoji}
               code={a.course.institution.country.code}
               name={a.course.institution.country.name}

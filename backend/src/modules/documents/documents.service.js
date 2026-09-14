@@ -89,7 +89,7 @@ export async function listFacets({ category }) {
     countryGroups.length
       ? prisma.country.findMany({
           where: { id: { in: countryGroups.map((g) => g.countryId) } },
-          select: { id: true, name: true, code: true, flagEmoji: true },
+          select: { id: true, name: true, code: true, flagEmoji: true, isoCode: true },
           orderBy: { name: 'asc' },
         })
       : [],

@@ -10,12 +10,12 @@
  * simple and avoids a server-side image processing dependency.
  *
  * Constraints enforced here:
- *   - Only image/png, image/jpeg, image/webp accepted
+ *   - Only the shared IMAGE_TYPES raster formats (PNG/JPEG/WebP/GIF/AVIF)
  *   - Max 2 MB
  *   - File is renamed to a UUID so paths are unguessable and never collide
  */
 import multer from 'multer';
-import { putObject, IMAGE_TYPES, LOGO_MAX_BYTES } from '../../utils/storage.js';
+import { putObject, IMAGE_TYPES, IMAGE_TYPE_ADVICE, LOGO_MAX_BYTES } from '../../utils/storage.js';
 import { BadRequestError } from '../../utils/httpErrors.js';
 
 const ALLOWED_MIME = Object.keys(IMAGE_TYPES);
@@ -29,7 +29,10 @@ export const logoUpload = multer({
   limits:  { fileSize: MAX_BYTES },
   fileFilter: (_req, file, cb) => {
     if (ALLOWED_MIME.includes(file.mimetype)) return cb(null, true);
-    cb(new BadRequestError(`Unsupported image type "${file.mimetype}". Use PNG, JPEG or WebP.`));
+    cb(new BadRequestError(
+      IMAGE_TYPE_ADVICE[file.mimetype]
+      ?? `Unsupported image type "${file.mimetype}". Use PNG, JPEG, WebP, GIF or AVIF.`
+    ));
   },
 });
 

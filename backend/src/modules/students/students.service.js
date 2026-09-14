@@ -37,7 +37,7 @@ const APPLICATION_INCLUDE = {
     include: {
       institution: {
         include: {
-          country: { select: { code: true, name: true, flagEmoji: true, currencyCode: true } },
+          country: { select: { code: true, name: true, flagEmoji: true, currencyCode: true, isoCode: true } },
         },
       },
       intakes: { orderBy: { startDate: 'asc' } },

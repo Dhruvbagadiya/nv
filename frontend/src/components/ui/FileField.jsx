@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import Icon from './Icon.jsx';
 import { uploadImage, uploadFile } from '../../api/admin.js';
+import { IMAGE_MIME } from '../../constants/imageTypes.js';
 
 /**
  * Pick a file, get a URL back.
@@ -61,7 +62,7 @@ export default function FileField({
           ref={inputRef}
           id={id}
           type="file"
-          accept={accept ?? (kind === 'image' ? 'image/png,image/jpeg,image/webp' : undefined)}
+          accept={accept ?? (kind === 'image' ? IMAGE_MIME : undefined)}
           onChange={pick}
           className="file-field__input"
         />

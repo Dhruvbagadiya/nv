@@ -72,7 +72,7 @@ export default function CourseInquiryHistory() {
       render: (i) =>
         i.country ? (
           <>
-            <Flag emoji={i.country.flagEmoji} code={i.country.code} name={i.country.name} /> {i.country.name}
+            <Flag isoCode={i.country.isoCode} emoji={i.country.flagEmoji} code={i.country.code} name={i.country.name} /> {i.country.name}
           </>
         ) : (
           '—'

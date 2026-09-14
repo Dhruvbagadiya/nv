@@ -25,7 +25,7 @@ export default function CourseInquiryForm() {
       countries.map((c) => ({
         value: c.id,
         label: c.name,
-        icon: <Flag emoji={c.flagEmoji} code={c.code} name={c.name} size={16} />,
+        icon: <Flag isoCode={c.isoCode} emoji={c.flagEmoji} code={c.code} name={c.name} size={16} />,
       })),
     [countries]
   );

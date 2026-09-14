@@ -9,6 +9,7 @@ import { buildAccentScale, applyTheme, resetTheme, NV_DEFAULT_ACCENT } from '../
 import { extractDominantColor } from '../../components/ui/LogoCropper.jsx';
 import Icon from '../../components/ui/Icon.jsx';
 import { toast } from '../../store/useToast.js';
+import { IMAGE_FORMATS } from '../../constants/imageTypes.js';
 
 // A curated palette of 12 suggested accent colors.
 const PRESET_COLORS = [
@@ -226,7 +227,7 @@ export default function AgencySettings() {
               </div>
             </div>
             <div className="field-hint">
-              Square PNG, JPEG or WebP · max 2 MB. Image will be cropped before upload.
+              Square {IMAGE_FORMATS} · max 2 MB. Image will be cropped before upload.
               Uploading a new logo will auto-detect its dominant colour.
             </div>
           </div>

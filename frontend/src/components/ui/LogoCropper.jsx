@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
+import { IMAGE_MIME, IMAGE_FORMATS } from '../../constants/imageTypes.js';
 
 /**
  * LogoCropper
@@ -115,7 +116,7 @@ export default function LogoCropper({
 
   // ── Load selected file ──────────────────────────────────────────────────
   //
-  // The dropzone's own hint promises "PNG, JPEG or WebP · max 2 MB" and nothing
+  // The dropzone's own hint names the accepted formats and nothing
   // enforced either half. `accept` on the input is a filter, not a rule — the
   // file dialog offers an "All files" option — so picking a PDF set imageSrc,
   // switched the UI to the crop view on the strength of that alone, and then
@@ -127,7 +128,7 @@ export default function LogoCropper({
     if (!file) return;
 
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      setLoadError('That file is not a PNG, JPEG or WebP image.');
+      setLoadError(`That file is not a ${IMAGE_FORMATS} image.`);
       return;
     }
     if (file.size > MAX_BYTES) {
@@ -294,12 +295,12 @@ export default function LogoCropper({
             <polyline points="21 15 16 10 5 21"/>
           </svg>
           <div className="logo-cropper-hint">Click to select a logo image</div>
-          <div className="logo-cropper-sub">PNG, JPEG or WebP · max 2 MB</div>
+          <div className="logo-cropper-sub">{IMAGE_FORMATS} · max 2 MB</div>
         </div>
         {/* Said where the file was chosen, rather than leaving the picker
             looking as though the click did nothing. */}
         {loadError && <p className="form-error" role="alert">{loadError}</p>}
-        <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp"
+        <input ref={fileRef} type="file" accept={IMAGE_MIME}
           style={{ display: 'none' }} onChange={handleFile} />
         <div className="logo-cropper-actions">
           <button type="button" className="btn btn-outline" onClick={onCancel}>Cancel</button>

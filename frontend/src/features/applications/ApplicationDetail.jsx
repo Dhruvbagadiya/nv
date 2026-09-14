@@ -101,6 +101,7 @@ export default function ApplicationDetail({ applicationId, onClose }) {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
               <Flag
+                isoCode={app.course.institution.country.isoCode}
                 emoji={app.course.institution.country.flagEmoji}
                 code={app.course.institution.country.code}
                 name={app.course.institution.country.name}

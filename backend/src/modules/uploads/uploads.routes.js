@@ -28,7 +28,7 @@ import { requireRole } from '../../middleware/rbac.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import { renderPdfThumbnail, thumbnailKeyFor } from '../../utils/pdfThumbnail.js';
 import { BadRequestError } from '../../utils/httpErrors.js';
-import { putObject, IMAGE_TYPES, storageStatus, MAX_BYTES, putGeneratedObject } from '../../utils/storage.js';
+import { putObject, IMAGE_TYPES, IMAGE_TYPE_ADVICE, storageStatus, MAX_BYTES, putGeneratedObject } from '../../utils/storage.js';
 
 const router = Router();
 const admin = [requireAuth, requireRole('ADMIN', 'SUPER_ADMIN')];
@@ -47,7 +47,12 @@ const imageUpload = multer({
   limits: { fileSize: IMAGE_MAX_BYTES },
   fileFilter: (_req, file, cb) => {
     if (IMAGE_MIME.includes(file.mimetype)) return cb(null, true);
-    cb(new BadRequestError(`Unsupported image type "${file.mimetype}". Use PNG, JPEG or WebP.`));
+    // A named reason where there is one. "Unsupported image type image/heic" is
+    // useless to someone whose phone picked the format for them.
+    const advice = IMAGE_TYPE_ADVICE[file.mimetype];
+    cb(new BadRequestError(
+      advice ?? `Unsupported image type "${file.mimetype}". Use PNG, JPEG, WebP, GIF or AVIF.`
+    ));
   },
 });
 

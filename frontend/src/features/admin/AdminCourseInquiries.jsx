@@ -68,7 +68,7 @@ export default function AdminCourseInquiries() {
       render: (r) =>
         r.country ? (
           <span className="cell-flag">
-            <Flag emoji={r.country.flagEmoji} code={r.country.code} name={r.country.name} />{' '}
+            <Flag isoCode={r.country.isoCode} emoji={r.country.flagEmoji} code={r.country.code} name={r.country.name} />{' '}
             {r.country.name}
           </span>
         ) : (

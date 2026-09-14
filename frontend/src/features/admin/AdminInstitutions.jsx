@@ -13,6 +13,7 @@ import { useInvalidateResource } from '../../hooks/useInvalidateResource.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 import FileField from '../../components/ui/FileField.jsx';
 import SourceBadge, { ImportNotice } from '../../components/ui/SourceBadge.jsx';
+import { IMAGE_FORMATS } from '../../constants/imageTypes.js';
 import {
   fetchInstitutionsPage,
   createInstitution,
@@ -138,7 +139,7 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
               category="institution-logos"
               value={form.logoUrl}
               onChange={(url) => set('logoUrl', url)}
-              hint="Square works best. PNG, JPEG or WebP, up to 5 MB."
+              hint={`Square works best. ${IMAGE_FORMATS}, up to 5 MB.`}
             />
           </div>
           <div style={{ gridColumn: '1 / -1' }}>
@@ -280,6 +281,7 @@ export default function AdminInstitutions() {
       render: (inst) => (
         <span className="cell-flag">
           <Flag
+            isoCode={inst.country?.isoCode}
             emoji={inst.country?.flagEmoji}
             code={inst.country?.code}
             name={inst.country?.name}

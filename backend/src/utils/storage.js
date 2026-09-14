@@ -27,6 +27,8 @@ const ALLOWED = {
   // Avatars and logos accept webp; it was missing here only because this map
   // was written for the Document Bank before those two paths existed.
   'image/webp': '.webp',
+  'image/gif': '.gif',
+  'image/avif': '.avif',
   'application/msword': '.doc',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
   'application/vnd.ms-excel': '.xls',
@@ -39,12 +41,42 @@ const ALLOWED = {
 // storage.js" — which is the comment you write just before the two stop matching.
 export const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 
-// Avatars and logos: images only, and much smaller. Exported so the two callers
-// share one definition instead of each keeping their own drifting copy.
+/**
+ * Avatars, logos and banners. Exported so the callers share one definition
+ * instead of each keeping their own drifting copy.
+ *
+ * GIF and AVIF are here because a logo arrives in whatever the sender's tool
+ * exported, and refusing a perfectly ordinary raster format teaches people to
+ * go and convert files by hand.
+ *
+ * SVG IS DELIBERATELY ABSENT, and will stay absent. An SVG is an XML document,
+ * not an image: it can carry <script>, and these files are served from the same
+ * origin as the portal, so accepting one is stored XSS with an upload form in
+ * front of it. The way to allow SVG is to sanitise it server-side or to serve
+ * uploads from a separate origin — not to add a line here.
+ *
+ * HEIC is absent for a different reason: it is what an iPhone produces by
+ * default, and accepting it would work right up until the logo renders, because
+ * only Safari can draw one in an <img>. It gets its own message rather than the
+ * generic one, since "unsupported" is unhelpful when the user's phone chose the
+ * format for them.
+ */
 export const IMAGE_TYPES = {
   'image/png': '.png',
   'image/jpeg': '.jpg',
   'image/webp': '.webp',
+  'image/gif': '.gif',
+  'image/avif': '.avif',
+};
+
+/** Types worth a specific message instead of "use PNG, JPEG or WebP". */
+export const IMAGE_TYPE_ADVICE = {
+  'image/svg+xml':
+    'SVG can carry scripts, so it is not accepted. Export the logo as PNG at 512px or larger.',
+  'image/heic': 'iPhone HEIC photos will not display in a browser. Change the format to JPEG in Settings › Camera › Formats, or export as JPEG.',
+  'image/heif': 'HEIF images will not display in a browser. Export as JPEG or PNG instead.',
+  'image/tiff': 'TIFF images will not display in a browser. Export as PNG or JPEG instead.',
+  'image/bmp': 'BMP files are very large and poorly supported. Export as PNG instead.',
 };
 export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 export const LOGO_MAX_BYTES   = 2 * 1024 * 1024;
