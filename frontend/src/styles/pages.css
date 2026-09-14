@@ -332,8 +332,17 @@
 
   /* ===================== ADMIN FORMS ===================== */
   .form-field { margin-bottom: 12px; }
-  .form-field input[type="text"], .form-field input[type="number"], .form-field input[type="date"],
-  .form-field input[type="email"], .form-field select, .form-field textarea {
+  /* An exclusion list, not an inclusion list.
+     This was `input[type="text"], [type="number"], [type="date"], [type="email"]`
+     — and `password` was simply never added, so every password box in the
+     product rendered as a browser default: narrow, white, square-cornered, in
+     the middle of a column of styled fields. Ten of them, on the login pages,
+     the reset flow, the profile screen and the create-user modal.
+     An inclusion list fails this way every time a type is added. Naming the
+     three that must NOT be stretched to full width is the list that stays
+     correct on its own. */
+  .form-field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .form-field select, .form-field textarea {
     width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm);
     padding: 7px 9px; font-size: 12.5px; background: var(--canvas); color: var(--ink-900);
     font-family: var(--font-sans); transition: border-color .13s, box-shadow .13s;

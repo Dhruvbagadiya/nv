@@ -375,6 +375,17 @@ const PATHS = {
       <circle cx="12" cy="12" r="3.2" />
     </g>
   ),
+  // The same eye with a stroke through it, rather than a different glyph: the
+  // toggle swaps between these two in place, and two unrelated shapes read as
+  // the button having moved.
+  eyeOff: (
+    <g {...STROKE}>
+      <path d="M4 4.5 20 19.5" />
+      <path d="M9.6 6A9.4 9.4 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.2 3.9" />
+      <path d="M6.6 8.1A17.4 17.4 0 0 0 2.5 12S6 18.5 12 18.5a9.6 9.6 0 0 0 3.2-.55" />
+      <path d="M9.9 10a3.2 3.2 0 0 0 4.3 4.4" />
+    </g>
+  ),
   logout: (
     <g {...STROKE}>
       <path d="M15 4.5h2.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H15" />

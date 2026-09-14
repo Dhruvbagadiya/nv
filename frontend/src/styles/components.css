@@ -676,3 +676,19 @@
     font-variant-numeric: tabular-nums;
   }
   .docs-chip:hover { background: var(--accent-100); }
+
+  /* ---- Password field with a reveal toggle ----
+     The button sits inside the input's box rather than beside it, so the field
+     keeps the same full width as every other one in the column — a toggle in a
+     flex row next to the input makes the input narrower than its neighbours,
+     which is the shape of the bug this replaced. */
+  .pwfield { position: relative; display: block; }
+  .pwfield input { padding-right: 38px !important; }
+  .pwfield__toggle {
+    position: absolute; top: 50%; right: 4px; transform: translateY(-50%);
+    display: grid; place-items: center; width: 28px; height: 28px;
+    background: transparent; border: 0; border-radius: var(--radius-xs);
+    color: var(--ink-400); cursor: pointer;
+  }
+  .pwfield__toggle:hover { color: var(--ink-700); background: var(--ink-100); }
+  .pwfield__toggle:focus-visible { outline: 2px solid var(--accent-500); outline-offset: 1px; }

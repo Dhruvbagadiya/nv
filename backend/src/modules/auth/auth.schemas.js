@@ -24,6 +24,25 @@ export const registerSchema = z
   })
   .strict();
 
+/**
+ * The roles this API will assign.
+ *
+ * SUPER_ADMIN is deliberately not among them. There is exactly one super admin
+ * and there is meant to stay exactly one: it is the account that can create
+ * users, change roles and reset anyone's password, so a second one is a second
+ * copy of the keys to everything, handed out through a dropdown.
+ *
+ * Enforced HERE and not only in the admin screen's <select>. Dropping the option
+ * from the UI changes what is easy to do, not what is possible — this route
+ * takes a JSON body, and a request that names SUPER_ADMIN has to be refused by
+ * the thing that reads the body.
+ *
+ * `Role` in the database keeps the value: the existing super admin must still
+ * load, still render with their own badge, and still be findable by the role
+ * filter. What is removed is the ability to MINT one, not the concept.
+ */
+export const ASSIGNABLE_ROLES = ['ADMIN', 'AGENT', 'STUDENT'];
+
 // The privileged path. Same shape, but role is allowed and required — and the
 // route is behind requireRole('SUPER_ADMIN').
 export const createUserSchema = z
@@ -31,7 +50,7 @@ export const createUserSchema = z
     name:     z.string().min(1).max(120).trim(),
     email:    z.string().trim().toLowerCase().email(),
     password: z.string().min(10).max(200),
-    role:     z.enum(['SUPER_ADMIN', 'ADMIN', 'AGENT', 'STUDENT']),
+    role:     z.enum(ASSIGNABLE_ROLES),
   })
   .strict();
 
@@ -45,7 +64,10 @@ export const idParam = z.object({ id: z.string().uuid() });
 export const updateUserBody = z
   .object({
     name: z.string().min(1).max(120).trim().optional(),
-    role: z.enum(['SUPER_ADMIN', 'ADMIN', 'AGENT', 'STUDENT']).optional(),
+    // Same list as creation: promoting an existing account is the other half of
+    // the same door, and leaving it open would make "no new super admins" a
+    // two-step process instead of an impossible one.
+    role: z.enum(ASSIGNABLE_ROLES).optional(),
   })
   .strict();
 

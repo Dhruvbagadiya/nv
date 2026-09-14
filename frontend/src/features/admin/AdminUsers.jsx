@@ -12,16 +12,34 @@ import {
 import { formatDate } from '../../utils/format.js';
 import { applicationStageLabel } from '../../constants/referenceData.js';
 import { toast } from '../../store/useToast.js';
+import PasswordField from '../../components/ui/PasswordField.jsx';
 import { invalidateResource } from '../../hooks/useInvalidateResource.js';
 
 const FILTER_DEFAULTS = { role: '', search: '', page: 1 };
 
+/**
+ * Every role the product has — for the filter and for labelling a row.
+ *
+ * Not for the create and edit forms. There is one Super Admin and there is meant
+ * to stay one: it is the account that can create users, change roles and reset
+ * anyone's password, so a second is a second copy of the keys to everything,
+ * handed out through a dropdown. ASSIGNABLE is what those two forms offer.
+ *
+ * SUPER_ADMIN stays HERE, though. Removing it from this list would also remove
+ * it from the role filter and from ROLE_LABEL — so the one account that holds it
+ * would become unfindable and would render its badge as the raw enum. What is
+ * gone is the ability to mint one, not the concept.
+ */
 const ROLES = [
   { value: 'SUPER_ADMIN', label: 'Super Admin' },
   { value: 'ADMIN',       label: 'Admin' },
   { value: 'AGENT',       label: 'Agent' },
   { value: 'STUDENT',     label: 'Student' },
 ];
+// Mirrors ASSIGNABLE_ROLES in backend/src/modules/auth/auth.schemas.js, which is
+// where this is actually enforced — the route takes a JSON body, so dropping an
+// <option> changes what is easy, not what is possible.
+const ASSIGNABLE = ROLES.filter((r) => r.value !== 'SUPER_ADMIN');
 const ROLE_LABEL = Object.fromEntries(ROLES.map((r) => [r.value, r.label]));
 const ROLE_COLORS = {
   SUPER_ADMIN: { background: 'var(--purple-100)', color: 'var(--purple-700)' },
@@ -32,7 +50,7 @@ const ROLE_COLORS = {
 
 // ── Create user modal ─────────────────────────────────────────────────────────
 function CreateUserModal({ onClose, onSaved }) {
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'AGENT' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', role: 'AGENT' });
   const [error, setError] = useState(null);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const save = useMutation({
@@ -40,9 +58,34 @@ function CreateUserModal({ onClose, onSaved }) {
     onSuccess: onSaved,
     onError: (e) => setError(e.response?.data?.error ?? 'Could not create user.'),
   });
+
+  /**
+   * The admin types a password the account's owner will have to be told, and
+   * nothing here echoes it back afterwards — so a typo is not discovered by the
+   * admin, it is discovered by the person who cannot log in.
+   *
+   * Shown only once the second field has something in it: a mismatch warning
+   * that appears on the first keystroke is an error about work in progress.
+   */
+  const mismatch = form.confirm.length > 0 && form.confirm !== form.password;
+
+  const submit = (e) => {
+    e.preventDefault();
+    setError(null);
+    if (form.password !== form.confirm) {
+      setError('The two passwords do not match.');
+      return;
+    }
+    // `confirm` is local to this form and not part of the API's body, which is
+    // `.strict()` — sending it would be a 400 naming a field the admin never
+    // knew existed.
+    const { confirm: _confirm, ...payload } = form;
+    save.mutate(payload);
+  };
+
   return (
     <Modal title="Create user" onClose={onClose}>
-      <form onSubmit={(e) => { e.preventDefault(); setError(null); save.mutate(form); }}>
+      <form onSubmit={submit}>
         <div className="form-field">
           <label className="flabel" htmlFor="u-name">Full name *</label>
           <input id="u-name" type="text" value={form.name} onChange={(e) => set('name', e.target.value)} required />
@@ -51,20 +94,35 @@ function CreateUserModal({ onClose, onSaved }) {
           <label className="flabel" htmlFor="u-email">Email *</label>
           <input id="u-email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} required />
         </div>
-        <div className="form-field">
-          <label className="flabel" htmlFor="u-password">Password *</label>
-          <input id="u-password" type="password" value={form.password} onChange={(e) => set('password', e.target.value)} required minLength={10} placeholder="Min 10 characters" />
-        </div>
+        <PasswordField
+          id="u-password"
+          label="Password *"
+          value={form.password}
+          onChange={(v) => set('password', v)}
+          required
+          minLength={10}
+          placeholder="Min 10 characters"
+          hint="At least 10 characters. Share it with the account holder and ask them to change it."
+        />
+        <PasswordField
+          id="u-password-confirm"
+          label="Confirm password *"
+          value={form.confirm}
+          onChange={(v) => set('confirm', v)}
+          required
+          placeholder="Type it again"
+          error={mismatch ? 'The two passwords do not match.' : null}
+        />
         <div className="form-field">
           <label className="flabel" htmlFor="u-role">Role *</label>
           <select id="u-role" value={form.role} onChange={(e) => set('role', e.target.value)} required>
-            {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+            {ASSIGNABLE.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
         </div>
         {error && <p className="form-error">{error}</p>}
         <div className="submit-row" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
           <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={save.isPending}>
+          <button type="submit" className="btn btn-primary" disabled={save.isPending || mismatch}>
             {save.isPending ? 'Creating…' : 'Create user'}
           </button>
         </div>
@@ -86,6 +144,8 @@ function UserDetailPanel({ userId, onClose }) {
     queryFn: () => fetchUserDetail(userId),
     enabled: Boolean(userId),
   });
+
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   // RELATED_KEYS.users already lists the detail key and ['admin-stats'];
   // hand-rolling the first two here is what left the dashboard Users tile
@@ -229,7 +289,13 @@ function UserDetailPanel({ userId, onClose }) {
         {editForm ? (
           <div style={{ background: 'var(--accent-50)', border: '1px solid var(--accent-100)', borderRadius: 'var(--radius-sm)', padding: 14 }}>
             <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--ink-950)', marginBottom: 12 }}>Edit user</div>
-            <form onSubmit={(e) => { e.preventDefault(); setEditError(null); updateMut.mutate(editForm); }}>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              setEditError(null);
+              // No `role` key at all for a super admin — not the current value
+              // re-sent, which is still a value the schema refuses.
+              updateMut.mutate(isSuperAdmin ? { name: editForm.name } : editForm);
+            }}>
               <div className="form-field">
                 <label className="flabel" htmlFor="ue-name">Name</label>
                 <input id="ue-name" type="text" value={editForm.name}
@@ -237,10 +303,25 @@ function UserDetailPanel({ userId, onClose }) {
               </div>
               <div className="form-field">
                 <label className="flabel" htmlFor="ue-role">Role</label>
-                <select id="ue-role" value={editForm.role}
-                  onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value }))}>
-                  {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
+                {/* A super admin's role is shown, not offered. With SUPER_ADMIN
+                    gone from the options a <select> bound to it has no matching
+                    option, so the browser displays the first one instead — and
+                    renaming the account would submit a demotion nobody asked
+                    for. The server refuses it, but the failure the admin sees
+                    would be about a field they never touched. */}
+                {isSuperAdmin ? (
+                  <>
+                    <input id="ue-role" type="text" value={ROLE_LABEL[user.role]} readOnly disabled />
+                    <p className="field-hint">
+                      There is one Super Admin, and the role cannot be reassigned here.
+                    </p>
+                  </>
+                ) : (
+                  <select id="ue-role" value={editForm.role}
+                    onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value }))}>
+                    {ASSIGNABLE.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                  </select>
+                )}
               </div>
               {editError && <p className="form-error">{editError}</p>}
               <div style={{ display: 'flex', gap: 8 }}>
