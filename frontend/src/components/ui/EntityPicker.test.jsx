@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -119,5 +120,84 @@ describe('EntityPicker', () => {
     await waitFor(() =>
       expect(screen.getByText('No institution matches that name.')).toBeTruthy()
     );
+  });
+});
+
+/**
+ * What the field shows once something is chosen.
+ *
+ * `selectedLabel` is a prop, so it can only ever describe a value that arrived
+ * from elsewhere — the row being edited. For a value the user has just picked
+ * there is nothing to seed it from, and the fallback was `|| value`: the Add
+ * course form rendered the institution's uuid where its name belongs, on every
+ * create, because the create path has no `attr.school.name` to pass.
+ */
+describe('EntityPicker: the chosen label', () => {
+  /** A controlled host, so choosing actually sets the value the picker renders. */
+  function Controlled({ selectedLabel }) {
+    const [value, setValue] = useState('');
+    const fetchOptions = async (search) =>
+      ROWS.filter((r) => r.label.toLowerCase().includes((search ?? '').toLowerCase()));
+    return (
+      <EntityPicker
+        id="p"
+        label="Institution"
+        value={value}
+        selectedLabel={selectedLabel}
+        onChange={(v) => setValue(v)}
+        queryKey={['label-test']}
+        fetchOptions={fetchOptions}
+      />
+    );
+  }
+
+  const renderControlled = (props = {}) => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    return render(
+      <QueryClientProvider client={queryClient}><Controlled {...props} /></QueryClientProvider>
+    );
+  };
+
+  const choose = async (name) => {
+    fireEvent.focus(screen.getByLabelText('Institution'));
+    await waitFor(() => expect(screen.getByText(name)).toBeTruthy());
+    // mouseDown, not click: the row commits on mousedown, because the input's
+    // blur would otherwise close the list before a click ever landed.
+    fireEvent.mouseDown(screen.getByText(name));
+  };
+
+  it('names what was just picked, with no selectedLabel to lean on', async () => {
+    renderControlled();
+    await choose('University of Hertfordshire');
+
+    await waitFor(() => expect(screen.getByText('University of Hertfordshire')).toBeTruthy());
+    // The failure this replaces: the uuid rendered as if it were the name.
+    expect(screen.queryByText('i1')).toBeNull();
+  });
+
+  it('forgets the remembered name when the value is cleared', async () => {
+    renderControlled();
+    await choose('University of Hull');
+    await waitFor(() => expect(screen.getByText('Clear')).toBeTruthy());
+
+    fireEvent.click(screen.getByText('Clear'));
+
+    // A remembered label outliving the value it described is a field
+    // confidently naming the wrong row.
+    await waitFor(() => expect(screen.queryByText('University of Hull')).toBeNull());
+  });
+
+  it('still prefers a seeded selectedLabel before anything is picked', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <EntityPicker
+          id="p" label="Institution" value="i9" selectedLabel="Seeded University"
+          onChange={() => {}} queryKey={['seed-test']} fetchOptions={async () => ROWS}
+        />
+      </QueryClientProvider>
+    );
+    expect(screen.getByText('Seeded University')).toBeTruthy();
+    expect(screen.queryByText('i9')).toBeNull();
   });
 });

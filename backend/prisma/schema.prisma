@@ -251,6 +251,13 @@ enum ProgramLevel {
   INTEGRATED_MASTERS
   POST_GRADUATE_DIPLOMA
   ADVANCED_DIPLOMA
+  // The diploma tiers below sit between a certificate and a full degree, and
+  // were already being written into course TITLES because the column could not
+  // express them -- "UNDERGRADUATE DIPLOMA IN HOSPITALITY AND TOURISM" filed
+  // under DIPLOMA, so an agent could read the level and not filter by it.
+  HIGHER_DIPLOMA
+  UNDERGRADUATE_CERTIFICATE
+  UNDERGRADUATE_DIPLOMA
   DOCTORAL_PHD
   TOPUP_DEGREE
   ENGLISH

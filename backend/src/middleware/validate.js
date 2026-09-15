@@ -14,7 +14,12 @@ export function validate(schema, source = 'body') {
     const result = schema.safeParse(req[source]);
     if (!result.success) {
       const details = result.error.issues.map((i) => ({
-        field: i.path.join('.'),
+        // `unrecognized_keys` carries an EMPTY path — the offending key is in
+        // `i.keys` instead — so joining the path gave "" and the client rendered
+        // ": Unrecognized key(s) in object", a message with a colon and no
+        // subject. Every schema here is .strict(), which makes this the issue a
+        // caller sending one field too many actually gets.
+        field: i.path.join('.') || i.keys?.join(', ') || '',
         message: i.message,
       }));
       return next(new BadRequestError(`Invalid request ${source}`, details));

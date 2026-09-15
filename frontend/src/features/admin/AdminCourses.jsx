@@ -251,12 +251,66 @@ function CourseModal({ initial, onClose, onSaved }) {
   const save = useMutation({
     mutationFn: (payload) => isEdit ? updateCourse(initial.id, payload) : createCourse(payload),
     onSuccess: onSaved,
-    onError: (e) => setError(e.response?.data?.error ?? 'Could not save course.'),
+    // errorMessage() reads the `details` array the validator sends — which names
+    // the field that failed. Reading `.error` straight off the body threw that
+    // away and rendered the envelope's generic "Invalid request body" instead,
+    // so every one of the five ways this form can be rejected looked identical.
+    onError: (e) => setError(errorMessage(e, 'Could not save course.')),
   });
+
+  /**
+   * The five ways this form gets rejected, caught here so the message names the
+   * field instead of arriving as "Invalid request body".
+   *
+   * Every one of these is a server rule too — this is not the enforcement, it is
+   * the part that tells the admin what is wrong while they are still looking at
+   * the field. The server's own `details` now reach the banner as well, so a
+   * rule only stated there still names itself.
+   */
+  const validate = () => {
+    if (!instId) return 'Pick an institution — a course has to belong to one.';
+    if (!form.title.trim()) return 'Give the course a title.';
+    if (form.tuitionFee !== '' && !Number.isFinite(Number(form.tuitionFee))) {
+      // "1,500" and "SGD 154" both become NaN, which the API reports as
+      // "Expected number, received nan" — accurate and unhelpful.
+      return 'Tuition fee must be a plain number — no commas, currency symbols or text.';
+    }
+    if (form.applicationFee !== '' && !Number.isFinite(Number(form.applicationFee))) {
+      return 'Application fee must be a plain number — no commas, currency symbols or text.';
+    }
+    if (form.commissionAmount !== '' && !Number.isFinite(Number(form.commissionAmount))) {
+      return 'Commission must be a plain number — no commas, currency symbols or text.';
+    }
+    const currency = form.currencyCode.trim();
+    if (currency && currency.length !== 3) {
+      return 'Currency must be a 3-letter code, like GBP, EUR or SGD.';
+    }
+    return null;
+  };
+
+  /**
+   * A pasted course link is almost never typed with its scheme.
+   *
+   * `z.string().url()` rejects "www.herts.ac.uk/course", which is what an admin
+   * gets from copying the address out of a page rather than the address bar.
+   * Refusing it teaches them to go and retype it; assuming https is what every
+   * browser does with the same input.
+   */
+  const normaliseUrl = (value) => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  };
 
   const submit = (e) => {
     e.preventDefault();
     setError(null);
+
+    const problem = validate();
+    if (problem) {
+      setError(problem);
+      return;
+    }
 
     // Empty values are stripped, so a form nobody filled in saves null rather
     // than an object full of blanks.
@@ -275,8 +329,8 @@ function CourseModal({ initial, onClose, onSaved }) {
       // Empty means unknown, which the column now stores as NULL. Number('')
       // is 0, which would publish "free to apply" over a fee nobody stated.
       applicationFee:        form.applicationFee === '' ? null : Number(form.applicationFee),
-      currencyCode:          form.currencyCode.trim() || null,
-      externalUrl:           form.externalUrl.trim()  || null,
+      currencyCode:          form.currencyCode.trim().toUpperCase() || null,
+      externalUrl:           normaliseUrl(form.externalUrl),
       entryRequirements:     parsedRequirements,
       commissionAmount:      form.commissionAmount !== '' ? Number(form.commissionAmount) : null,
       abAppCreationEnabled:  form.abAppCreationEnabled,
@@ -313,8 +367,13 @@ function CourseModal({ initial, onClose, onSaved }) {
         <div className="admin-section-label">Basic information</div>
         <div className="admin-form-grid">
           <div style={{ gridColumn: '1 / -1' }}>
+            {/* The starred label matters here: this is the one field with no
+                sensible default, and leaving it blank was the commonest way to
+                get "Invalid request body" — the API wants a uuid and an unset
+                picker sends "". */}
             <InstitutionPicker
               id="c-inst"
+              label="Institution *"
               value={instId}
               selectedLabel={attr.school?.name}
               onChange={(id) => setInstId(id)}

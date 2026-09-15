@@ -62,7 +62,24 @@ export default function EntityPicker({
     return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
 
+  /**
+   * The label of the option the user picked here, remembered.
+   *
+   * `selectedLabel` is a prop, and it can only ever describe a value that
+   * arrived from somewhere else — the row being edited. For a value the user
+   * has just chosen there is nothing to seed it from, so a caller that did not
+   * also store the label got `selectedLabel || value`, and the field showed a
+   * raw uuid where the institution's name belongs.
+   *
+   * Kept WITH its value rather than as a bare string, so it is discarded the
+   * moment the parent sets a different value — a remembered label outliving the
+   * value it described is a field confidently naming the wrong row.
+   */
+  const [picked, setPicked] = useState(null);
+  const displayLabel = (picked?.value === value ? picked.label : null) ?? selectedLabel ?? '';
+
   const choose = (option) => {
+    setPicked({ value: option.value, label: option.label });
     onChange(option.value, option);
     setOpen(false);
     setSearch('');
@@ -97,7 +114,9 @@ export default function EntityPicker({
       {/* A chosen value reads as a settled choice, not as text in a search box. */}
       {value && !open ? (
         <div className="entity-picker__chosen">
-          <span className="entity-picker__chosen-name">{selectedLabel || value}</span>
+          {/* Never `|| value`. An id where a name belongs looks like data, and
+              an admin cannot tell it from a badly-named row. */}
+          <span className="entity-picker__chosen-name">{displayLabel || 'Selected'}</span>
           <button
             type="button"
             // Carries the id in THIS branch, because the input that normally
@@ -108,14 +127,14 @@ export default function EntityPicker({
             id={id}
             // Names the control it reopens, so "Change" is not the whole of what
             // gets announced.
-            aria-label={`${label}: ${selectedLabel || value}. Change`}
+            aria-label={`${label}: ${displayLabel || 'a selection'}. Change`}
             className="btn btn-ghost entity-picker__change"
             onClick={() => { setOpen(true); setSearch(''); setTimeout(() => inputRef.current?.focus(), 0); }}
           >
             Change
           </button>
           {allowClear && (
-            <button type="button" className="btn btn-ghost" onClick={() => onChange('', null)}>
+            <button type="button" className="btn btn-ghost" onClick={() => { setPicked(null); onChange('', null); }}>
               Clear
             </button>
           )}
