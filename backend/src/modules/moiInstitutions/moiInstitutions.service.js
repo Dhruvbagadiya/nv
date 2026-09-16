@@ -4,7 +4,7 @@ import { NotFoundError } from '../../utils/httpErrors.js';
 
 const MOI_INCLUDE = { institution: { include: { country: true } } };
 
-export async function listMoiAcceptances({ country, institutionId, courseType, page, pageSize }) {
+export async function listMoiAcceptances({ country, institutionId, courseType, programLevel, page, pageSize }) {
   const institutionFilter = {
     archivedAt: null,
     ...(institutionId && { id: institutionId }),
@@ -16,6 +16,7 @@ export async function listMoiAcceptances({ country, institutionId, courseType, p
     {
       where: {
         ...(courseType && { courseType }),
+        ...(programLevel && { programLevel }),
         institution: institutionFilter,
       },
       include: MOI_INCLUDE,

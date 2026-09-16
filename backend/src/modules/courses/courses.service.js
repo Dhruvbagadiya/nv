@@ -230,6 +230,7 @@ export async function searchCourses({
   programLevel,
   institutionId,
   intakeMonth,
+  moiAccepted,
   status = 'active',
   page = 1,
   pageSize = 12,
@@ -259,6 +260,46 @@ export async function searchCourses({
     matchingInstitutionIds = matches.map((m) => m.id);
   }
 
+  /**
+   * "Courses this school accepts an MOI letter for."
+   *
+   * The honest reading is a correlation -- the course's OWN level has to be one
+   * its institution accepts -- and Prisma cannot compare a column to a column on
+   * a related row. So it is expanded into one branch per level.
+   *
+   * The levels come from MoiAcceptance itself rather than from the enum, which
+   * is what keeps it small: the enum has twenty values, and a partnership
+   * agreement names two or three. Twenty subqueries where three will do is the
+   * difference between a filter and a timeout.
+   *
+   * When the caller ALSO picked a level, the whole thing collapses to a single
+   * branch and this query is skipped -- which is the common case, since the two
+   * filters sit next to each other.
+   */
+  let moiWhere = null;
+  if (moiAccepted) {
+    if (programLevel) {
+      moiWhere = { institution: { moiAcceptances: { some: { programLevel } } } };
+    } else {
+      const levels = await prisma.moiAcceptance.findMany({
+        where: { programLevel: { not: null } },
+        distinct: ['programLevel'],
+        select: { programLevel: true },
+      });
+      moiWhere = levels.length
+        ? {
+            OR: levels.map(({ programLevel: level }) => ({
+              programLevel: level,
+              institution: { moiAcceptances: { some: { programLevel: level } } },
+            })),
+          }
+        // No MOI row carries a level yet, so nothing can match. An unfiltered
+        // list here would be the filter silently doing nothing, which reads as
+        // "every course accepts MOI".
+        : { id: { in: [] } };
+    }
+  }
+
   // 'active' is the default and the only thing the public catalogue ever asks
   // for. The others exist so an admin can find a soft-deleted course again --
   // archiving is reversible, but only if something can list the archived rows.
@@ -284,6 +325,10 @@ export async function searchCourses({
       country !== 'ALL' && {
         institution: { archivedAt: null, country: { code: country } },
       }),
+    // Spread last and as its own AND entry: it carries both an `institution`
+    // key and an `OR`, either of which would be overwritten by -- or would
+    // overwrite -- the country filter and the search above if merged flat.
+    ...(moiWhere && { AND: [moiWhere] }),
   };
 
   const [rows, total] = await Promise.all([

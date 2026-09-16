@@ -387,3 +387,98 @@ describe('createCourse — intakes', () => {
     expect(prismaMock.course.create.mock.calls[0][0].include.intakes).toBeTruthy();
   });
 });
+
+/**
+ * "Courses this school accepts an MOI letter for."
+ *
+ * MoiAcceptance.courseType was free text, so the table could never be joined to
+ * anything: a course carries a ProgramLevel enum and an MOI row carried prose.
+ * The question was unanswerable however obviously the two belonged together.
+ *
+ * The honest reading is a CORRELATION — the course's own level has to be one its
+ * institution accepts — and Prisma cannot compare a column to a column on a
+ * related row. So it expands into one branch per level, and the interesting
+ * assertions are about how few branches that is.
+ */
+describe('searchCourses — the MOI filter', () => {
+  beforeEach(() => {
+    prismaMock.course.findMany.mockResolvedValue([]);
+    prismaMock.course.count.mockResolvedValue(0);
+  });
+
+  const whereOf = () => prismaMock.course.findMany.mock.calls[0][0].where;
+
+  it('collapses to one branch when a level is also chosen', async () => {
+    await service.searchCourses({ moiAccepted: true, programLevel: 'DIPLOMA' });
+
+    expect(whereOf().AND).toEqual([
+      { institution: { moiAcceptances: { some: { programLevel: 'DIPLOMA' } } } },
+    ]);
+    // No lookup needed: the level is a constant from the filter, and the two
+    // controls sit next to each other so this is the common case.
+    expect(prismaMock.moiAcceptance.findMany).not.toHaveBeenCalled();
+  });
+
+  it('pairs each level with itself when no level is chosen', async () => {
+    prismaMock.moiAcceptance.findMany.mockResolvedValue([
+      { programLevel: 'BACHELORS_DEGREE' },
+      { programLevel: 'MASTERS_DEGREE' },
+    ]);
+
+    await service.searchCourses({ moiAccepted: true });
+
+    // Each branch constrains the COURSE's level and the institution's acceptance
+    // to the same value. Without the pairing this would return every course at
+    // any school that accepts MOI for anything.
+    expect(whereOf().AND[0].OR).toEqual([
+      { programLevel: 'BACHELORS_DEGREE', institution: { moiAcceptances: { some: { programLevel: 'BACHELORS_DEGREE' } } } },
+      { programLevel: 'MASTERS_DEGREE', institution: { moiAcceptances: { some: { programLevel: 'MASTERS_DEGREE' } } } },
+    ]);
+  });
+
+  // From MoiAcceptance rather than from the enum: the enum has twenty values and
+  // a partnership agreement names two or three. Twenty subqueries where three
+  // will do is the difference between a filter and a timeout.
+  it('asks the small table which levels are actually in use', async () => {
+    prismaMock.moiAcceptance.findMany.mockResolvedValue([{ programLevel: 'DIPLOMA' }]);
+
+    await service.searchCourses({ moiAccepted: true });
+
+    const args = prismaMock.moiAcceptance.findMany.mock.calls[0][0];
+    expect(args.distinct).toEqual(['programLevel']);
+    expect(args.where).toEqual({ programLevel: { not: null } });
+  });
+
+  /**
+   * Nothing carries a level yet — which is every deployment until the backfill
+   * runs. An unfiltered list here would be the filter silently doing nothing,
+   * and a catalogue of 93,000 courses under a pressed "MOI accepted" chip reads
+   * as "every course accepts MOI".
+   */
+  it('matches nothing rather than everything when no MOI row has a level', async () => {
+    prismaMock.moiAcceptance.findMany.mockResolvedValue([]);
+
+    await service.searchCourses({ moiAccepted: true });
+
+    expect(whereOf().AND).toEqual([{ id: { in: [] } }]);
+  });
+
+  it('adds nothing at all when the filter is off', async () => {
+    await service.searchCourses({});
+
+    expect(whereOf().AND).toBeUndefined();
+    expect(prismaMock.moiAcceptance.findMany).not.toHaveBeenCalled();
+  });
+
+  // Under AND rather than merged flat: it carries both an `institution` key and
+  // an `OR`, either of which would collide with the country filter or the search.
+  it('does not overwrite the country filter', async () => {
+    prismaMock.moiAcceptance.findMany.mockResolvedValue([{ programLevel: 'DIPLOMA' }]);
+
+    await service.searchCourses({ moiAccepted: true, country: 'UK' });
+
+    const where = whereOf();
+    expect(where.institution.country).toEqual({ code: 'UK' });
+    expect(where.AND[0].OR).toHaveLength(1);
+  });
+});

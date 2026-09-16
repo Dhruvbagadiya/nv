@@ -3,7 +3,7 @@ import { api } from './client.js';
 // Mirrors GET /api/courses?country=&search=&tag=&programLevel=&page= from the backend.
 // Response shape: { data: [{id, type, attributes}], meta: { counts: {total}, page, pageSize, totalPages } }
 export async function fetchCourses({
-  country, search, tag, institutionId, programLevel, status, page = 1,
+  country, search, tag, institutionId, programLevel, moiAccepted, status, page = 1,
 }) {
   const params = { page };
   // Only the admin screen sends this. Omitted elsewhere so the API applies its
@@ -16,6 +16,9 @@ export async function fetchCourses({
   if (tag) params.tag = tag;
   if (institutionId) params.institutionId = institutionId;
   if (programLevel) params.programLevel = programLevel;
+  // Only when true. It narrows and never widens, so `moiAccepted=false` would
+  // read as "courses that do NOT accept MOI" — a different question.
+  if (moiAccepted) params.moiAccepted = 'true';
 
   const { data } = await api.get('/courses', { params });
   return data;

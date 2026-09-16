@@ -34,6 +34,11 @@ export default function CourseFinder() {
   const [tag, setTag] = useState(null);
   const [institutionId, setInstitutionId] = useState('');
   const [programLevel, setProgramLevel] = useState('');
+  // Courses whose own level their institution accepts an MOI letter for. The
+  // MOI screen has always listed which schools accept one; this is the same fact
+  // asked the other way round, which is the way an agent with a student in front
+  // of them actually needs it.
+  const [moiAccepted, setMoiAccepted] = useState(false);
   const [page, setPage] = useState(1);
 
   // Reset page when country changes (F-12 fix).
@@ -56,7 +61,7 @@ export default function CourseFinder() {
   }
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['courses', selectedCountry, search, tag, institutionId, programLevel, page],
+    queryKey: ['courses', selectedCountry, search, tag, institutionId, programLevel, moiAccepted, page],
     queryFn: () =>
       fetchCourses({
         country: selectedCountry,
@@ -64,6 +69,9 @@ export default function CourseFinder() {
         tag,
         institutionId: institutionId || undefined,
         programLevel: programLevel || undefined,
+        // Omitted rather than sent as false: it only ever narrows, and
+        // `moiAccepted=false` would read as "courses that do NOT accept MOI".
+        moiAccepted: moiAccepted || undefined,
         page,
       }),
     placeholderData: keepPreviousData,
@@ -101,6 +109,11 @@ export default function CourseFinder() {
       clear: () => withPageReset(setProgramLevel)(''),
     },
     tag && { key: 'tag', label: QUICK_FILTER_LABELS[tag], clear: () => withPageReset(setTag)(null) },
+    moiAccepted && {
+      key: 'moi',
+      label: 'MOI accepted',
+      clear: () => withPageReset(setMoiAccepted)(false),
+    },
   ].filter(Boolean);
 
   const clearAll = () => {
@@ -108,6 +121,7 @@ export default function CourseFinder() {
     setSearch('');
     setTag(null);
     setInstitutionId('');
+    setMoiAccepted(false);
     setProgramLevel('');
     setSelectedCountry('ALL');
   };
@@ -197,6 +211,17 @@ export default function CourseFinder() {
       </div>
 
       <div className="cf-quick">
+        {/* Beside the quick filters because it is one: a yes/no that narrows the
+            catalogue, not a value to choose. */}
+        <button
+          type="button"
+          className={`chip${moiAccepted ? ' chip-active' : ''}`}
+          aria-pressed={moiAccepted}
+          title="Only courses whose level this university accepts a Medium of Instruction letter for"
+          onClick={() => withPageReset(setMoiAccepted)(!moiAccepted)}
+        >
+          MOI accepted
+        </button>
         {QUICK_FILTERS.map((f) => (
           <button
             key={f}

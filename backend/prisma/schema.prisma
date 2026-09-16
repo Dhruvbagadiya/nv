@@ -419,7 +419,17 @@ model CourseIntake {
 model MoiAcceptance {
   id            String   @id @default(uuid())
   institutionId String
+  /// The label the agent screens render. Free text, and that is the whole
+  /// problem: "Bachelor's Degree", "Bachelors" and "UG" are three course types
+  /// as far as a groupBy is concerned, so the agent dropdown grew an option per
+  /// spelling. Written from `programLevel` below now, so the two cannot drift.
   courseType    String
+  /// The machine-readable half, and the only one a JOIN can use. A course
+  /// carries a ProgramLevel; this column is what lets "courses this school
+  /// accepts an MOI letter for" be a query rather than a guess.
+  /// Nullable because rows written before it existed hold only prose --
+  /// ops/backfill-moi-program-level.mjs maps what it can and reports the rest.
+  programLevel  ProgramLevel?
   years         Int
   documentUrl   String?
   createdAt     DateTime @default(now())
@@ -431,6 +441,8 @@ model MoiAcceptance {
   // agent-facing dropdown into two options for the same award.
   @@unique([institutionId, courseType])
   @@index([institutionId])
+  @@index([programLevel])
+  @@index([institutionId, programLevel])
   @@index([courseType])
 }
 

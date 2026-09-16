@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Icon from '../../components/ui/Icon.jsx';
+import { PROGRAM_LEVELS, programLevelLabel } from '../../constants/referenceData.js';
 
 /**
  * Commission, entry requirements and MOI acceptances, on the Add Institution
@@ -74,7 +75,11 @@ export function useInstitutionSetup() {
   const [levels, setLevels] = useState({ UG: true, PG: false });
 
   const [moiOn, setMoiOn] = useState(false);
-  const [moi, setMoi] = useState([{ courseType: '', years: '' }]);
+  // Keyed on programLevel, not a typed courseType. Free text is how the same
+  // award became "Bachelor's Degree", "Bachelors" and "UG" — three course types
+  // as far as a groupBy is concerned, so the agent dropdown grew an option per
+  // spelling, and none of them could ever be joined to a course.
+  const [moi, setMoi] = useState([{ programLevel: '', years: '' }]);
 
   const num = (v) => (v === '' || v == null ? null : Number(v));
 
@@ -111,8 +116,14 @@ export function useInstitutionSetup() {
 
     if (moiOn) {
       const rows = moi
-        .filter((m) => m.courseType.trim() && m.years !== '')
-        .map((m) => ({ courseType: m.courseType.trim(), years: Number(m.years) }));
+        .filter((m) => m.programLevel && m.years !== '')
+        .map((m) => ({
+          programLevel: m.programLevel,
+          // The label the agent screens render, derived rather than typed, so
+          // the two halves cannot drift.
+          courseType: programLevelLabel(m.programLevel),
+          years: Number(m.years),
+        }));
       if (rows.length) out.moiAcceptances = rows;
     }
 
@@ -149,8 +160,16 @@ export function useInstitutionSetup() {
       }
     }
 
-    if (moiOn && !moi.some((m) => m.courseType.trim() && m.years !== '')) {
-      return 'MOI: give at least one row a course type and a number of years, or remove the section.';
+    if (moiOn) {
+      if (!moi.some((m) => m.programLevel && m.years !== '')) {
+        return 'MOI: give at least one row a program level and a number of years, or remove the section.';
+      }
+      const levels = moi.map((m) => m.programLevel).filter(Boolean);
+      if (new Set(levels).size !== levels.length) {
+        // The unique key is (institutionId, courseType), so a repeat fails at
+        // the database with a message about a constraint the admin cannot see.
+        return 'MOI: each program level can only appear once.';
+      }
     }
 
     return null;
@@ -333,19 +352,22 @@ export function useInstitutionSetup() {
 
       <Section
         title="MOI accepted"
-        hint="Which awards this school accepts a Medium of Instruction letter for, instead of an English test."
+        hint="Which program levels this school accepts a Medium of Instruction letter for, instead of an English test. Agents can filter courses by it."
         enabled={moiOn}
         onToggle={setMoiOn}
       >
         {moi.map((row, i) => (
           <div className="setup-row" key={i}>
-            <input
-              type="text"
-              aria-label={`MOI course type ${i + 1}`}
-              placeholder="e.g. Bachelor's Degree"
-              value={row.courseType}
-              onChange={(e) => setMoi((m) => m.map((x, j) => (j === i ? { ...x, courseType: e.target.value } : x)))}
-            />
+            <select
+              aria-label={`MOI program level ${i + 1}`}
+              value={row.programLevel}
+              onChange={(e) => setMoi((m) => m.map((x, j) => (j === i ? { ...x, programLevel: e.target.value } : x)))}
+            >
+              <option value="">Select a program level…</option>
+              {PROGRAM_LEVELS.map((l) => (
+                <option key={l.value} value={l.value}>{l.label}</option>
+              ))}
+            </select>
             <input
               type="number"
               min="1"
@@ -368,9 +390,9 @@ export function useInstitutionSetup() {
         <button
           type="button"
           className="btn btn-outline"
-          onClick={() => setMoi((m) => [...m, { courseType: '', years: '' }])}
+          onClick={() => setMoi((m) => [...m, { programLevel: '', years: '' }])}
         >
-          + Add course type
+          + Add program level
         </button>
       </Section>
     </>

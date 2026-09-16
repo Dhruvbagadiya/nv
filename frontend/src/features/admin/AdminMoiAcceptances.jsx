@@ -1,9 +1,10 @@
 import AdminResourcePage from '../../components/admin/AdminResourcePage.jsx';
 import Flag from '../../components/ui/Flag.jsx';
+import { PROGRAM_LEVELS, programLevelLabel } from '../../constants/referenceData.js';
 import { fetchMoiAcceptances, createMoiAcceptance, updateMoiAcceptance, deleteMoiAcceptance } from '../../api/admin.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 
-const FILTER_DEFAULTS = { country: '', institutionId: '', courseType: '', page: 1 };
+const FILTER_DEFAULTS = { country: '', institutionId: '', programLevel: '', page: 1 };
 
 export default function AdminMoiAcceptances() {
   const { options: countryOptions, isError: countriesFailed } = useCountries();
@@ -27,7 +28,10 @@ export default function AdminMoiAcceptances() {
     filterFields: [
       { name: 'country',       label: 'Country',     type: 'select', placeholder: 'Any country',     options: countryOptions, optionsError: countriesFailed },
       { name: 'institutionId', label: 'Institution',  type: 'institution' },
-      { name: 'courseType',    label: 'Course type',  type: 'text',   placeholder: 'e.g. Masters' },
+      // A list, not a text box. Filtering on a typed string meant the filter
+      // only worked if you spelled the award the same way the admin who entered
+      // it did.
+      { name: 'programLevel',  label: 'Program level', type: 'select', placeholder: 'Any level', options: PROGRAM_LEVELS },
     ],
 
     columns: [
@@ -50,7 +54,15 @@ export default function AdminMoiAcceptances() {
           </div>
         ),
       },
-      { key: 'courseType', header: 'Course type' },
+      {
+        key: 'programLevel',
+        header: 'Program level',
+        // The enum where there is one; the raw courseType for rows written
+        // before the column existed, which the backfill could not map.
+        render: (r) => r.programLevel
+          ? programLevelLabel(r.programLevel)
+          : <span title="No program level set — invisible to the MOI course filter">{r.courseType}</span>,
+      },
       { key: 'years',      header: 'Years', className: 'cell-mono' },
       {
         key: 'documentUrl',
@@ -70,14 +82,17 @@ export default function AdminMoiAcceptances() {
         hint: 'The university that accepts a Medium of Instruction letter in place of IELTS.',
       },
       {
-        name: 'courseType',
-        label: 'Course type',
-        type: 'text',
+        name: 'programLevel',
+        label: 'Program level',
+        type: 'select',
         required: true,
-        placeholder: "e.g. Master's Degree",
-        // The agent screen filters on this exact string, so two spellings of the
-        // same award split the dropdown into two options.
-        hint: 'Match the wording already used for this award — a second spelling creates a second filter option.',
+        options: PROGRAM_LEVELS,
+        placeholder: 'Select a program level…',
+        // Was a free-text "Course type", which is how the same award became
+        // "Bachelor's Degree", "Bachelors" and "UG" — three course types as far
+        // as a groupBy is concerned, so the agent dropdown grew an option per
+        // spelling and none of them could be joined to a course.
+        hint: 'The same list courses use, so agents can filter the catalogue to courses this school accepts an MOI letter for.',
       },
       {
         name: 'years',
@@ -98,14 +113,17 @@ export default function AdminMoiAcceptances() {
 
     toForm: (r) => ({
       institutionId: r.institutionId,
-      courseType:    r.courseType,
+      programLevel:  r.programLevel ?? '',
       years:         r.years,
       documentUrl:   r.documentUrl ?? '',
     }),
 
     toPayload: (v) => ({
       institutionId: v.institutionId,
-      courseType:    v.courseType,
+      programLevel:  v.programLevel,
+      // Derived from the level rather than typed, so the label the agent screens
+      // render and the enum a query joins on cannot say different things.
+      courseType:    programLevelLabel(v.programLevel),
       years:         Number(v.years),
       documentUrl:   v.documentUrl || null,
     }),

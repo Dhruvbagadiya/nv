@@ -179,19 +179,46 @@ describe('AdminInstitutions — setting up a new institution', () => {
     expect(api.createInstitution).not.toHaveBeenCalled();
   });
 
-  it('sends MOI rows with the years as a number', async () => {
+  /**
+   * A program level from the same list courses use, not a typed course type.
+   * Free text is how the same award became "Bachelor's Degree", "Bachelors" and
+   * "UG" — three course types as far as a groupBy is concerned, so the agent
+   * dropdown grew an option per spelling and none of them could be joined to a
+   * course.
+   */
+  it('sends a program level, with the label derived from it', async () => {
     await openAdd();
     fillRequired();
 
     fireEvent.click(screen.getByText('MOI accepted'));
-    fireEvent.change(screen.getByLabelText('MOI course type 1'), { target: { value: "Bachelor's Degree" } });
+    fireEvent.change(screen.getByLabelText('MOI program level 1'), { target: { value: 'BACHELORS_DEGREE' } });
     fireEvent.change(screen.getByLabelText('MOI years 1'), { target: { value: '3' } });
     submitForm();
 
     await waitFor(() => expect(api.createInstitution).toHaveBeenCalled());
     expect(api.createInstitution.mock.calls[0][0].moiAcceptances).toEqual([
-      { courseType: "Bachelor's Degree", years: 3 },
+      // courseType derived rather than typed, so the label the agent screens
+      // render and the enum a query joins on cannot say different things.
+      { programLevel: 'BACHELORS_DEGREE', courseType: "Bachelor's Degree", years: 3 },
     ]);
+  });
+
+  // The unique key is (institutionId, courseType), so a repeat fails at the
+  // database with a message about a constraint the admin cannot see.
+  it('refuses the same program level twice', async () => {
+    await openAdd();
+    fillRequired();
+
+    fireEvent.click(screen.getByText('MOI accepted'));
+    fireEvent.change(screen.getByLabelText('MOI program level 1'), { target: { value: 'BACHELORS_DEGREE' } });
+    fireEvent.change(screen.getByLabelText('MOI years 1'), { target: { value: '3' } });
+    fireEvent.click(screen.getByText('+ Add program level'));
+    fireEvent.change(screen.getByLabelText('MOI program level 2'), { target: { value: 'BACHELORS_DEGREE' } });
+    fireEvent.change(screen.getByLabelText('MOI years 2'), { target: { value: '4' } });
+    submitForm();
+
+    await waitFor(() => expect(screen.getByText(/each program level can only appear once/i)).toBeTruthy());
+    expect(api.createInstitution).not.toHaveBeenCalled();
   });
 
   // On edit the existing rows already have their own screens, and a second

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ProgramLevel } from '@prisma/client';
-import { optionalUuid, optionalText, optionalEnum } from '../../utils/queryTypes.js';
+import { optionalUuid, optionalText, optionalEnum, queryBool } from '../../utils/queryTypes.js';
 
 // Shared pagination coercion. Query strings arrive as text so `coerce` is
 // required — `Number('abc')` previously became `skip: NaN`, which Prisma
@@ -35,6 +35,11 @@ export const listCoursesQuery = z.object({
   // Filter by the month a course starts, 1-12. Works for both feeds now that
   // the pattern is stored on Course rather than inferred from dated rows.
   intakeMonth: z.coerce.number().int().min(1).max(12).optional(),
+  // Courses whose own level their institution accepts an MOI letter for. Only
+  // ever narrows, so `false` is the same as absent and is normalised away --
+  // otherwise `?moiAccepted=false` would read as "courses that do NOT accept
+  // MOI", which is a different question and not one this answers.
+  moiAccepted: queryBool,
   ...paginationQuery,
 });
 
