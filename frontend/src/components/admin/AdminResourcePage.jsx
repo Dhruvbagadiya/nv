@@ -120,7 +120,23 @@ export default function AdminResourcePage({ resource }) {
     {
       key: '__actions',
       header: 'Actions',
-      render: (row) => (
+      render: (row) => {
+        /**
+         * Which ROW is in flight, not whether any is.
+         *
+         * `mutation.isPending` is one flag for the whole screen, so archiving a
+         * single row greyed out all twenty — and the button that was actually
+         * working looked identical to the nineteen that were not, which is the
+         * opposite of what a disabled state is for.
+         *
+         * `variables` is what the in-flight call was given, so no extra state is
+         * needed to tell the rows apart.
+         */
+        const id = removeIdOf(row);
+        const removing = removeMutation.isPending && removeMutation.variables === id;
+        const restoring = restoreMutation.isPending && restoreMutation.variables === id;
+
+        return (
         <div className="action-row">
           <button type="button" className="btn btn-outline" onClick={() => setEditing(row)}>
             Edit
@@ -130,11 +146,11 @@ export default function AdminResourcePage({ resource }) {
             <button
               type="button"
               className="btn btn-ghost"
-              onClick={() => restoreMutation.mutate(removeIdOf(row))}
-              disabled={restoreMutation.isPending}
+              onClick={() => restoreMutation.mutate(id)}
+              disabled={restoring}
               aria-label={`Restore ${resource.rowLabel?.(row) ?? 'item'}`}
             >
-              Restore
+              {restoring ? 'Restoring…' : 'Restore'}
             </button>
           ) : (
             resource.remove && (
@@ -144,20 +160,25 @@ export default function AdminResourcePage({ resource }) {
                 // Destructive and not undoable from this screen, so it asks first.
                 onClick={() => {
                   if (window.confirm(resource.confirmRemove?.(row) ?? `${removeLabel} this item?`)) {
-                    removeMutation.mutate(removeIdOf(row));
+                    removeMutation.mutate(id);
                   }
                 }}
-                disabled={removeMutation.isPending}
+                disabled={removing}
                 // Twenty identical buttons per page otherwise, with nothing to tell
                 // a screen reader which row this one belongs to.
                 aria-label={`${removeLabel} ${resource.rowLabel?.(row) ?? 'item'}`}
               >
-                {removeLabel}
+                {/* Archive→Archiving, Delete→Deleting, Blacklist→Blacklisting.
+                    Dropping a trailing "e" covers every label this screen uses;
+                    a resource that needs different wording should say so rather
+                    than have the verb guessed. */}
+                {removing ? `${removeLabel.replace(/e$/, '')}ing…` : removeLabel}
               </button>
             )
           )}
         </div>
-      ),
+        );
+      },
     },
   ];
 

@@ -1,7 +1,6 @@
 import { api } from './client.js';
 
 // All agency endpoints are at /api/agency (no /profile suffix)
-export const fetchAgencyProfile  = ()        => api.get('/agency').then((r) => r.data.profile);
 export const saveAgencyProfile = (payload) =>
   api.put('/agency', payload).then((r) => r.data.profile);
 export const deleteAgencyProfile = ()        => api.delete('/agency');

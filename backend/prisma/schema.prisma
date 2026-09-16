@@ -394,6 +394,11 @@ model Course {
   @@index([createdAt])
   @@index([slug])
   @@index([source])
+  // Filter on one column, sort by another: Postgres uses ONE index per scan, so
+  // the two single-column indexes above cannot serve `WHERE archivedAt IS NULL
+  // ORDER BY createdAt DESC` together -- it walks one and sorts the rest.
+  @@index([archivedAt, createdAt(sort: Desc)])
+  @@index([institutionId, archivedAt, createdAt(sort: Desc)])
 }
 
 // Replaces the `intakes String[]` array. Each intake now has its own identity,
@@ -662,6 +667,8 @@ model CourseInquiry {
   @@index([agentId, createdAt])
   @@index([countryId])
   @@index([stage])
+  // The activity feed reads this stream newest-first across every agency.
+  @@index([createdAt(sort: Desc)])
 }
 
 // The 8 stat tiles across the top of the Report screen, in order. Making this an
@@ -807,6 +814,13 @@ model Application {
   @@index([stage])
   @@index([deadlineAt])
   @@index([passportNo])
+  // The admin list, which has no agent to narrow by.
+  @@index([createdAt(sort: Desc)])
+  // The dashboard's deadline panel: this agent's, soonest first. Without the
+  // pairing, `deadlineAt` alone reads every future deadline across every agency.
+  @@index([agentId, deadlineAt])
+  // The Report screen's stage tiles: groupBy(stage) for one agent.
+  @@index([agentId, stage])
 }
 
 // Replaces the derived stub in notifications.service.js, which synthesised a
@@ -837,6 +851,8 @@ model Notification {
   // Backs both the unread badge count and the feed ordering.
   @@index([userId, readAt])
   @@index([userId, createdAt])
+  // The query the list actually runs: unread only, newest first.
+  @@index([userId, readAt, createdAt(sort: Desc)])
   @@index([applicationId])
 }
 

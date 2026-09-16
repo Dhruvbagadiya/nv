@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { api } from './client.js';
 
 // login/refresh/logout use a plain client rather than `api`, because `api`'s
 // response interceptor treats a 401 as "refresh and retry" — which is wrong for
@@ -26,11 +25,6 @@ export async function register(payload) {
   return data;
 }
 
-// Authenticated, so it goes through `api` to pick up the bearer token.
-export async function fetchMe() {
-  const { data } = await api.get('/auth/me');
-  return data.user;
-}
 
 // Password reset. Both use authClient for the same reason login does: a 401 or
 // 400 here is a real answer, not a stale access token to refresh and retry.
