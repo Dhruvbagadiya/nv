@@ -4,6 +4,30 @@ import { HttpError } from '../utils/httpErrors.js';
 // Prisma's known request errors carry a code that maps cleanly onto HTTP.
 // Without this, deleting a course that still has applications surfaced the raw
 // FK violation as a 500 — a client-fixable conflict reported as a server fault.
+// A friendly name for the columns a unique constraint can collide on, so the
+// 409 says which field rather than "That value is already taken" — which names
+// neither the field nor the value, and is what an admin saw when two courses
+// derived the same URL slug from the same title.
+const UNIQUE_FIELD_LABEL = {
+  slug: 'URL slug',
+  email: 'email address',
+  code: 'code',
+  isoCode: 'ISO code',
+  externalId: 'import id',
+  reference: 'reference',
+};
+
+/** "A record with that email address already exists." */
+function uniqueMessage(err) {
+  const columns = [].concat(err?.meta?.target ?? []).filter((c) => typeof c === 'string');
+  if (!columns.length) return 'That value is already taken';
+  const named = columns.map((c) => UNIQUE_FIELD_LABEL[c] ?? c);
+  const list = named.length === 1
+    ? named[0]
+    : `${named.slice(0, -1).join(', ')} and ${named[named.length - 1]}`;
+  return `Another record already uses that ${list}.`;
+}
+
 const PRISMA_STATUS = {
   P2002: [409, 'That value is already taken'], // unique constraint
   P2025: [404, 'Record not found'], // update/delete on a missing row
@@ -33,6 +57,10 @@ export function errorHandler(err, req, res, _next) {
     details = err.details;
   } else if (err?.code === 'P2003') {
     [status, message] = foreignKeyFailure(req.method);
+  } else if (err?.code === 'P2002') {
+    // Named from meta.target, so the caller is told WHICH field collided.
+    status = 409;
+    message = uniqueMessage(err);
   } else if (err?.code && PRISMA_STATUS[err.code]) {
     [status, message] = PRISMA_STATUS[err.code];
   } else if (err?.name === 'PrismaClientValidationError') {

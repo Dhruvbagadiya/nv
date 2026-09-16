@@ -1,5 +1,5 @@
 import { prisma } from '../../utils/prisma.js';
-import { NotFoundError } from '../../utils/httpErrors.js';
+import { NotFoundError, ConflictError } from '../../utils/httpErrors.js';
 import { toSkipTake, maxReachablePage } from '../../utils/pagination.js';
 import { slugify } from '../../utils/slug.js';
 import { archiveWhere } from '../../utils/softDelete.js';
@@ -322,32 +322,64 @@ export async function getCourse(id, { includeCommission = false } = {}) {
   return toProgramResource(course, { includeCommission });
 }
 
+/** Is this the unique-constraint violation, and is it the slug that collided? */
+const isSlugCollision = (err) =>
+  err?.code === 'P2002' && [].concat(err.meta?.target ?? []).includes('slug');
+
 export async function createCourse(data) {
   const { intakes, ...rest } = data;
 
-  // Course.slug is required with no database default, but the request schema
-  // makes it optional — so a create without one raised a
-  // PrismaClientValidationError, which carries no `.code` and surfaced as a 500.
-  // Derived here the way institutions have always done it. The uniqueness
-  // suffix keeps two courses of the same name at different institutions from
-  // colliding on a constraint the caller cannot see.
-  const slug = rest.slug || `${slugify(rest.title)}-${Date.now().toString(36)}`;
+  /**
+   * Course.slug is required with no database default, but the request schema
+   * makes it optional — so a create without one raised a
+   * PrismaClientValidationError, which carries no `.code` and surfaced as a 500.
+   *
+   * The uniqueness handling used to sit behind `rest.slug ||`, so it only ran
+   * when the caller sent NO slug — and the admin form always sends one, because
+   * it auto-derives the slug from the title as you type. So a second "Diploma in
+   * Hospitality Management" produced the same slug as the first and the create
+   * failed with "That value is already taken", naming neither the field nor the
+   * value, over a string the admin never chose.
+   *
+   * It retries instead. Two courses of the same name at different institutions
+   * is an ordinary thing to want, and a slug is a URL key, not content —
+   * `-2` on the end of one is not a decision worth interrupting someone for. The
+   * response carries the slug that was actually written, so nothing is hidden.
+   *
+   * A retry loop rather than a "find the next free number" query, because the
+   * query has a race in it: two creates in the same second both read the same
+   * highest suffix and one of them still fails. Letting the constraint be the
+   * arbiter is the only version that is correct under concurrency.
+   */
+  const base = rest.slug || slugify(rest.title) || 'course';
 
-  const course = await prisma.course.create({
-    data: {
-      ...rest,
-      slug,
-      ...(intakes?.length && {
-        intakes: {
-          create: intakes,
+  for (let attempt = 0; attempt < 25; attempt += 1) {
+    try {
+      const course = await prisma.course.create({
+        data: {
+          ...rest,
+          slug: attempt === 0 ? base : `${base}-${attempt + 1}`,
+          ...(intakes?.length && {
+            intakes: {
+              create: intakes,
+            },
+          }),
         },
-      }),
-    },
-    include: PROGRAM_INCLUDE,
-  });
-  // ADMIN-only route, and the admin form seeds itself from this response — so
-  // withholding commission here would blank the field on screen after a save.
-  return toProgramResource(course, { includeCommission: true });
+        include: PROGRAM_INCLUDE,
+      });
+      // ADMIN-only route, and the admin form seeds itself from this response —
+      // so withholding commission here would blank the field on screen.
+      return toProgramResource(course, { includeCommission: true });
+    } catch (err) {
+      // Only the slug. A collision on (source, externalId) means this row is
+      // already imported, which is a real conflict the caller has to see.
+      if (!isSlugCollision(err)) throw err;
+    }
+  }
+
+  throw new ConflictError(
+    'Could not find a free URL slug for that title. Give the course a distinct title or set the slug by hand.'
+  );
 }
 
 export async function updateCourse(id, data) {

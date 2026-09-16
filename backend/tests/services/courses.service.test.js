@@ -156,14 +156,75 @@ describe('createCourse', () => {
   it('derives a slug when the caller omits one', async () => {
     await service.createCourse({ institutionId: 'i1', title: 'MSc Data Science', tuitionFee: 1 });
 
-    const { slug } = prismaMock.course.create.mock.calls[0][0].data;
-    expect(slug).toMatch(/^msc-data-science-/);
+    // The bare slug, with no timestamp on the end. The suffix used to be
+    // unconditional because it was the only collision handling there was; the
+    // retry below does that job properly, and a URL ending in a base36
+    // timestamp was the price of never testing whether it collided.
+    expect(prismaMock.course.create.mock.calls[0][0].data.slug).toBe('msc-data-science');
   });
 
-  it('keeps an explicit slug untouched', async () => {
+  it('keeps an explicit slug untouched when nothing else holds it', async () => {
     await service.createCourse({ institutionId: 'i1', title: 'X', slug: 'chosen-slug', tuitionFee: 1 });
 
     expect(prismaMock.course.create.mock.calls[0][0].data.slug).toBe('chosen-slug');
+  });
+
+  /**
+   * Two courses of the same name at different institutions is an ordinary thing
+   * to want, and the admin form derives the slug from the title as you type — so
+   * the second "Diploma in Hospitality Management" sent the same slug as the
+   * first and got "That value is already taken", naming neither the field nor
+   * the value, over a string the admin never chose.
+   */
+  it('retries with a numbered slug when the derived one is taken', async () => {
+    const collision = Object.assign(new Error('Unique constraint failed'), {
+      code: 'P2002',
+      meta: { target: ['slug'] },
+    });
+    prismaMock.course.create
+      .mockRejectedValueOnce(collision)
+      .mockRejectedValueOnce(collision)
+      .mockResolvedValueOnce(courseRow({ slug: 'diploma-in-hospitality-management-3' }));
+
+    await service.createCourse({
+      institutionId: 'i1', title: 'Diploma in Hospitality Management', tuitionFee: 1,
+    });
+
+    expect(prismaMock.course.create.mock.calls.map((c) => c[0].data.slug)).toEqual([
+      'diploma-in-hospitality-management',
+      'diploma-in-hospitality-management-2',
+      'diploma-in-hospitality-management-3',
+    ]);
+  });
+
+  // A retry loop rather than a "find the next free number" query, because that
+  // query has a race in it — so the constraint stays the arbiter, and anything
+  // that is NOT the slug has to come straight back out.
+  it('does not retry a collision on anything but the slug', async () => {
+    const collision = Object.assign(new Error('Unique constraint failed'), {
+      code: 'P2002',
+      meta: { target: ['source', 'externalId'] },
+    });
+    prismaMock.course.create.mockRejectedValue(collision);
+
+    // (source, externalId) colliding means this row is already imported, which
+    // is a real conflict the caller has to see.
+    await expect(
+      service.createCourse({ institutionId: 'i1', title: 'X', tuitionFee: 1 })
+    ).rejects.toMatchObject({ code: 'P2002' });
+    expect(prismaMock.course.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives up rather than looping forever', async () => {
+    const collision = Object.assign(new Error('Unique constraint failed'), {
+      code: 'P2002',
+      meta: { target: ['slug'] },
+    });
+    prismaMock.course.create.mockRejectedValue(collision);
+
+    await expect(
+      service.createCourse({ institutionId: 'i1', title: 'X', tuitionFee: 1 })
+    ).rejects.toThrow(/set the slug by hand/);
   });
 });
 

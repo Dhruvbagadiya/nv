@@ -203,3 +203,42 @@ describe('asyncHandler', () => {
     expect(next).toHaveBeenCalled();
   });
 });
+
+describe('errorHandler: unique-constraint messages', () => {
+  const run = async (err) => {
+    const { errorHandler } = await import('../src/middleware/errorHandler.js');
+    let body;
+    const res = { status(s) { this.code = s; return this; }, json(b) { body = b; return this; } };
+    errorHandler(err, { method: 'POST', originalUrl: '/api/courses' }, res, () => {});
+    return { status: res.code, body };
+  };
+
+  const p2002 = (target) => Object.assign(new Error('Unique constraint failed'), {
+    code: 'P2002',
+    meta: { target },
+  });
+
+  /**
+   * "That value is already taken" names neither the field nor the value, and it
+   * is what an admin saw when two courses derived the same URL slug from the
+   * same title — over a string the form generated and they never typed.
+   */
+  it('names the column that collided', async () => {
+    const { status, body } = await run(p2002(['slug']));
+    expect(status).toBe(409);
+    expect(body.error).toBe('Another record already uses that URL slug.');
+  });
+
+  it('names a composite constraint as a list', async () => {
+    const { body } = await run(p2002(['source', 'externalId']));
+    expect(body.error).toBe('Another record already uses that source and import id.');
+  });
+
+  // Prisma does not always populate meta.target — on some connectors it is
+  // absent — so the generic sentence has to remain reachable.
+  it('falls back when Prisma names nothing', async () => {
+    const { status, body } = await run(p2002(undefined));
+    expect(status).toBe(409);
+    expect(body.error).toBe('That value is already taken');
+  });
+});
