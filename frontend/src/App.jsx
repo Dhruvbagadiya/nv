@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 // ── Public marketing site ──────────────────────────────────────────────
@@ -7,57 +8,89 @@ import LandingPage from './features/landing/LandingPage.jsx';
 import ErrorBoundary from './components/ui/ErrorBoundary.jsx';
 import Header from './components/layout/Header.jsx';
 import Sidebar from './components/layout/Sidebar.jsx';
-import CourseFinder from './features/courseFinder/CourseFinder.jsx';
-import PartnerDashboard from './features/partner/PartnerDashboard.jsx';
-import CourseInquiryForm from './features/courseInquiries/CourseInquiryForm.jsx';
-import CourseInquiryHistory from './features/courseInquiries/CourseInquiryHistory.jsx';
-import NewApplication from './features/applications/NewApplication.jsx';
-import ApplicationHistory from './features/applications/ApplicationHistory.jsx';
-import NotificationsPage from './features/partner/NotificationsPage.jsx';
-import MoiAccepted from './features/moiAccepted/MoiAccepted.jsx';
-import Commission from './features/commission/Commission.jsx';
-import EntryRequirements from './features/entryRequirements/EntryRequirements.jsx';
-import ImportantUpdates from './features/importantUpdates/ImportantUpdates.jsx';
-import DocumentBank from './features/documentBank/DocumentBank.jsx';
-import Report from './features/report/Report.jsx';
-import HelpSupport from './features/help/HelpSupport.jsx';
 import PartnerLoginPage from './features/auth/PartnerLoginPage.jsx';
-import AgencySettings from './features/partner/AgencySettings.jsx';
-import ProfilePage    from './features/profile/ProfilePage.jsx';
 
 // ── Admin panel ────────────────────────────────────────────────────────
 import AdminLoginPage from './features/auth/AdminLoginPage.jsx';
 import ForgotPasswordPage from './features/auth/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './features/auth/ResetPasswordPage.jsx';
-import AdminDashboard from './features/admin/AdminDashboard.jsx';
-import AdminActivity from './features/admin/AdminActivity.jsx';
-import AdminCountries from './features/admin/AdminCountries.jsx';
-import AdminInstitutions from './features/admin/AdminInstitutions.jsx';
-import AdminCourses from './features/admin/AdminCourses.jsx';
-import AdminCommissions from './features/admin/AdminCommissions.jsx';
-import AdminEntryRequirements from './features/admin/AdminEntryRequirements.jsx';
-import AdminMoiAcceptances from './features/admin/AdminMoiAcceptances.jsx';
-import AdminUpdates from './features/admin/AdminUpdates.jsx';
-import AdminDocuments from './features/admin/AdminDocuments.jsx';
-import AdminUsefulInformation from './features/admin/AdminUsefulInformation.jsx';
-import AdminCourseInquiries from './features/admin/AdminCourseInquiries.jsx';
-import AdminAnnouncements from './features/admin/AdminAnnouncements.jsx';
-import AdminSupportContacts from './features/admin/AdminSupportContacts.jsx';
-import AdminUsers from './features/admin/AdminUsers.jsx';
-import AdminApplications from './features/admin/AdminApplications.jsx';
 
 // ── Student portal ─────────────────────────────────────────────────────
 import StudentLoginPage from './features/student/StudentLoginPage.jsx';
-import StudentShell from './features/student/StudentShell.jsx';
-import StudentProgramBrowser from './features/student/StudentProgramBrowser.jsx';
-import StudentProgramDetail from './features/student/StudentProgramDetail.jsx';
-import StudentApplyForm from './features/student/StudentApplyForm.jsx';
-import StudentApplications from './features/student/StudentApplications.jsx';
-import StudentApplicationDetail from './features/student/StudentApplicationDetail.jsx';
+
+/**
+ * Every screen behind a login, loaded when it is first opened.
+ *
+ * All 79 routes were imported eagerly, so the bundle was one 612 kB file and a
+ * visitor to the marketing page downloaded the entire admin panel and student
+ * portal before the hero rendered. Nobody is all three of an agent, an admin and
+ * a student, and most people are none of them.
+ *
+ * WHAT STAYS EAGER is the part that decides where you go: the landing page, the
+ * five auth screens, the shell chrome and ProtectedRoute. Splitting those would
+ * add a network round trip to the first paint of the only pages an anonymous
+ * visitor ever sees — a loading spinner in place of the thing they came for.
+ *
+ * This was held back until there were error boundaries. React.lazy CREATES a
+ * white-screen class that eager imports do not have: a chunk that 404s after a
+ * deploy throws during render, and with nothing to catch it that is the blank
+ * page all over again. Both shells and the root have a boundary now, so a failed
+ * chunk shows the retry and keeps the navigation.
+ */
+const CourseFinder = lazy(() => import('./features/courseFinder/CourseFinder.jsx'));
+const PartnerDashboard = lazy(() => import('./features/partner/PartnerDashboard.jsx'));
+const CourseInquiryForm = lazy(() => import('./features/courseInquiries/CourseInquiryForm.jsx'));
+const CourseInquiryHistory = lazy(() => import('./features/courseInquiries/CourseInquiryHistory.jsx'));
+const NewApplication = lazy(() => import('./features/applications/NewApplication.jsx'));
+const ApplicationHistory = lazy(() => import('./features/applications/ApplicationHistory.jsx'));
+const NotificationsPage = lazy(() => import('./features/partner/NotificationsPage.jsx'));
+const MoiAccepted = lazy(() => import('./features/moiAccepted/MoiAccepted.jsx'));
+const Commission = lazy(() => import('./features/commission/Commission.jsx'));
+const EntryRequirements = lazy(() => import('./features/entryRequirements/EntryRequirements.jsx'));
+const ImportantUpdates = lazy(() => import('./features/importantUpdates/ImportantUpdates.jsx'));
+const DocumentBank = lazy(() => import('./features/documentBank/DocumentBank.jsx'));
+const Report = lazy(() => import('./features/report/Report.jsx'));
+const HelpSupport = lazy(() => import('./features/help/HelpSupport.jsx'));
+const AgencySettings = lazy(() => import('./features/partner/AgencySettings.jsx'));
+const ProfilePage = lazy(() => import('./features/profile/ProfilePage.jsx'));
+const AdminDashboard = lazy(() => import('./features/admin/AdminDashboard.jsx'));
+const AdminActivity = lazy(() => import('./features/admin/AdminActivity.jsx'));
+const AdminCountries = lazy(() => import('./features/admin/AdminCountries.jsx'));
+const AdminInstitutions = lazy(() => import('./features/admin/AdminInstitutions.jsx'));
+const AdminCourses = lazy(() => import('./features/admin/AdminCourses.jsx'));
+const AdminCommissions = lazy(() => import('./features/admin/AdminCommissions.jsx'));
+const AdminEntryRequirements = lazy(() => import('./features/admin/AdminEntryRequirements.jsx'));
+const AdminMoiAcceptances = lazy(() => import('./features/admin/AdminMoiAcceptances.jsx'));
+const AdminUpdates = lazy(() => import('./features/admin/AdminUpdates.jsx'));
+const AdminDocuments = lazy(() => import('./features/admin/AdminDocuments.jsx'));
+const AdminUsefulInformation = lazy(() => import('./features/admin/AdminUsefulInformation.jsx'));
+const AdminCourseInquiries = lazy(() => import('./features/admin/AdminCourseInquiries.jsx'));
+const AdminAnnouncements = lazy(() => import('./features/admin/AdminAnnouncements.jsx'));
+const AdminSupportContacts = lazy(() => import('./features/admin/AdminSupportContacts.jsx'));
+const AdminUsers = lazy(() => import('./features/admin/AdminUsers.jsx'));
+const AdminApplications = lazy(() => import('./features/admin/AdminApplications.jsx'));
+const StudentShell = lazy(() => import('./features/student/StudentShell.jsx'));
+const StudentProgramBrowser = lazy(() => import('./features/student/StudentProgramBrowser.jsx'));
+const StudentProgramDetail = lazy(() => import('./features/student/StudentProgramDetail.jsx'));
+const StudentApplyForm = lazy(() => import('./features/student/StudentApplyForm.jsx'));
+const StudentApplications = lazy(() => import('./features/student/StudentApplications.jsx'));
+const StudentApplicationDetail = lazy(() => import('./features/student/StudentApplicationDetail.jsx'));
 
 import ProtectedRoute from './routes/ProtectedRoute.jsx';
 import NotFound from './routes/NotFound.jsx';
 import ToastStack from './components/ui/ToastStack.jsx';
+
+/**
+ * What a screen shows while its chunk is in flight.
+ *
+ * Deliberately not a spinner. On a warm cache this renders for a handful of
+ * milliseconds, and a spinner that flashes for 40ms reads as a glitch — the
+ * skeleton is a quiet block that looks like the page arriving, and animates
+ * slowly enough that a fast load looks like nothing happened at all.
+ */
+function ScreenLoading() {
+  return <div className="screen-loading" role="status" aria-label="Loading" />;
+}
 
 const ADMIN_ROLES       = ['ADMIN', 'SUPER_ADMIN'];
 const SUPER_ADMIN_ROLES = ['SUPER_ADMIN'];
@@ -81,7 +114,12 @@ function PartnerShell({ children }) {
               what made the old white page unrecoverable. Keyed on the path so
               navigating away from a broken screen clears the error rather than
               carrying it to the next one. */}
-          <ErrorBoundary key={pathname}>{children}</ErrorBoundary>
+          <ErrorBoundary key={pathname}>
+            {/* Inside the shell, so the header and sidebar stay up while a
+                chunk arrives. A Suspense at the root would blank the whole
+                frame on every first visit to a section. */}
+            <Suspense fallback={<ScreenLoading />}>{children}</Suspense>
+          </ErrorBoundary>
         </main>
       </div>
     </>
@@ -95,6 +133,10 @@ export default function App() {
     {/* Backstop for anything thrown outside a shell — the landing page, the
         auth screens, or a route element itself. */}
     <ErrorBoundary title="Something went wrong">
+    {/* Backstop, for the lazy routes that are not inside a shell — the student
+        portal has its own, and a route element can suspend before any shell
+        renders. */}
+    <Suspense fallback={<ScreenLoading />}>
     <Routes>
       {/* ── Public marketing home ─────────────────────── */}
       {/* Was a redirect to /login, which meant anyone arriving at the bare
@@ -216,6 +258,7 @@ export default function App() {
       {/* ── Catch-all ─────────────────────────────────── */}
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </Suspense>
     </ErrorBoundary>
     </>
   );

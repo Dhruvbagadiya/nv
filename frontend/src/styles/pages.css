@@ -1112,3 +1112,12 @@
     padding: 7px 9px; font-size: 12.5px; background: var(--canvas); color: var(--ink-900);
     font-family: var(--font-sans);
   }
+
+  /* The placeholder a lazily-loaded screen shows while its chunk arrives. Quiet
+     on purpose: on a warm cache this renders for a handful of milliseconds, and
+     a spinner that flashes for 40ms reads as a glitch. */
+  .screen-loading {
+    height: 60vh; border-radius: var(--radius);
+    background: var(--surface); border: 1px solid var(--border);
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
