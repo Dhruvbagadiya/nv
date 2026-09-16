@@ -15,9 +15,16 @@ export const listCommissionsQuery = z.object({
 // per-programme rates. Validated as a shape rather than as fixed columns, but
 // still validated: `tiers` reaching Prisma as arbitrary Json would let a typo
 // render as an empty commission cell with no error anywhere.
-export const upsertCommissionBody = z
-  .object({
-    institutionId: z.string().uuid(),
+/**
+ * Everything about a commission EXCEPT whose it is.
+ *
+ * Split out so POST /institutions can accept a commission nested inside the
+ * institution being created, where there is no institutionId to send yet — it
+ * does not exist until the transaction runs. Re-stating these fields there
+ * would mean two copies of the rate bounds and the range checks, and the copy
+ * that is not the one being edited is the one that goes wrong.
+ */
+export const commissionDetailFields = {
     tiers: z
       .array(
         z.object({
@@ -43,8 +50,10 @@ export const upsertCommissionBody = z
     isTierAdjusted: z.boolean().optional(),
     maxNumberOfInstallments: z.number().int().min(1).max(60).nullable().optional(),
     tuitionBasis: z.enum(['net', 'gross']).nullable().optional(),
-  })
-  .strict()
+};
+
+/** The range checks, applied wherever these fields are used. */
+export const withCommissionRanges = (schema) => schema
   // A range that reads backwards would silently render as "15% – 5%".
   .refine(
     (v) => v.rateFrom == null || v.rateTo == null || v.rateFrom <= v.rateTo,
@@ -54,5 +63,13 @@ export const upsertCommissionBody = z
     (v) => v.amountFrom == null || v.amountTo == null || v.amountFrom <= v.amountTo,
     { message: 'Amount from must not be greater than amount to', path: ['amountTo'] }
   );
+
+/** The standalone endpoint: the same fields, plus whose they are. */
+export const upsertCommissionBody = withCommissionRanges(
+  z.object({
+    institutionId: z.string().uuid(),
+    ...commissionDetailFields,
+  }).strict()
+);
 
 export const idParam = z.object({ id: z.string().uuid() });

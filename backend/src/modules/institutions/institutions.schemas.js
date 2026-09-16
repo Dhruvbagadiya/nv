@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import { commissionDetailFields, withCommissionRanges } from '../commissions/commissions.schemas.js';
+import { entryRequirementDetailFields } from '../entryRequirements/entryRequirements.schemas.js';
+import { moiDetailFields } from '../moiInstitutions/moiInstitutions.schemas.js';
 import { optionalText, queryBool, uploadedUrl } from '../../utils/queryTypes.js';
 
 // `page` deliberately has no .default(1): its absence is the signal that the
@@ -30,6 +33,49 @@ export const createInstitutionBody = z
     bannerUrl:    uploadedUrl(500).nullable().optional(),
     isTrending:   z.boolean().optional(),
     isBlacklisted: z.boolean().optional(),
+
+    /**
+     * The three things an institution is useless without, accepted here so they
+     * do not have to be entered on three other screens afterwards.
+     *
+     * All three hang off institutionId and there was never a technical reason
+     * they could not be created together — only that nobody had. The cost of
+     * three trips is not the typing: it is that an institution can sit in the
+     * catalogue for weeks with no commission and no entry requirements, looking
+     * complete, because the second and third steps are easy to forget and
+     * nothing anywhere says they are missing.
+     *
+     * Every one is OPTIONAL and every one is written in the SAME transaction as
+     * the institution. Sequential requests would let the institution exist with
+     * its commission having failed — a half-created row the admin has no way to
+     * see, which is worse than the three steps this replaces.
+     *
+     * Field definitions are imported, not restated: two copies of the rate
+     * bounds means the copy nobody is editing is the one that drifts.
+     */
+    commission: withCommissionRanges(
+      z.object(commissionDetailFields).strict()
+    ).optional(),
+
+    // At most two: the unique constraint is (institutionId, level) and there
+    // are two levels, so a third entry is necessarily a duplicate.
+    entryRequirements: z
+      .array(z.object(entryRequirementDetailFields).strict())
+      .max(2)
+      .optional()
+      .refine(
+        (rows) => !rows || new Set(rows.map((r) => r.level)).size === rows.length,
+        'Only one entry requirement per level'
+      ),
+
+    moiAcceptances: z
+      .array(z.object(moiDetailFields).strict())
+      .max(20)
+      .optional()
+      .refine(
+        (rows) => !rows || new Set(rows.map((r) => r.courseType)).size === rows.length,
+        'Each course type can appear only once'
+      ),
   })
   .strict();
 

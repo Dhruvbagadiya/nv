@@ -52,15 +52,44 @@ export async function listTrending({ limit = 12 } = {}) {
   });
 }
 
+/**
+ * Create an institution, and optionally everything it is useless without.
+ *
+ * `commission`, `entryRequirements` and `moiAcceptances` all hang off
+ * institutionId and each has its own screen. There was never a technical reason
+ * they could not be created together — only that nobody had. The cost of three
+ * separate trips is not the typing: it is that an institution sits in the
+ * catalogue looking complete, with no commission and no entry requirements,
+ * because the second and third steps are easy to forget and nothing says they
+ * are missing.
+ *
+ * ONE TRANSACTION, not three requests. Sequential writes would let the
+ * institution exist with its commission having failed, and a half-created row
+ * is worse than the three steps this replaces — the admin cannot see what
+ * landed and what did not.
+ *
+ * Written through nested `create` rather than three statements, so Prisma fills
+ * in the institutionId that does not exist until the insert runs.
+ */
 export async function createInstitution(data) {
-  const slug = data.slug || slugify(data.name);
+  const { commission, entryRequirements, moiAcceptances, ...rest } = data;
+  const slug = rest.slug || slugify(rest.name);
 
   // Ensure slug uniqueness — append a short timestamp suffix if collision.
   const existing = await prisma.institution.findUnique({ where: { slug } });
   const finalSlug = existing ? `${slug}-${Date.now().toString(36)}` : slug;
 
   return prisma.institution.create({
-    data: { ...data, slug: finalSlug },
+    data: {
+      ...rest,
+      slug: finalSlug,
+      ...(commission && { commission: { create: commission } }),
+      // `?.length`, not just presence: `{ create: [] }` is a valid write that
+      // does nothing, and a form that sends an empty array for a section the
+      // admin never opened should produce the same row as one that omits it.
+      ...(entryRequirements?.length && { entryRequirements: { create: entryRequirements } }),
+      ...(moiAcceptances?.length && { moiAcceptances: { create: moiAcceptances } }),
+    },
     include: INSTITUTION_INCLUDE,
   });
 }

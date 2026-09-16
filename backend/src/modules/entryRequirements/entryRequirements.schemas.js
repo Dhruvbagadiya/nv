@@ -18,15 +18,24 @@ export const listEntryRequirementsQuery = z.object({
 
 export const englishTestsQuery = z.object({ level: z.enum(['UG', 'PG']) });
 
+/**
+ * A requirement EXCEPT whose it is — see commissionDetailFields for why the
+ * split exists: POST /institutions accepts these nested, where there is no
+ * institutionId to send because the institution does not exist yet.
+ */
+export const entryRequirementDetailFields = {
+  level: z.enum(['UG', 'PG']),
+  englishRequirement: z.string().trim().min(1).max(2000),
+  academicRequirement: z.string().trim().min(1).max(2000),
+  offerTimeline: z.string().trim().min(1).max(500),
+  credibilityInterview: z.boolean(),
+  financialInformation: z.string().trim().min(1).max(2000),
+};
+
 export const upsertEntryRequirementBody = z
   .object({
     institutionId: z.string().uuid(),
-    level: z.enum(['UG', 'PG']),
-    englishRequirement: z.string().trim().min(1).max(2000),
-    academicRequirement: z.string().trim().min(1).max(2000),
-    offerTimeline: z.string().trim().min(1).max(500),
-    credibilityInterview: z.boolean(),
-    financialInformation: z.string().trim().min(1).max(2000),
+    ...entryRequirementDetailFields,
   })
   .strict();
 

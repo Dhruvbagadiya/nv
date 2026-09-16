@@ -1082,3 +1082,33 @@
     flex-shrink: 0; font-size: var(--fs-xs); font-weight: 700;
     color: var(--ink-950); font-variant-numeric: tabular-nums;
   }
+
+  /* ═════════════ INSTITUTION SETUP SECTIONS ═════════════
+     Commission, entry requirements and MOI on the Add Institution form.
+     Collapsed by default: open, they would triple the length of a form whose
+     required part is four fields. */
+  .setup-sections { margin-top: var(--sp-4); }
+  .setup-section { border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: var(--sp-2); }
+  .setup-section__head {
+    display: flex; align-items: center; gap: var(--sp-2); width: 100%;
+    padding: var(--sp-2) var(--sp-3); background: var(--canvas); border: 0;
+    border-radius: var(--radius-sm); cursor: pointer; font-family: var(--font-sans);
+  }
+  .setup-section__head:hover { background: var(--ink-100); }
+  .setup-section__chevron { display: grid; place-items: center; color: var(--ink-400); transition: transform .15s; }
+  .setup-section__chevron.is-open { transform: rotate(90deg); }
+  .setup-section__title { flex: 1; text-align: left; font-size: var(--fs-xs); font-weight: 700; color: var(--ink-900); }
+  .setup-section__state { font-size: var(--fs-2xs); font-weight: 600; color: var(--accent-700); }
+  .setup-section__hint { padding: 0 var(--sp-3) var(--sp-2) 34px; margin: 0; }
+  .setup-section__body { padding: var(--sp-3); border-top: 1px solid var(--border); }
+  .setup-level { padding-bottom: var(--sp-2); }
+  .setup-level + .setup-level { border-top: 1px solid var(--border); padding-top: var(--sp-3); }
+  /* Two inputs and a Remove, on one line. `auto` on the last column keeps the
+     button at its own width rather than stretching it across a third of the row. */
+  .setup-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+  @media (max-width: 560px) { .setup-row { grid-template-columns: minmax(0, 1fr); } }
+  .setup-row input {
+    width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 7px 9px; font-size: 12.5px; background: var(--canvas); color: var(--ink-900);
+    font-family: var(--font-sans);
+  }

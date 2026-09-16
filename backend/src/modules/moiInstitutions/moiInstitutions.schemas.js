@@ -9,13 +9,21 @@ export const listMoiQuery = z.object({
   pageSize:      z.coerce.number().int().positive().max(100).default(20),
 });
 
-export const createMoiBody = z.object({
-  institutionId: z.string().uuid(),
+/**
+ * An MOI acceptance EXCEPT whose it is — see commissionDetailFields for why:
+ * POST /institutions accepts these nested, before the institution has an id.
+ */
+export const moiDetailFields = {
   courseType:    z.string().trim().min(1).max(80),
   years:         z.coerce.number().int().positive(),
   // uploadedUrl, not .url(): the form uploads this file, and the upload
   // endpoint returns a relative /uploads/ path unless S3 is configured.
   documentUrl:   uploadedUrl(500).nullable().optional(),
+};
+
+export const createMoiBody = z.object({
+  institutionId: z.string().uuid(),
+  ...moiDetailFields,
 }).strict();
 
 export const updateMoiBody = createMoiBody

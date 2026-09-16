@@ -14,6 +14,7 @@ import { useCountries } from '../../hooks/useReferenceData.js';
 import FileField from '../../components/ui/FileField.jsx';
 import SourceBadge, { ImportNotice } from '../../components/ui/SourceBadge.jsx';
 import { IMAGE_FORMATS } from '../../constants/imageTypes.js';
+import { useInstitutionSetup } from './InstitutionSetupSections.jsx';
 import {
   fetchInstitutionsPage,
   createInstitution,
@@ -44,6 +45,11 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
     isBlacklisted: initial?.isBlacklisted ?? false,
   });
   const [error, setError] = useState(null);
+  // Only on create. The three have their own screens for revising later; this is
+  // for the one moment when the admin has the partnership agreement in front of
+  // them, and on edit the sections would compete with the row that already
+  // exists rather than replacing it.
+  const setup = useInstitutionSetup();
 
   const set = (k, v) => setForm((f) => {
     const next = { ...f, [k]: v };
@@ -64,7 +70,18 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
   const submit = (e) => {
     e.preventDefault();
     setError(null);
+
+    // Named before the request, because the server's message for a nested block
+    // would say "commission.tiers" and leave the admin looking for a field
+    // called that.
+    const problem = isEdit ? null : setup.problem();
+    if (problem) {
+      setError(problem);
+      return;
+    }
+
     save.mutate({
+      ...(isEdit ? {} : setup.payload()),
       name:          form.name,
       slug:          form.slug || slugify(form.name),
       countryId:     form.countryId,
@@ -177,6 +194,15 @@ function InstitutionModal({ initial, onClose, onSaved, countries }) {
             </div>
           </div>
         </div>
+
+        {/* Created in the SAME transaction as the institution, so none of this
+            can land while the institution fails or the reverse. */}
+        {!isEdit && (
+          <div className="setup-sections">
+            <div className="admin-section-label">Set up now, or leave for later</div>
+            {setup.sections}
+          </div>
+        )}
 
         {error && <p className="form-error">{error}</p>}
 
