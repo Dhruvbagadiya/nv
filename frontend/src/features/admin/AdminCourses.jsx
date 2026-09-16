@@ -164,7 +164,12 @@ function formFrom(attr) {
     title:                 attr.name              ?? '',
     shortName:             attr.shortName         ?? '',
     slug:                  attr.slug              ?? '',
-    programLevel:          attr.programLevel?.toUpperCase() ?? 'MASTERS_DEGREE',
+    // Unset on create rather than defaulting to a level. It defaulted to
+    // MASTERS_DEGREE, so an admin adding a diploma who never touched this field
+    // filed it as a Master's — a wrong answer that saves cleanly, shows nothing
+    // in the UI, and puts the course under the wrong filter for every agent who
+    // searches after that. An empty value makes `required` actually bite.
+    programLevel:          attr.programLevel?.toUpperCase() ?? '',
     minLength:             attr.minLength         ?? '',
     maxLength:             attr.maxLength         ?? '',
     languageOfInstruction: attr.languageOfInstructionCode ?? 'eng',
@@ -270,6 +275,7 @@ function CourseModal({ initial, onClose, onSaved }) {
   const validate = () => {
     if (!instId) return 'Pick an institution — a course has to belong to one.';
     if (!form.title.trim()) return 'Give the course a title.';
+    if (!form.programLevel) return 'Choose a program level — it is what agents filter the catalogue by.';
     if (form.tuitionFee !== '' && !Number.isFinite(Number(form.tuitionFee))) {
       // "1,500" and "SGD 154" both become NaN, which the API reports as
       // "Expected number, received nan" — accurate and unhelpful.
@@ -402,6 +408,7 @@ function CourseModal({ initial, onClose, onSaved }) {
             <label className="flabel" htmlFor="c-level">Program level *</label>
             <select id="c-level" value={form.programLevel}
               onChange={(e) => set('programLevel', e.target.value)} required>
+              <option value="">Select a level…</option>
               {PROGRAM_LEVELS.map((l) => (
                 <option key={l.value} value={l.value}>{l.label}</option>
               ))}
@@ -663,7 +670,32 @@ export default function AdminCourses() {
     {
       key: 'intakes',
       header: 'Intakes',
-      render: (p) => <span className="cell-mono">{p.attributes.programIntakes?.length ?? 0}</span>,
+      /**
+       * BOTH kinds, because two different things wear this name and the column
+       * only counted one of them.
+       *
+       * `intakeMonths` is the recurring pattern the month chips write, and it is
+       * the field the form leads with — the dated `programIntakes` below it are
+       * labelled optional, and most providers publish no dates at all. Counting
+       * only the dated ones meant selecting six months and saving rendered "0"
+       * under a heading that says Intakes, which reads as the save having
+       * silently failed.
+       */
+      render: (p) => {
+        const months = p.attributes.intakeMonths ?? [];
+        const dated = p.attributes.programIntakes?.length ?? 0;
+        if (!months.length && !dated) return <span className="cell-mono">—</span>;
+        return (
+          <div>
+            {months.length > 0 && (
+              <div className="cell-strong">{months.map((m) => MONTH_NAMES[m - 1]).join(', ')}</div>
+            )}
+            {dated > 0 && (
+              <div className="picker-sub">{dated} dated</div>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: '__actions',

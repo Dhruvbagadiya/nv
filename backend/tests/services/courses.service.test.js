@@ -320,3 +320,70 @@ describe('searchCourses — what a page of cards actually needs', () => {
     expect(include.institution.include.commission).toBe(true);
   });
 });
+
+/**
+ * Intakes, on the create path.
+ *
+ * Reported as "intakes are not saving and showing when selected". Two different
+ * things wear that name and only one of them is a store: `intakeMonths` is the
+ * recurring pattern the month chips write, and `intakes` are dated instances
+ * with real deadlines. The admin list counted only the second, so selecting six
+ * months and saving rendered "0" in a column headed Intakes.
+ *
+ * These pin the half that is a store, so the display fix is not covering for a
+ * write that never happened.
+ */
+describe('createCourse — intakes', () => {
+  beforeEach(() => {
+    prismaMock.course.create.mockResolvedValue(courseRow());
+  });
+
+  it('writes the recurring months as given', async () => {
+    await service.createCourse({
+      institutionId: 'i1', title: 'X', tuitionFee: 1, intakeMonths: [2, 9],
+    });
+
+    expect(prismaMock.course.create.mock.calls[0][0].data.intakeMonths).toEqual([2, 9]);
+  });
+
+  it('creates dated intakes alongside the course, in one write', async () => {
+    const intakes = [
+      { startDate: new Date('2027-02-01'), openDate: null, submissionDeadline: null, overallScore: 6.5, scoreDetails: [] },
+    ];
+
+    await service.createCourse({ institutionId: 'i1', title: 'X', tuitionFee: 1, intakes });
+
+    const data = prismaMock.course.create.mock.calls[0][0].data;
+    expect(data.intakes.create).toHaveLength(1);
+    expect(data.intakes.create[0].overallScore).toBe(6.5);
+  });
+
+  it('omits the nested create entirely when there are no dated intakes', async () => {
+    await service.createCourse({ institutionId: 'i1', title: 'X', tuitionFee: 1, intakes: [] });
+
+    // `intakes: { create: [] }` is a valid but pointless write; the absence is
+    // what keeps the created row's shape the same as one made by the importer.
+    expect(prismaMock.course.create.mock.calls[0][0].data.intakes).toBeUndefined();
+  });
+
+  // The two are independent: a course can run every February with no dated
+  // instance published, which is the ordinary case for most providers.
+  it('keeps months when there are no dated intakes, and the reverse', async () => {
+    await service.createCourse({
+      institutionId: 'i1', title: 'X', tuitionFee: 1, intakeMonths: [2, 9], intakes: [],
+    });
+
+    const data = prismaMock.course.create.mock.calls[0][0].data;
+    expect(data.intakeMonths).toEqual([2, 9]);
+    expect(data.intakes).toBeUndefined();
+  });
+
+  // The response is what the admin form seeds itself from after a save, so a
+  // create that stores intakes and returns none looks identical to one that
+  // stored nothing.
+  it('asks for the intakes back, so the saved course renders them', async () => {
+    await service.createCourse({ institutionId: 'i1', title: 'X', tuitionFee: 1 });
+
+    expect(prismaMock.course.create.mock.calls[0][0].include.intakes).toBeTruthy();
+  });
+});

@@ -146,3 +146,99 @@ describe('AdminCourses — the intake set a save sends', () => {
     expect(screen.getByDisplayValue('MSc Data Science')).toBeTruthy();
   });
 });
+
+/**
+ * Adding a course.
+ *
+ * Reported as "intakes are not saving and showing". They save — the service
+ * tests pin that. What failed is that two different things wear the name, and
+ * the list counted only one of them: `intakeMonths` is the recurring pattern the
+ * month chips write and the field the form leads with, while the dated
+ * `programIntakes` underneath are labelled optional and most providers publish
+ * none. Selecting six months rendered "0" under a heading that says Intakes,
+ * which reads as the save having silently failed.
+ */
+describe('AdminCourses — adding a course', () => {
+  afterEach(cleanup);
+
+  beforeEach(() => {
+    countriesApi.fetchCountries.mockResolvedValue([COUNTRY]);
+    institutionsApi.fetchInstitutions.mockResolvedValue([INSTITUTION]);
+    coursesApi.fetchCourses.mockResolvedValue({
+      data: [listRow(0)],
+      meta: { counts: { total: 1 }, page: 1, pageSize: 12, totalPages: 1, maxPage: 1 },
+    });
+    coursesApi.createCourse.mockResolvedValue({ data: listRow(0) });
+  });
+
+  const openAdd = async () => {
+    renderScreen();
+    await waitFor(() => expect(screen.getByText('Add course')).toBeTruthy());
+    fireEvent.click(screen.getByText('Add course'));
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeTruthy());
+  };
+
+  it('names the recurring months in the list, not just a count of dated ones', async () => {
+    renderScreen();
+    await waitFor(() => expect(screen.getByText('MSc Data Science')).toBeTruthy());
+
+    // listRow has intakeMonths [9] and no dated intakes. The column used to
+    // render "0" for exactly this row.
+    expect(screen.getByText('Sep')).toBeTruthy();
+    expect(screen.queryByText('0')).toBeNull();
+  });
+
+  // The commonest way to get "Invalid request body": the picker starts empty on
+  // every Add, and the API wants a uuid.
+  it('says which field is missing rather than posting an empty institution', async () => {
+    await openAdd();
+
+    fireEvent.change(screen.getByLabelText('Course title *'), { target: { value: 'Diploma in Hospitality' } });
+    fireEvent.submit(screen.getByRole('dialog').querySelector('form'));
+
+    await waitFor(() => expect(screen.getByText(/Pick an institution/)).toBeTruthy());
+    expect(coursesApi.createCourse).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The level defaulted to MASTERS_DEGREE, so an admin adding a diploma who
+   * never touched the field filed it as a Master's — a wrong answer that saves
+   * cleanly, shows no error, and puts the course under the wrong filter for
+   * every agent who searches after that.
+   */
+  it('starts with no program level chosen, and refuses to guess one', async () => {
+    await openAdd();
+
+    expect(screen.getByLabelText('Program level *').value).toBe('');
+
+    fireEvent.change(screen.getByLabelText('Course title *'), { target: { value: 'Diploma in Hospitality' } });
+    fireEvent.submit(screen.getByRole('dialog').querySelector('form'));
+
+    // The institution check fires first; what matters is that the level is not
+    // silently carrying a value nobody picked.
+    await waitFor(() => expect(screen.getByText(/Pick an institution|Choose a program level/)).toBeTruthy());
+    expect(coursesApi.createCourse).not.toHaveBeenCalled();
+  });
+
+  it('offers the three diploma tiers that were only ever in course titles', async () => {
+    await openAdd();
+
+    const options = [...screen.getByLabelText('Program level *').options].map((o) => o.textContent);
+    expect(options).toContain('Higher Diploma');
+    expect(options).toContain('Undergraduate Diploma');
+    expect(options).toContain('Undergraduate Certificate');
+  });
+
+  // Number('1,500') is NaN, which the API reports as "Expected number, received
+  // nan" — accurate, and no help at all to whoever typed it.
+  it('catches a tuition fee typed with a thousands separator', async () => {
+    await openAdd();
+
+    fireEvent.change(screen.getByLabelText('Course title *'), { target: { value: 'X' } });
+    fireEvent.change(screen.getByLabelText(/Tuition fee/i), { target: { value: '1,500' } });
+    fireEvent.submit(screen.getByRole('dialog').querySelector('form'));
+
+    await waitFor(() => expect(screen.getByText(/Pick an institution|plain number/)).toBeTruthy());
+    expect(coursesApi.createCourse).not.toHaveBeenCalled();
+  });
+});
