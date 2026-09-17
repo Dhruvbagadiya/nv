@@ -133,7 +133,18 @@ app.use('/api/profile',  profileRoutes);
 
 // Serve locally-uploaded files (logos, avatars, documents) when S3 is not configured.
 // /uploads/<type>/<uuid>.ext  →  backend/uploads/<type>/<uuid>.ext
-app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
+//
+// Cached the same way the bucket caches them, and for the same reason: a key is
+// `<folder>/<uuid>.<ext>` and nothing ever overwrites one, so the bytes behind a
+// URL genuinely never change. Without this Express sends no Cache-Control and
+// every logo and thumbnail is re-validated on every page load.
+app.use('/uploads', express.static(join(__dirname, '..', 'uploads'), {
+  maxAge: '1y',
+  immutable: true,
+  // A miss should 404 immediately rather than fall through to the API's own
+  // handler and be reported as an unknown endpoint.
+  fallthrough: false,
+}));
 
 // Unknown /api/* used to fall through to Express's default HTML 404, which a
 // JSON client cannot parse. Must stay above errorHandler.

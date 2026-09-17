@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { createUploadUrl, storageStatus } from '../src/utils/storage.js';
 
@@ -54,5 +55,44 @@ describe('upload validation', () => {
 
   it('explains which variables are missing rather than throwing a bare 500', async () => {
     await expect(createUploadUrl(valid)).rejects.toThrow(/S3_BUCKET/);
+  });
+});
+
+describe('cache headers on uploads', () => {
+  /**
+   * Every key this module writes is `<folder>/<uuid>.<ext>` and nothing ever
+   * overwrites one — a replacement logo is a new uuid and a new row. So the
+   * bytes behind a URL genuinely never change, which is exactly what
+   * `immutable` means: the browser does not even send a revalidation request.
+   *
+   * Without it R2 serves no Cache-Control at all, so every logo, banner,
+   * thumbnail and document costs a round trip on every page load for bytes the
+   * client already has.
+   */
+  it('marks stored objects immutable for a year', async () => {
+    const { IMMUTABLE_CACHE_CONTROL } = await import('../src/utils/storage.js');
+
+    expect(IMMUTABLE_CACHE_CONTROL).toContain('immutable');
+    expect(IMMUTABLE_CACHE_CONTROL).toContain('public');
+    // A year is the largest value the spec defines; `immutable` does the work.
+    expect(IMMUTABLE_CACHE_CONTROL).toContain('31536000');
+  });
+
+  // The signature covers the headers, so a client that sends Content-Type and
+  // not Cache-Control gets an opaque 403 from the bucket.
+  it('tells a presigned client every header the signature covers', async () => {
+    const storage = await import('../src/utils/storage.js');
+    const source = readFileSync(
+      new URL('../src/utils/storage.js', import.meta.url),
+      'utf8'
+    );
+
+    const presign = source.slice(source.indexOf('export async function createUploadUrl'));
+    const signed = presign.slice(0, presign.indexOf('requiredHeaders'));
+
+    // Whatever the signed command sets, requiredHeaders has to echo.
+    expect(signed).toContain('CacheControl');
+    expect(presign).toContain("'Cache-Control': IMMUTABLE_CACHE_CONTROL");
+    expect(storage.IMMUTABLE_CACHE_CONTROL).toBeTruthy();
   });
 });

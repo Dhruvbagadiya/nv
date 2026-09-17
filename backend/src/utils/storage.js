@@ -113,6 +113,23 @@ function getClient() {
 // could contain path traversal, and two agents uploading "form.pdf" must not
 // collide. A random key plus the validated extension avoids both; the original
 // name is kept as the Document's title, where it is only ever displayed.
+/**
+ * Cache headers for an uploaded object.
+ *
+ * Every key this module writes is `<folder>/<uuid>.<ext>` and nothing ever
+ * overwrites one — a replacement logo is a new uuid and a new row. So the bytes
+ * behind a URL genuinely never change, which is exactly what `immutable` means:
+ * the browser does not even send a revalidation request.
+ *
+ * Without this, R2 serves no Cache-Control at all, so every logo, banner,
+ * thumbnail and document is re-fetched or at best re-validated on every page
+ * load — a round trip per image, for bytes the client already has.
+ *
+ * A year rather than forever because that is the largest value the spec defines;
+ * `immutable` is what actually does the work.
+ */
+export const IMMUTABLE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+
 function buildKey({ category, contentType, allowed = ALLOWED }) {
   const ext = allowed[contentType];
   // `category` reaches here from a request body, and putObject joins the key
@@ -150,6 +167,7 @@ export async function createUploadUrl({ filename, contentType, size, category })
       Bucket: config.storage.bucket,
       Key: key,
       ContentType: contentType,
+      CacheControl: IMMUTABLE_CACHE_CONTROL,
     }),
     { expiresIn: config.storage.presignTtlSeconds }
   );
@@ -163,7 +181,12 @@ export async function createUploadUrl({ filename, contentType, size, category })
     expiresInSeconds: config.storage.presignTtlSeconds,
     // Echoed back so the client sends exactly the header the signature covers —
     // a mismatch makes S3 reject the PUT with an opaque 403.
-    requiredHeaders: { 'Content-Type': contentType },
+    // Both, because both are covered by the signature: a client that sends one
+    // and not the other gets an opaque 403.
+    requiredHeaders: {
+      'Content-Type': contentType,
+      'Cache-Control': IMMUTABLE_CACHE_CONTROL,
+    },
   };
 }
 
@@ -207,6 +230,7 @@ export async function putObject(
         Key: key,
         Body: buffer,
         ContentType: contentType,
+        CacheControl: IMMUTABLE_CACHE_CONTROL,
       })
     );
     return { key, fileUrl: `${config.storage.publicBaseUrl}/${key}`, storage: 's3' };
@@ -242,6 +266,7 @@ export async function putGeneratedObject(buffer, { key, contentType }) {
         Key: key,
         Body: buffer,
         ContentType: contentType,
+        CacheControl: IMMUTABLE_CACHE_CONTROL,
       })
     );
     return { key, fileUrl: `${config.storage.publicBaseUrl}/${key}`, storage: 's3' };
