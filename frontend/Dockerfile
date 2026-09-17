@@ -21,4 +21,7 @@ RUN npm run build
 FROM nginx:1.27-alpine AS runtime
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+# Included by every location block in nginx.conf. See the comment at the top of
+# the snippet for why these cannot simply be set once at the server level.
+COPY deploy/security-headers.conf /etc/nginx/security-headers.conf
 EXPOSE 80 443
