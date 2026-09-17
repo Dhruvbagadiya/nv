@@ -72,6 +72,21 @@ describe('AdminInstitutions — setting up a new institution', () => {
   const submitForm = () =>
     fireEvent.submit(screen.getByRole('dialog').querySelector('form'));
 
+  /**
+   * Program level is a searchable picker, not a <select> — twenty options in a
+   * native dropdown is a scroll, and the word is what a person knows.
+   * mouseDown, not click: the row commits on mousedown, because the input's blur
+   * would otherwise close the list before a click landed.
+   */
+  const pickLevel = async (fieldLabel, optionLabel) => {
+    fireEvent.focus(screen.getByLabelText(fieldLabel));
+    // Scoped to the open list, and awaited inside it: a level already chosen in
+    // another row renders its label in that row's chip too, and the <ul> itself
+    // renders empty a tick before its options arrive.
+    const list = await screen.findByRole('listbox');
+    fireEvent.mouseDown(await within(list).findByText(optionLabel));
+  };
+
   it('sends nothing extra when the sections are left closed', async () => {
     await openAdd();
     fillRequired();
@@ -191,7 +206,7 @@ describe('AdminInstitutions — setting up a new institution', () => {
     fillRequired();
 
     fireEvent.click(screen.getByText('MOI accepted'));
-    fireEvent.change(screen.getByLabelText('MOI program level 1'), { target: { value: 'BACHELORS_DEGREE' } });
+    await pickLevel('MOI program level 1', "Bachelor's Degree");
     fireEvent.change(screen.getByLabelText('MOI years 1'), { target: { value: '3' } });
     submitForm();
 
@@ -210,10 +225,10 @@ describe('AdminInstitutions — setting up a new institution', () => {
     fillRequired();
 
     fireEvent.click(screen.getByText('MOI accepted'));
-    fireEvent.change(screen.getByLabelText('MOI program level 1'), { target: { value: 'BACHELORS_DEGREE' } });
+    await pickLevel('MOI program level 1', "Bachelor's Degree");
     fireEvent.change(screen.getByLabelText('MOI years 1'), { target: { value: '3' } });
     fireEvent.click(screen.getByText('+ Add program level'));
-    fireEvent.change(screen.getByLabelText('MOI program level 2'), { target: { value: 'BACHELORS_DEGREE' } });
+    await pickLevel('MOI program level 2', "Bachelor's Degree");
     fireEvent.change(screen.getByLabelText('MOI years 2'), { target: { value: '4' } });
     submitForm();
 

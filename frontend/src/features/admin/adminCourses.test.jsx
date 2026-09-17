@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -223,10 +223,29 @@ describe('AdminCourses — adding a course', () => {
   it('offers the three diploma tiers that were only ever in course titles', async () => {
     await openAdd();
 
-    const options = [...screen.getByLabelText('Program level *').options].map((o) => o.textContent);
-    expect(options).toContain('Higher Diploma');
-    expect(options).toContain('Undergraduate Diploma');
-    expect(options).toContain('Undergraduate Certificate');
+    // A searchable picker now, not a <select>: twenty options in a native
+    // dropdown is a scroll, and the word is what an admin knows.
+    fireEvent.change(screen.getByLabelText('Program level *'), { target: { value: 'diploma' } });
+
+    // Scoped to the open list: the table behind the modal renders level labels
+    // of its own.
+    const list = await screen.findByRole('listbox');
+    expect(await within(list).findByText('Higher Diploma')).toBeTruthy();
+    expect(within(list).getByText('Undergraduate Diploma')).toBeTruthy();
+    // One word finds the whole family, which is the point of searching it.
+    expect(within(list).getByText('Advanced Diploma')).toBeTruthy();
+  });
+
+  // "PG" appears in no label — the letters are in "Postgraduate" but not
+  // together — so a substring search on the label alone finds nothing.
+  it('finds a level by the abbreviation someone would actually type', async () => {
+    await openAdd();
+
+    fireEvent.change(screen.getByLabelText('Program level *'), { target: { value: 'pg' } });
+
+    const list = await screen.findByRole('listbox');
+    expect(await within(list).findByText('Postgraduate Diploma')).toBeTruthy();
+    expect(within(list).getByText("Master's Degree")).toBeTruthy();
   });
 
   // Number('1,500') is NaN, which the API reports as "Expected number, received

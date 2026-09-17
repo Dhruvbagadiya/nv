@@ -19,6 +19,7 @@
 //   ];
 //
 import InstitutionPicker from './InstitutionPicker.jsx';
+import ProgramLevelPicker from './ProgramLevelPicker.jsx';
 
 export default function FilterBar({
   fields,
@@ -55,6 +56,19 @@ export default function FilterBar({
                   value={value}
                   selectedLabel={field.selectedLabel}
                   countryCode={field.countryCode}
+                  onChange={(next) => onChange(field.name, next)}
+                />
+              </div>
+            );
+          }
+
+          if (field.type === 'programLevel') {
+            return (
+              <div className="filter-field" key={field.name}>
+                <ProgramLevelPicker
+                  id={id}
+                  label={field.label}
+                  value={value}
                   onChange={(next) => onChange(field.name, next)}
                 />
               </div>

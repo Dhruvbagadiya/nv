@@ -3,6 +3,7 @@ import Modal from '../ui/Modal.jsx';
 import Icon from '../ui/Icon.jsx';
 import FileField from '../ui/FileField.jsx';
 import InstitutionPicker from '../ui/InstitutionPicker.jsx';
+import ProgramLevelPicker from '../ui/ProgramLevelPicker.jsx';
 
 // Config-driven form used by every admin editor. Same reasoning as FilterBar: six
 // reference resources need create/edit forms that differ only in their fields, so
@@ -111,6 +112,21 @@ function Field({ field, value, onChange }) {
         value={value ?? ''}
         selectedLabel={field.selectedLabel}
         countryCode={field.countryCode}
+        required={field.required}
+        hint={field.hint}
+        onChange={(next) => onChange(field.name, next)}
+      />
+    );
+  }
+
+  // Twenty options in a native <select> is a scroll, and the thing an admin
+  // knows is the word — "diploma", "bachelor", "PG".
+  if (field.type === 'programLevel') {
+    return (
+      <ProgramLevelPicker
+        id={id}
+        label={field.label}
+        value={value ?? ''}
         required={field.required}
         hint={field.hint}
         onChange={(next) => onChange(field.name, next)}

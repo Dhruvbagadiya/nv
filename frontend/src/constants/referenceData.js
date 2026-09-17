@@ -69,6 +69,77 @@ export const PROGRAM_LEVELS = [
 export const programLevelLabel = (value) =>
   PROGRAM_LEVELS.find((l) => l.value === value)?.label ?? value ?? '—';
 
+/**
+ * Levels matching a typed term — label, enum name, or a family word.
+ *
+ * Twenty options in a native <select> is a scroll, and the thing a person knows
+ * is the word: "diploma", "bachelor", "PG". The same problem the document-type
+ * list had, and the same answer.
+ *
+ * `group` is what makes searching one word useful. Typing "diploma" matches six
+ * levels, and without a second line they are six near-identical rows — the
+ * family tells them apart while you are still typing.
+ */
+const LEVEL_GROUP = {
+  BACHELORS_DEGREE: 'Undergraduate',
+  THREE_YEAR_BACHELORS: 'Undergraduate',
+  FOUR_YEAR_BACHELORS: 'Undergraduate',
+  TOPUP_DEGREE: 'Undergraduate',
+  UNDERGRADUATE_DIPLOMA: 'Undergraduate',
+  UNDERGRADUATE_CERTIFICATE: 'Undergraduate',
+  INTEGRATED_MASTERS: 'Postgraduate',
+  MASTERS_DEGREE: 'Postgraduate',
+  POST_GRADUATE_CERTIFICATE: 'Postgraduate',
+  POST_GRADUATE_DIPLOMA: 'Postgraduate',
+  DOCTORAL_PHD: 'Postgraduate',
+  ADVANCED_DIPLOMA: 'Diploma & certificate',
+  HIGHER_DIPLOMA: 'Diploma & certificate',
+  DIPLOMA: 'Diploma & certificate',
+  CERTIFICATE: 'Diploma & certificate',
+  FOUNDATION: 'Pathway',
+  ENGLISH: 'Pathway',
+  SECONDARY_SCHOOL: 'Pathway',
+  NON_CREDENTIAL: 'Other',
+  OTHER: 'Other',
+};
+
+/**
+ * Abbreviations people actually type, which no substring of the label matches.
+ * "PG" finds nothing in "Postgraduate Diploma" — the letters are there but not
+ * together — and "UG" appears in no label at all.
+ */
+const LEVEL_ALIASES = {
+  BACHELORS_DEGREE: 'ug undergrad bachelors ba bsc',
+  THREE_YEAR_BACHELORS: 'ug undergrad',
+  FOUR_YEAR_BACHELORS: 'ug undergrad',
+  TOPUP_DEGREE: 'ug undergrad topup',
+  UNDERGRADUATE_DIPLOMA: 'ug undergrad',
+  UNDERGRADUATE_CERTIFICATE: 'ug undergrad',
+  INTEGRATED_MASTERS: 'pg postgrad',
+  MASTERS_DEGREE: 'pg postgrad masters ma msc mba',
+  POST_GRADUATE_CERTIFICATE: 'pg postgrad pgc',
+  POST_GRADUATE_DIPLOMA: 'pg postgrad pgd',
+  DOCTORAL_PHD: 'pg postgrad phd doctorate',
+  HIGHER_DIPLOMA: 'hnd',
+  ENGLISH: 'ielts language elicos',
+  SECONDARY_SCHOOL: 'high school',
+};
+
+export const PROGRAM_LEVEL_GROUP = LEVEL_GROUP;
+
+export function searchProgramLevels(term) {
+  const q = (term ?? '').trim().toLowerCase();
+  const withGroup = PROGRAM_LEVELS.map((l) => ({ ...l, group: LEVEL_GROUP[l.value] ?? 'Other' }));
+  if (!q) return withGroup;
+  return withGroup.filter(
+    (l) =>
+      l.label.toLowerCase().includes(q) ||
+      l.group.toLowerCase().includes(q) ||
+      l.value.toLowerCase().replace(/_/g, ' ').includes(q) ||
+      (LEVEL_ALIASES[l.value] ?? '').includes(q)
+  );
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // CourseInquiry.intake is free text, so the only thing keeping the form and the

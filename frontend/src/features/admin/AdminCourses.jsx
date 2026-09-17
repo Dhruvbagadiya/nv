@@ -13,6 +13,7 @@ import { useCountries } from '../../hooks/useReferenceData.js';
 import { fetchCourses, fetchCourse, createCourse, updateCourse, archiveCourse, restoreCourse } from '../../api/courses.js';
 import { formatFee } from '../../utils/format.js';
 import { PROGRAM_LEVELS } from '../../constants/referenceData.js';
+import ProgramLevelPicker from '../../components/ui/ProgramLevelPicker.jsx';
 import SourceBadge, { ImportNotice } from '../../components/ui/SourceBadge.jsx';
 import BulkImportDialog from './BulkImportDialog.jsx';
 import { toast } from '../../store/useToast.js';
@@ -404,16 +405,14 @@ function CourseModal({ initial, onClose, onSaved }) {
               onChange={(e) => set('slug', e.target.value)}
               placeholder="auto-derived from title" />
           </div>
-          <div className="form-field">
-            <label className="flabel" htmlFor="c-level">Program level *</label>
-            <select id="c-level" value={form.programLevel}
-              onChange={(e) => set('programLevel', e.target.value)} required>
-              <option value="">Select a level…</option>
-              {PROGRAM_LEVELS.map((l) => (
-                <option key={l.value} value={l.value}>{l.label}</option>
-              ))}
-            </select>
-          </div>
+          {/* Searchable, not a twenty-option scroll: the thing an admin knows
+              is the word — "diploma", "bachelor", "PG". */}
+          <ProgramLevelPicker
+            id="c-level"
+            label="Program level *"
+            value={form.programLevel}
+            onChange={(v) => set('programLevel', v)}
+          />
           <div className="form-field">
             <label className="flabel" htmlFor="c-lang">Language</label>
             <input id="c-lang" type="text" value={form.languageOfInstruction}
@@ -581,8 +580,7 @@ export default function AdminCourses() {
   const filterFields = [
     { name: 'country',      label: 'Country',       type: 'select', placeholder: 'All countries',      options: countryOptions, optionsError: countriesFailed },
     { name: 'institutionId',label: 'Institution',    type: 'institution', countryCode: applied.country || undefined },
-    { name: 'programLevel', label: 'Level',          type: 'select', placeholder: 'All levels',
-      options: PROGRAM_LEVELS },
+    { name: 'programLevel', label: 'Level',          type: 'programLevel' },
     { name: 'search',       label: 'Search',         type: 'text',   placeholder: 'Title or institution' },
     // Archiving is a soft delete with a restore endpoint, so an admin has to be
     // able to list what was archived; without this the Restore button could

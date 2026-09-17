@@ -64,6 +64,9 @@ const NOT_INVALIDATED_BY_DESIGN = {
   // It goes through useQuery only because EntityPicker's search is built on one;
   // there is no server call to go stale.
   'document-kinds': 'a constant in the bundle, not fetched',
+  // Same: the twenty ProgramLevel values, searched locally. It goes through
+  // useQuery only because EntityPicker's search is built on one.
+  'program-levels': 'a constant in the bundle, not fetched',
 };
 
 describe('RELATED_KEYS is wired to keys that exist', () => {

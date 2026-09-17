@@ -1,6 +1,6 @@
 import AdminResourcePage from '../../components/admin/AdminResourcePage.jsx';
 import Flag from '../../components/ui/Flag.jsx';
-import { PROGRAM_LEVELS, programLevelLabel } from '../../constants/referenceData.js';
+import { programLevelLabel } from '../../constants/referenceData.js';
 import { fetchMoiAcceptances, createMoiAcceptance, updateMoiAcceptance, deleteMoiAcceptance } from '../../api/admin.js';
 import { useCountries } from '../../hooks/useReferenceData.js';
 
@@ -31,7 +31,7 @@ export default function AdminMoiAcceptances() {
       // A list, not a text box. Filtering on a typed string meant the filter
       // only worked if you spelled the award the same way the admin who entered
       // it did.
-      { name: 'programLevel',  label: 'Program level', type: 'select', placeholder: 'Any level', options: PROGRAM_LEVELS },
+      { name: 'programLevel',  label: 'Program level', type: 'programLevel' },
     ],
 
     columns: [
@@ -84,10 +84,8 @@ export default function AdminMoiAcceptances() {
       {
         name: 'programLevel',
         label: 'Program level',
-        type: 'select',
+        type: 'programLevel',
         required: true,
-        options: PROGRAM_LEVELS,
-        placeholder: 'Select a program level…',
         // Was a free-text "Course type", which is how the same award became
         // "Bachelor's Degree", "Bachelors" and "UG" — three course types as far
         // as a groupBy is concerned, so the agent dropdown grew an option per

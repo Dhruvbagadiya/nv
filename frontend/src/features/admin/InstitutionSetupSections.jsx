@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Icon from '../../components/ui/Icon.jsx';
-import { PROGRAM_LEVELS, programLevelLabel } from '../../constants/referenceData.js';
+import { programLevelLabel } from '../../constants/referenceData.js';
+import ProgramLevelPicker from '../../components/ui/ProgramLevelPicker.jsx';
 
 /**
  * Commission, entry requirements and MOI acceptances, on the Add Institution
@@ -358,16 +359,12 @@ export function useInstitutionSetup() {
       >
         {moi.map((row, i) => (
           <div className="setup-row" key={i}>
-            <select
-              aria-label={`MOI program level ${i + 1}`}
+            <ProgramLevelPicker
+              id={`moi-level-${i}`}
+              label={`MOI program level ${i + 1}`}
               value={row.programLevel}
-              onChange={(e) => setMoi((m) => m.map((x, j) => (j === i ? { ...x, programLevel: e.target.value } : x)))}
-            >
-              <option value="">Select a program level…</option>
-              {PROGRAM_LEVELS.map((l) => (
-                <option key={l.value} value={l.value}>{l.label}</option>
-              ))}
-            </select>
+              onChange={(v) => setMoi((m) => m.map((x, j) => (j === i ? { ...x, programLevel: v } : x)))}
+            />
             <input
               type="number"
               min="1"
