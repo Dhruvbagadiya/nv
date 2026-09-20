@@ -26,7 +26,13 @@ describe('passport numbers', () => {
   });
 
   it('is what the application body uses', () => {
-    const base = { studentName: 'A B', courseId: '00000000-0000-4000-8000-000000000000' };
+    const base = {
+      studentName: 'A B',
+      courseId: '00000000-0000-4000-8000-000000000000',
+      // Required since applications started carrying contact details.
+      studentEmail: 'a.b@example.com',
+      studentPhone: '+91 99259 13764',
+    };
     expect(createApplicationBody.safeParse({ ...base, passportNo: 'aaaa' }).success).toBe(false);
     expect(createApplicationBody.safeParse({ ...base, passportNo: 'P7654321' }).success).toBe(true);
   });

@@ -21,6 +21,8 @@ export async function createApplication({
   agentId,
   studentName,
   passportNo,
+  studentEmail,
+  studentPhone,
   courseId,
   intakeLabel,
 }) {
@@ -41,6 +43,8 @@ export async function createApplication({
       agentId,
       studentName,
       passportNo,
+      studentEmail,
+      studentPhone,
       courseId,
       intakeLabel,
       // stage defaults to PROFILE_ASSESSMENT in the schema.

@@ -18,6 +18,8 @@ export default function NewApplication() {
   const [form, setForm] = useState({
     studentName: '',
     passportNo: '',
+    studentEmail: '',
+    studentPhone: '',
     courseId: preselectedCourseId,
     intakeLabel: '',
   });
@@ -95,9 +97,50 @@ export default function NewApplication() {
               type="text"
               value={form.passportNo}
               onChange={(e) => setField('passportNo', e.target.value)}
-              // Bounds mirror the API schema so the form fails before the request.
-              minLength={4}
+              // Bounds mirror the API schema so the form fails before the
+              // request. 6, not 4: the API rule was tightened when "aaaa" turned
+              // out to be an accepted passport number, and this was left behind.
+              minLength={6}
               maxLength={40}
+              required
+            />
+          </div>
+        </div>
+
+        {/*
+          * Contact details, required.
+          *
+          * An application filed here used to carry a name and a passport and
+          * nothing else, so there was no way to reach the applicant: the
+          * stage-change email went to whoever filed it, and the history list had
+          * nothing to show but the passport. One applicant's email address ended
+          * up typed INTO the passport box, which is what a missing field looks
+          * like once people start working around it.
+          */}
+        <div className="field">
+          <div style={{ width: '100%' }}>
+            <div className="flabel">Student email</div>
+            <input
+              type="email"
+              value={form.studentEmail}
+              onChange={(e) => setField('studentEmail', e.target.value)}
+              placeholder="Where the offer and visa updates are sent"
+              autoComplete="off"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="field">
+          <div style={{ width: '100%' }}>
+            <div className="flabel">Student mobile number</div>
+            <input
+              type="tel"
+              value={form.studentPhone}
+              onChange={(e) => setField('studentPhone', e.target.value)}
+              placeholder="+91 99999 99999"
+              inputMode="tel"
+              autoComplete="off"
               required
             />
           </div>

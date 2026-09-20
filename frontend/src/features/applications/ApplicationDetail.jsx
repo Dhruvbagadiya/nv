@@ -258,9 +258,14 @@ export default function ApplicationDetail({ applicationId, onClose }) {
             {[
               ['Student name', app.studentName],
               ['Passport no.', app.passportNo],
+              // Absent on applications filed before the form asked for them.
+              // Filtered out below rather than shown empty, so an old record is
+              // simply shorter instead of looking like data that went missing.
+              ['Email', app.studentEmail],
+              ['Mobile', app.studentPhone],
               ['Last updated', formatDate(app.updatedAt)],
               ['POEC reference', `#${app.reference}`],
-            ].map(([label, value]) => (
+            ].filter(([, value]) => value).map(([label, value]) => (
               <div key={label}>
                 <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--ink-400)', marginBottom: 2 }}>{label}</div>
                 <div style={{ fontWeight: 600, color: 'var(--ink-900)' }}>{value}</div>

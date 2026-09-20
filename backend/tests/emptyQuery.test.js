@@ -103,6 +103,8 @@ describe('empty optional body fields mean "not provided"', () => {
     const result = createApplicationBody.safeParse({
       studentName: 'A Student',
       passportNo: 'P7654321',
+      studentEmail: 'a.student@example.com',
+      studentPhone: '+91 99259 13764',
       courseId: '11111111-1111-4111-8111-111111111111',
       intakeLabel: '',
     });

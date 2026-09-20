@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { ApplicationDocumentKind } from '@prisma/client';
 import { optionalBody, optionalEnum, optionalText, optionalUuid } from '../../utils/queryTypes.js';
+// The same rule student registration uses — one definition of what a phone
+// number is, so the two forms cannot drift apart.
+import { phoneNumber } from '../auth/auth.schemas.js';
 
 export const APPLICATION_STAGES = [
   'PROFILE_ASSESSMENT',
@@ -57,6 +60,17 @@ export const createApplicationBody = z
     // NOT normalised to uppercase: it is copied from a document and should be
     // stored as written. See passportNumber above for why there is no format check.
     passportNo: passportNumber,
+    /*
+     * Required. Both of these used to be absent entirely, which is why a
+     * stage-change email on an agent-filed application went to the agent — there
+     * was no applicant address to send it to — and why the history list had
+     * nothing to show under "Student name & info" but a passport.
+     *
+     * Lowercased like every other email in this codebase, so the same person
+     * typed two ways is the same string.
+     */
+    studentEmail: z.string().trim().toLowerCase().email('Enter a valid email address'),
+    studentPhone: phoneNumber,
     courseId: z.string().uuid(),
     intakeLabel: optionalBody(z.string().trim().max(40)),
   })

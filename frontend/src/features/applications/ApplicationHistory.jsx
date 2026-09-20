@@ -93,6 +93,27 @@ export default function ApplicationHistory() {
         <>
           <div className="cell-strong">{a.studentName}</div>
           <div className="picker-sub">Passport: {a.passportNo}</div>
+          {/*
+            * Contact details, which applications filed before 2026-09-20 do not
+            * carry — there was nowhere on the form to put them. Rendered only
+            * when present rather than as an em dash: a blank line reads as "this
+            * is an old record", where "—" reads as "we asked and got nothing".
+            */}
+          {a.studentEmail && (
+            <div className="picker-sub">
+              <a href={`mailto:${a.studentEmail}`} onClick={(e) => e.stopPropagation()}>
+                {a.studentEmail}
+              </a>
+            </div>
+          )}
+          {a.studentPhone && (
+            <div className="picker-sub">
+              {/* tel: so a click on a phone dials rather than selecting text. */}
+              <a href={`tel:${a.studentPhone.replace(/[^\d+]/g, '')}`} onClick={(e) => e.stopPropagation()}>
+                {a.studentPhone}
+              </a>
+            </div>
+          )}
         </>
       ),
     },

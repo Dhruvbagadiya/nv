@@ -74,7 +74,17 @@ export async function createStudentApplication({ studentId, courseId, intakeLabe
    */
   const student = await prisma.user.findUnique({
     where: { id: studentId },
-    select: { emailVerifiedAt: true },
+    // email and the profile phone come along for studentEmail/studentPhone
+    // below: the same two columns the agent form fills in by hand. Copied onto
+    // the application rather than read through the account each time, so one
+    // list query shows contact details for agent-filed and self-filed rows
+    // alike, and so a later change of address does not rewrite the details an
+    // offer was actually issued against.
+    select: {
+      emailVerifiedAt: true,
+      email: true,
+      studentProfile: { select: { phone: true } },
+    },
   });
   if (!student?.emailVerifiedAt) {
     throw new ForbiddenError(
@@ -98,6 +108,8 @@ export async function createStudentApplication({ studentId, courseId, intakeLabe
       agentId:     studentId,  // students own their own applications
       studentName,
       passportNo,
+      studentEmail: student.email,
+      studentPhone: student.studentProfile?.phone ?? null,
       courseId,
       intakeLabel,
       stageNote:   'Application received',

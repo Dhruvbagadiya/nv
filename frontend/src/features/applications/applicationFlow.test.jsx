@@ -158,7 +158,7 @@ describe('application flow', () => {
     await waitFor(() => expect(screen.getByText('Proceed for application').disabled).toBe(false));
   });
 
-  it('submits studentName, passportNo, courseId and intakeLabel', async () => {
+  it('submits the name, passport, contact details, course and intake', async () => {
     applicationsApi.createApplication.mockResolvedValue({
       id: 'a1',
       reference: 47,
@@ -174,6 +174,12 @@ describe('application flow', () => {
     fireEvent.change(document.querySelector('input[maxlength="40"]'), {
       target: { value: 'P1234567' },
     });
+    fireEvent.change(screen.getByPlaceholderText('Where the offer and visa updates are sent'), {
+      target: { value: 'aarav@example.com' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('+91 99999 99999'), {
+      target: { value: '+91 99259 13764' },
+    });
     const intakeSelect = screen.getByRole('combobox');
     fireEvent.change(intakeSelect, { target: { value: intakeSelect.options[1].value } });
     fireEvent.click(screen.getByText('Proceed for application'));
@@ -184,6 +190,10 @@ describe('application flow', () => {
     expect(applicationsApi.createApplication.mock.calls[0][0]).toEqual({
       studentName: 'Aarav Sharma',
       passportNo: 'P1234567',
+      // Required since applications started carrying contact details: without
+      // them the stage-change email has nobody to go to but the agent.
+      studentEmail: 'aarav@example.com',
+      studentPhone: '+91 99259 13764',
       courseId: COURSE.id,
       // Derived from the intake's startDate, so the exact wording is the
       // component's business ("January 2027"), not this test's.
@@ -203,6 +213,12 @@ describe('application flow', () => {
     });
     fireEvent.change(document.querySelector('input[maxlength="40"]'), {
       target: { value: 'P1234567' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Where the offer and visa updates are sent'), {
+      target: { value: 'aarav@example.com' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('+91 99999 99999'), {
+      target: { value: '+91 99259 13764' },
     });
     const intakeSelect = screen.getByRole('combobox');
     fireEvent.change(intakeSelect, { target: { value: intakeSelect.options[1].value } });

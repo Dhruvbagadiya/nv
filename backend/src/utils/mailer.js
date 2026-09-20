@@ -165,18 +165,31 @@ export function applicationReceivedEmail({ name, reference, program, institution
 }
 
 /** C — internal alert, so a self-submitted application is not left unseen. */
-export function newApplicationAlertEmail({ reference, studentName, program, institution, email }) {
+export function newApplicationAlertEmail({
+  reference, studentName, program, institution, studentEmail, studentPhone, filedBy,
+}) {
   return {
     subject: `New application #${reference} — ${studentName}`,
     html: shell({
       name: 'team',
       intro: 'A student submitted an application through the portal.',
+      /*
+       * The applicant's own email and phone, then who filed it — labelled
+       * separately because they are frequently different people.
+       *
+       * This used to show the FILER's address under a bare "Email", directly
+       * beneath the student's name. On an agency-filed application that is a
+       * member of staff, so the one line telling you how to reach the applicant
+       * was actually the address of the colleague who typed the form.
+       */
       body: facts([
         ['Reference', `#${reference}`],
         ['Student', studentName],
-        ['Email', email],
+        ['Email', studentEmail],
+        ['Mobile', studentPhone],
         ['Program', program],
         ['Institution', institution],
+        ['Filed by', filedBy],
       ]),
       footer: 'Sent automatically by the NV Immigration portal.',
     }),

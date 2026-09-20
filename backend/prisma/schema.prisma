@@ -29,13 +29,13 @@ enum Role {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         Role     @default(AGENT)
+  id              String    @id @default(uuid())
+  name            String
+  email           String    @unique
+  passwordHash    String
+  role            Role      @default(AGENT)
   // When false the account exists but login is refused.
-  isActive     Boolean  @default(true)
+  isActive        Boolean   @default(true)
   // When the address on this account was proved reachable, or null if it never
   // has been. A timestamp rather than a boolean because "when" answers support
   // questions a flag cannot — whether someone verified before or after an
@@ -46,11 +46,11 @@ model User {
   emailVerifiedAt DateTime?
 
   // Optional profile fields — all roles can fill these in.
-  phone        String?
-  bio          String?
-  avatarUrl    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  phone     String?
+  bio       String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Sub-agents: the header in the reference screenshots has an "invite
   // sub-agent" action. This was a bare `parentAgentId String?` with no relation,
@@ -59,18 +59,18 @@ model User {
   parentAgent   User?   @relation("AgencyHierarchy", fields: [parentAgentId], references: [id], onDelete: SetNull)
   subAgents     User[]  @relation("AgencyHierarchy")
 
-  applications      Application[]
+  applications       Application[]
   // Documents this user attached to an application. Named for the action rather
   // than the object, because `documents` on a User would read as "their files"
   // and these belong to an application.
-  uploadedDocuments ApplicationDocument[]
-  courseInquiries   CourseInquiry[]
-  refreshTokens     RefreshToken[]
-  passwordResets    PasswordResetToken[]
+  uploadedDocuments  ApplicationDocument[]
+  courseInquiries    CourseInquiry[]
+  refreshTokens      RefreshToken[]
+  passwordResets     PasswordResetToken[]
   emailVerifications EmailVerificationToken[]
-  notifications     Notification[]
-  studentProfile    StudentProfile?
-  agencyProfile     AgencyProfile?
+  notifications      Notification[]
+  studentProfile     StudentProfile?
+  agencyProfile      AgencyProfile?
 
   @@index([parentAgentId])
   @@index([role])
@@ -455,7 +455,7 @@ model CourseIntake {
 }
 
 model MoiAcceptance {
-  id            String   @id @default(uuid())
+  id            String        @id @default(uuid())
   institutionId String
   /// The label the agent screens render. Free text, and that is the whole
   /// problem: "Bachelor's Degree", "Bachelors" and "UG" are three course types
@@ -470,8 +470,8 @@ model MoiAcceptance {
   programLevel  ProgramLevel?
   years         Int
   documentUrl   String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
 
@@ -817,14 +817,31 @@ enum ApplicationStage {
 }
 
 model Application {
-  id          String  @id @default(uuid())
+  id          String @id @default(uuid())
   // The "POEC ID: 4367" the reference portal shows on every application. A
   // sequential integer because agents read these out on the phone; a uuid is not
   // something anyone dictates.
-  reference   Int     @unique @default(autoincrement())
+  reference   Int    @unique @default(autoincrement())
   agentId     String
   studentName String
   passportNo  String
+
+  // How to reach the applicant, captured on the form that creates the
+  // application.
+  //
+  // Nullable ONLY for the rows that predate this. An agent-filed application
+  // had no contact details at all and no student account behind it to borrow
+  // them from, which meant the stage-change email — the one that tells somebody
+  // their offer came through — had nowhere to go, and went to the agent
+  // instead. It also meant the history list could not show a phone number, so
+  // one applicant's email ended up typed into the passport field because that
+  // was the only box available.
+  //
+  // Required on the way in (see createApplicationBody), so everything filed
+  // from now on carries them.
+  studentEmail String?
+  studentPhone String?
+
   courseId    String
   intakeLabel String? // "March 2027", as displayed alongside the reference
 
@@ -852,7 +869,6 @@ model Application {
   // distinguishes the people. A student has one passport, so the triple collapses
   // to the pair for them.
   @@unique([agentId, courseId, passportNo])
-
   @@index([agentId, createdAt])
   @@index([courseId])
   @@index([stage])

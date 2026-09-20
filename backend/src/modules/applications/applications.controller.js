@@ -59,14 +59,46 @@ async function ownerOf(agentId) {
 
 const appUrlFor = (app) => `${config.appUrl}/my-applications/${app.id}`;
 
-async function emailOwner(app, build) {
+// Takes the owner rather than looking it up, because the caller needs the same
+// record to decide whether the applicant is a separate person worth mailing.
+// Two lookups of one row, to send two halves of one notification, is a query
+// this route does not need to make.
+async function emailOwner(owner, build) {
+  if (!owner?.email) return;
   try {
-    const owner = await ownerOf(app.agentId);
-    if (!owner?.email) return;
     const { subject, html } = build(owner);
     await sendMail({ to: owner.email, subject, html });
   } catch (err) {
     console.error('[notify] email failed:', err?.message ?? err);
+  }
+}
+
+/*
+ * The applicant, when they are not the account that filed.
+ *
+ * On an agency-filed application the owner is a member of staff, so everything
+ * above tells the AGENT that the student's offer came through and tells the
+ * student nothing. That was unavoidable while an application stored only a name
+ * and a passport; now it carries studentEmail, so the person the news is
+ * actually about can be told.
+ *
+ * Skipped when the address matches the owner's, which is the self-submitted
+ * case — the student filed it themselves and emailOwner has already written to
+ * them. Sending both would deliver the same message twice.
+ *
+ * The agent keeps their copy rather than handing it over: they have a
+ * notification bell and this email, and taking the email away to give it to
+ * someone else would be a regression for them. Students have no bell, which is
+ * the whole reason this exists.
+ */
+async function emailApplicant(app, ownerEmail, build) {
+  const to = app.studentEmail;
+  if (!to || to.toLowerCase() === (ownerEmail ?? '').toLowerCase()) return;
+  try {
+    const { subject, html } = build();
+    await sendMail({ to, subject, html });
+  } catch (err) {
+    console.error('[notify] applicant email failed:', err?.message ?? err);
   }
 }
 
@@ -87,7 +119,9 @@ export async function notifyTeamOfNewApplication(app) {
       studentName: app.studentName,
       program: app.course?.title,
       institution: app.course?.institution?.name,
-      email: owner?.email,
+      studentEmail: app.studentEmail,
+      studentPhone: app.studentPhone,
+      filedBy: owner?.email,
     });
     await sendMail({ to, subject, html });
   } catch (err) {
@@ -157,16 +191,30 @@ export async function updateStageHandler(req, res) {
   // Email A. For a student this is the ONLY way they find out: the portal has no
   // notification UI and nothing polls, so the row notifyAgent just wrote is
   // invisible to them.
-  await emailOwner(application, (owner) =>
+  const stageEmail = (over = {}) =>
     applicationStageEmail({
-      name: owner.name,
       reference: application.reference,
       program: application.course.title,
       institution: application.course.institution.name,
       stage: stageLabel,
       note: req.body.stageNote,
-      url: owner.role === 'STUDENT' ? appUrlFor(application) : undefined,
+      ...over,
+    });
+
+  const owner = await ownerOf(application.agentId);
+  await emailOwner(owner, (o) =>
+    stageEmail({
+      name: o.name,
+      // Only a student has somewhere to click through TO. An agent's copy links
+      // nowhere rather than into a portal they cannot open.
+      url: o.role === 'STUDENT' ? appUrlFor(application) : undefined,
     })
+  );
+
+  // And the applicant themselves, on an agency-filed application. No url: there
+  // is no account behind this address, so a link would land on a sign-in wall.
+  await emailApplicant(application, owner?.email, () =>
+    stageEmail({ name: application.studentName })
   );
 
   res.json(application);
