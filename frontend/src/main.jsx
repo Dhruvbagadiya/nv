@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App.jsx';
 import { useAuth } from './store/useAuth.js';
 import './index.css';
+// No-op unless the URL carries ?fps — see the file header.
+import { installFpsMeter } from './devFpsMeter.js';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,6 +33,9 @@ useAuth.getState().setQueryClient(queryClient);
 // settles. Until this resolves, useAuth.status === 'loading' and ProtectedRoute
 // holds off on deciding anything.
 useAuth.getState().bootstrap();
+
+
+installFpsMeter();
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

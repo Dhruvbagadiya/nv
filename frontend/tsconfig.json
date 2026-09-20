@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* The existing 175 .jsx/.js files stay exactly as they are. allowJs lets
+       TypeScript coexist with them instead of demanding a full migration, and
+       checkJs is OFF so none of them are suddenly type-errors. New .tsx files
+       are checked; old .jsx files are not. */
+    "allowJs": true,
+    "checkJs": false,
+
+    /* The @/ alias shadcn components import through. It has to exist in BOTH
+       places: here for the editor and `tsc`, and in vite.config.js for the
+       bundler — they do not read each other.
+
+       No baseUrl: TypeScript 7 removed it (TS5102). Paths now resolve relative
+       to this file, which is what the leading ./ means. */
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}

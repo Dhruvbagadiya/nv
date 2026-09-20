@@ -1,0 +1,306 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   Hero motion — ambient light, glass, and the split headline
+   ══════════════════════════════════════════════════════════════════════════
+
+   The brief this answers: the page needed motion that reads as expensive. The
+   two things it was doing wrong have names — "cheap visuals" and "fast
+   animations" — and a cartoon aeroplane skidding past in three seconds was
+   both. What replaces it is slow, ambient and continuous: nothing here
+   announces itself, and nothing here finishes and leaves.
+
+   Three rules hold throughout:
+
+   1. ONLY transform and opacity animate. No width, no top/left, no animated
+      filter on anything that repeats. Every moving element below is composited.
+   2. NO blur() on the ambient layer. Liquid-glass lighting is usually built
+      from huge blurred circles, which is one of the most expensive things you
+      can ask a compositor to redraw every frame. A radial-gradient with a soft
+      transparent falloff is visually identical here and costs nothing to move.
+   3. Every colour goes through var(--accent-*). useTheme writes a partner
+      agency's own accent onto :root at runtime, so a literal #E78518 would make
+      the hero the one part of the page that ignored white-labelling.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Ambient light ─────────────────────────────────────────────────────── */
+
+.lp-aurora {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* Sits above .lp-hero::before (the static mesh) and below .lp-hero-inner. */
+}
+
+.lp-aurora-blob {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  /* The falloff IS the blur. See rule 2 above. */
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--accent-700) 30%, transparent) 0%,
+    color-mix(in srgb, var(--accent-800) 12%, transparent) 42%,
+    transparent 70%
+  );
+  will-change: transform;
+}
+
+/*
+ * Three blobs on deliberately co-prime-ish durations — 11s, 14s and 9s. Equal or
+ * harmonically related periods re-sync every few cycles and the eye catches the
+ * loop; these drift in and out of phase for minutes at a time.
+ *
+ * These were 23s / 31s / 19s, which measured 11px of travel in two seconds on a
+ * 1440px screen — running, but below the threshold at which a person registers
+ * anything is moving at all. Ambient does not mean imperceptible.
+ */
+.lp-aurora-blob--1 {
+  width: 58%;
+  top: -18%;
+  left: 46%;
+  animation: lp-aurora-drift-1 11s ease-in-out infinite alternate;
+}
+
+.lp-aurora-blob--2 {
+  width: 44%;
+  bottom: -22%;
+  left: -8%;
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--accent-800) 26%, transparent) 0%,
+    transparent 68%
+  );
+  animation: lp-aurora-drift-2 14s ease-in-out infinite alternate;
+}
+
+.lp-aurora-blob--3 {
+  width: 34%;
+  top: 34%;
+  left: 24%;
+  opacity: .7;
+  animation: lp-aurora-drift-3 9s ease-in-out infinite alternate;
+}
+
+@keyframes lp-aurora-drift-1 {
+  from { transform: translate3d(-14%, -6%, 0) scale(.94); }
+  to   { transform: translate3d(16%, 13%, 0) scale(1.26); }
+}
+@keyframes lp-aurora-drift-2 {
+  from { transform: translate3d(-10%, 8%, 0) scale(1.18); }
+  to   { transform: translate3d(26%, -16%, 0) scale(.86); }
+}
+@keyframes lp-aurora-drift-3 {
+  from { transform: translate3d(-12%, -10%, 0) scale(.84); }
+  to   { transform: translate3d(18%, 20%, 0) scale(1.3); }
+}
+
+/*
+ * A single specular pass across the whole hero every 7 seconds. This is the
+ * one thing that makes a dark surface read as GLASS rather than as paint: real
+ * glass catches a moving highlight. Skewed so it travels like a reflection
+ * rather than a wipe.
+ */
+.lp-aurora-sheen {
+  position: absolute;
+  top: -30%;
+  bottom: -30%;
+  width: 22%;
+  left: -30%;
+  transform: skewX(-14deg);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--accent-100) 11%, transparent) 50%,
+    transparent 100%
+  );
+  animation: lp-aurora-sheen 7s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Was a 62% hold on an 11s loop — 6.8 seconds of the sheen standing perfectly
+   still, which is most of the time somebody spends looking at a hero. */
+@keyframes lp-aurora-sheen {
+  0%, 18%  { transform: translateX(0) skewX(-14deg); }
+  100%     { transform: translateX(640%) skewX(-14deg); }
+}
+
+/* ── Cursor glow ───────────────────────────────────────────────────────── */
+
+/*
+ * A light that tracks the pointer across the hero. This is the only motion on
+ * the page that is ALWAYS visible, because it is driven by the person looking at
+ * it rather than by a clock — which is also why it does more for perceived
+ * quality than any timed effect.
+ *
+ * Position arrives as --mx/--my, written straight onto the element by a
+ * mousemove handler. No React state, so moving the mouse never triggers a
+ * render; the same trick useSpotlight already uses on the cards.
+ */
+.lp-hero-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 46rem;
+  height: 46rem;
+  margin: -23rem 0 0 -23rem;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transform: translate3d(var(--mx, 50%), var(--my, 50%), 0);
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--accent-700) 20%, transparent) 0%,
+    color-mix(in srgb, var(--accent-800) 8%, transparent) 38%,
+    transparent 66%
+  );
+  transition: opacity .45s ease;
+  will-change: transform;
+}
+
+.lp-hero:hover .lp-hero-glow { opacity: 1; }
+
+/* Touch devices fire a synthetic hover on tap that then sticks, leaving the
+   glow frozen wherever the finger last landed. */
+@media (hover: none) {
+  .lp-hero-glow { display: none; }
+}
+
+/* ── Split headline ────────────────────────────────────────────────────── */
+
+.lp-split-stage {
+  display: block;
+  /* rotateX is meaningless without a perspective on the containing block; with
+     none, the characters would fade and slide but never actually tilt. */
+  perspective: 720px;
+}
+
+.lp-split-word {
+  display: inline-block;
+  /* Word gaps are a margin, not a space character: the words are inline-blocks
+     and the whitespace between them in JSX collapses to nothing. */
+  margin-right: .24em;
+  white-space: nowrap;
+}
+
+/*
+ * The per-character reveal, in CSS rather than through an animation runtime.
+ *
+ * --i is the character's index in the headline, written once by SplitHeadline;
+ * everything else is a calc(). This is the same mechanism worldmap.css uses to
+ * stagger 176 country outlines, and it is why the landing page does not need to
+ * ship motion/react just to fan thirty-seven letters in.
+ *
+ * rotateX tilts each character up from below its own baseline, so the line
+ * assembles as though it were being set rather than fading in. The y offset is
+ * in em so it tracks the clamped display size instead of drifting at large
+ * viewports.
+ */
+.lp-split-char {
+  display: inline-block;
+  transform-origin: 50% 80%;
+  opacity: 0;
+  animation: lp-split-in .86s cubic-bezier(.16, 1, .3, 1) forwards;
+  /* 0.28s of lead-in so the first characters land after the page has painted
+     rather than during it, then 22ms between each. */
+  animation-delay: calc(.28s + var(--i, 0) * .022s);
+  will-change: transform, opacity;
+}
+
+@keyframes lp-split-in {
+  from { opacity: 0; transform: translateY(.42em) rotateX(-78deg); }
+  to   { opacity: 1; transform: translateY(0) rotateX(0); }
+}
+
+/* The accessible copy of the headline. The animated characters are aria-hidden
+   — a screen reader would otherwise read the line one letter at a time. */
+.lp-split-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Liquid glass on the hero chips ────────────────────────────────────── */
+
+/*
+ * Scoped to .lp-hero-badges on purpose: .lp-chip is used in other sections and
+ * this treatment only belongs where the ambient light is behind it.
+ */
+.lp-hero-badges .lp-chip {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface) 62%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-color: color-mix(in srgb, var(--accent-700) 26%, transparent);
+}
+
+/* The lit top edge. Real glass is brightest where it catches the light; a flat
+   1px border is what makes a translucent panel look like a rectangle instead. */
+.lp-hero-badges .lp-chip::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--accent-100) 42%, transparent),
+    transparent
+  );
+}
+
+/* ── Photo scan ring ───────────────────────────────────────────────────── */
+
+/*
+ * A conic sweep around the portrait. It rotates rather than pulsing, so it
+ * reads as a system scanning rather than as a notification demanding attention
+ * — the distinction between "alive" and "nagging" in an always-on element.
+ */
+.lp-hero-ring {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 250deg,
+    color-mix(in srgb, var(--accent-700) 72%, transparent) 320deg,
+    color-mix(in srgb, var(--accent-100) 88%, transparent) 352deg,
+    transparent 360deg
+  );
+  /* Punches out the middle, leaving a ring. Cheaper and sharper than stacking a
+     second element on top to cover the centre. */
+  -webkit-mask: radial-gradient(circle, transparent 0 calc(50% - 2.5px), #000 calc(50% - 2.5px) 50%, transparent 50%);
+          mask: radial-gradient(circle, transparent 0 calc(50% - 2.5px), #000 calc(50% - 2.5px) 50%, transparent 50%);
+  animation: lp-ring-scan 8s linear infinite;
+  will-change: transform;
+}
+
+@keyframes lp-ring-scan {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────── */
+
+/*
+ * landing.css already collapses every animation under .lp to .001ms, which
+ * stops all of the above. These rules make the intent explicit and, more
+ * importantly, remove the ambient layer entirely rather than freezing it at a
+ * random frame: a light wash caught mid-drift is a composition nobody designed.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .lp-aurora-sheen { display: none; }
+  .lp-aurora-blob { animation: none; }
+  .lp-hero-ring { animation: none; opacity: .55; }
+  .lp-hero-glow { display: none; }
+  .lp-split-char { animation: none; opacity: 1; transform: none; }
+}

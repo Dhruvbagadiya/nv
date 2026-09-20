@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react';
-import { ORIGIN, MAP_DESTINATIONS, projectPoint } from './worldMapData';
+import { ORIGIN, MAP_DESTINATIONS, PLANE_PATH, projectPoint } from './worldMapData';
 
 /*
  * The dotted-world backdrop behind the whole landing page.
  *
  * A slowly drifting map of the continents rendered as points of light, with a
- * radar sweep, expanding rings, and NV's routes drawn out of Surat with a pulse
- * travelling along each one.
+ * radar sweep, expanding rings, and NV's routes drawn out of Surat with an
+ * aircraft flying along each one.
  *
  * WHY CANVAS AND NOT THE EXISTING SVG MAP. WorldMap.jsx puts 176 country
  * outlines in the DOM so each one can be hovered and lit. This draws roughly
@@ -35,6 +35,41 @@ const TEX_H = 900;
 // Grid pitch for the dot scatter, in texture pixels. 6.5 is the number that
 // reads as "made of points" rather than as a halftone screen or a sparse spray.
 const SPACING = 6.5;
+
+/*
+ * The aircraft that flies each route, built once and reused for every frame of
+ * every route — a Path2D is parsed on construction, so rebuilding it per frame
+ * would re-parse the same string twelve times every sixteen milliseconds.
+ *
+ * PLANE_PATH is the same top-down silhouette the map section uses, drawn nose
+ * along +x and centred on (0,0). Both of those matter here: the nose direction
+ * is what lets a single rotate() aim it down the route, and the centring is
+ * what keeps it ON the line rather than flying parallel to it.
+ *
+ * This replaces a 2.2px filled circle. A dot travelling an arc is the same mark
+ * as a dot marking a city, so it read as a moving waypoint rather than as a
+ * flight — and at four pixels across, mostly it read as nothing at all.
+ */
+const PLANE = typeof Path2D !== 'undefined' ? new Path2D(PLANE_PATH) : null;
+
+// PLANE_PATH is 24 units nose to tail. 1.0 puts it at ~24px on screen. 0.62 was
+// the first try and it vanished: this aircraft has to be picked out against a
+// field of nine thousand dots, so "small enough not to compete with the copy" is
+// the wrong target — it competes with the NOISE.
+const PLANE_SCALE = 1.0;
+
+// Height of one slice of the dot scatter, in texture pixels. Small enough that a
+// band lands well inside a frame's budget, large enough not to spend more time
+// yielding than working.
+const BAND = 120;
+
+// Dots painted per frame while the texture is baked. 1500 keeps each slice well
+// inside a frame's budget on a mid-range machine.
+const DOT_CHUNK = 1500;
+
+// Hands the main thread back until the next frame. rAF rather than setTimeout(0)
+// so the slices interleave with painting instead of competing with it.
+const frame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
 
 /* Reads a CSS custom property off the page and returns it as [r,g,b].
  *
@@ -70,15 +105,25 @@ function buildMask(world, w, h) {
   return c.getImageData(0, 0, w, h).data;
 }
 
-function buildDots(mask, w, h, accent) {
+/*
+ * Scatters the dot field for ONE horizontal band of the mask, from gy0 up to but
+ * not including gy1, appending into `dots`.
+ *
+ * Sliced rather than done in one pass because the whole field is ~49,000 grid
+ * cells each doing eight coastline probes — around 400,000 mask lookups. As a
+ * single call that is one uninterruptible task of well over a hundred
+ * milliseconds, during which the browser cannot respond to anything: it is the
+ * stall you feel on refresh. Split into bands with a yield between them, the
+ * same total work costs the same CPU but never blocks a frame.
+ */
+function scatterBand(mask, w, h, accent, dots, gy0, gy1) {
   const [ar, ag, ab] = accent;
   const at = (x, y) => {
     if (x < 0 || y < 0 || x >= w || y >= h) return false;
     return mask[((y | 0) * w + (x | 0)) * 4 + 3] > 128;
   };
-  const dots = [];
   const R = SPACING * 1.6;
-  for (let gy = 0; gy < h; gy += SPACING) {
+  for (let gy = gy0; gy < gy1 && gy < h; gy += SPACING) {
     for (let gx = 0; gx < w; gx += SPACING) {
       const x = gx + (Math.random() - 0.5) * SPACING * 0.85;
       const y = gy + (Math.random() - 0.5) * SPACING * 0.85;
@@ -108,10 +153,9 @@ function buildDots(mask, w, h, accent) {
       });
     }
   }
-  return dots;
 }
 
-function bakeTexture(dots, w, h, accent) {
+function bakeTexture(w, h, accent) {
   const tex = document.createElement('canvas');
   tex.width = w;
   tex.height = h;
@@ -137,16 +181,35 @@ function bakeTexture(dots, w, h, accent) {
     c.stroke();
   }
 
-  for (const d of dots) {
-    c.shadowColor = `rgba(${d.r0},${d.g},${d.b},0.85)`;
-    c.shadowBlur = d.r > 1.1 ? 3.4 : 1.6;
+  return tex;
+}
+
+/*
+ * Paints one slice of the dot field onto the baked texture.
+ *
+ * NO shadowBlur. Each dot used to be a single fill with shadowColor and
+ * shadowBlur set on it, which reads well but costs enormously: canvas runs a
+ * separate blur pass per draw call, so nine thousand dots meant nine thousand
+ * blurs in one synchronous loop. Measured on a real GPU that pinned the page at
+ * 1.8fps until it finished — the whole "stuck until the background loads" stall.
+ *
+ * The glow is now two ordinary fills instead: a wide, very transparent halo and
+ * a solid core. Eighteen thousand plain fills are dramatically cheaper than nine
+ * thousand blurred ones, and at this dot size the result is indistinguishable.
+ */
+function paintDots(c, dots, from, to) {
+  const TAU = Math.PI * 2;
+  for (let i = from; i < to && i < dots.length; i += 1) {
+    const d = dots[i];
+    c.fillStyle = `rgba(${d.r0},${d.g},${d.b},${d.a * 0.30})`;
+    c.beginPath();
+    c.arc(d.x, d.y, d.r * 2.6, 0, TAU);
+    c.fill();
     c.fillStyle = `rgba(${d.r0},${d.g},${d.b},${d.a})`;
     c.beginPath();
-    c.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+    c.arc(d.x, d.y, d.r, 0, TAU);
     c.fill();
   }
-  c.shadowBlur = 0;
-  return tex;
 }
 
 export default function WorldBackdrop() {
@@ -225,8 +288,18 @@ export default function WorldBackdrop() {
       const offX =
         ((((cw - worldW) / 2 + pan + parX) % worldW) + worldW) % worldW - worldW;
 
+      /*
+       * Three copies side by side give the seamless horizontal wrap, but at any
+       * moment at most two of them overlap the window — often only one. Blitting
+       * all three means up to a full extra screen of scaled pixel work every
+       * frame, for something nobody can see. `onScreen` skips those.
+       */
+      const onScreen = (x) => x + worldW > 0 && x < cw;
+
       for (let i = -1; i <= 1; i += 1) {
-        ctx.drawImage(tex, offX + i * worldW, baseY, worldW, worldH);
+        const x = offX + i * worldW;
+        if (!onScreen(x)) continue;
+        ctx.drawImage(tex, x, baseY, worldW, worldH);
       }
 
       /* Veil.
@@ -269,32 +342,72 @@ export default function WorldBackdrop() {
         ctx.restore();
       }
 
-      // Routes out of Surat, with a pulse running along each. Same origin and
-      // destinations the map section below uses, so the two agree.
-      const put = (p) => ({ x: offX + worldW + p.x * scale, y: baseY + p.y * scale });
+      /*
+       * Routes out of Surat, with an aircraft flying along each. Same origin and
+       * destinations the map section uses, so the two agree.
+       *
+       * Drawn on ALL THREE copies of the world, exactly like the dot texture
+       * above. They used to be drawn once, on copy 1 only — so whenever the pan
+       * carried that copy off the side of the window, every route and every
+       * aircraft left with it and the backdrop became a plain dot field. Surat
+       * sits 70% across the texture, which is off the right-hand edge for most
+       * of the drift cycle, so "most of the time" was the normal case.
+       */
+      for (let copy = -1; copy <= 1; copy += 1) {
+      // Same culling as the blit above. Drawing routes on all three copies is
+      // what made them visible at all, but two of the three are usually off
+      // screen — and each carries twelve arcs, twelve aircraft and twelve
+      // destination markers.
+      if (!onScreen(offX + copy * worldW)) continue;
+      const put = (p) => ({ x: offX + copy * worldW + p.x * scale, y: baseY + p.y * scale });
       for (const node of nodes) {
         const a = put(node.from);
         const b = put(node.to);
         const mx = (a.x + b.x) / 2;
         const my = (a.y + b.y) / 2 - Math.abs(a.x - b.x) * 0.18 - 40;
-        ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.22)`;
-        ctx.lineWidth = 1;
+        // 0.22 and 1px read as nothing against the dot field; the routes are the
+        // one element here that carries meaning rather than texture.
+        ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.40)`;
+        ctx.lineWidth = 1.4;
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         ctx.quadraticCurveTo(mx, my, b.x, b.y);
         ctx.stroke();
 
-        if (!reduce) {
+        if (!reduce && PLANE) {
           const k = (t * 0.18 + node.phase) % 1;
           const m = 1 - k;
-          ctx.fillStyle = `rgba(${ar},${Math.min(255, ag + 60)},${Math.min(255, ab + 78)},0.95)`;
+          // Position on the quadratic, and its derivative at the same k. The
+          // derivative is the heading: without it the silhouette would slide
+          // along the route pointing east regardless of where it was going.
+          const px = m * m * a.x + 2 * m * k * mx + k * k * b.x;
+          const py = m * m * a.y + 2 * m * k * my + k * k * b.y;
+          const dx = 2 * m * (mx - a.x) + 2 * k * (b.x - mx);
+          const dy = 2 * m * (my - a.y) + 2 * k * (b.y - my);
+
+          ctx.save();
+          ctx.translate(px, py);
+
+          /*
+           * A soft halo under the aircraft. Without it the silhouette competes
+           * with the dot field at the same brightness and disappears into it;
+           * the halo darkens nothing but gives the eye a shape to lock onto,
+           * which is what separates "a plane" from "another bright dot".
+           */
+          const halo = ctx.createRadialGradient(0, 0, 0, 0, 0, 26);
+          halo.addColorStop(0, `rgba(${ar},${ag},${ab},0.34)`);
+          halo.addColorStop(1, `rgba(${ar},${ag},${ab},0)`);
+          ctx.fillStyle = halo;
           ctx.beginPath();
-          ctx.arc(
-            m * m * a.x + 2 * m * k * mx + k * k * b.x,
-            m * m * a.y + 2 * m * k * my + k * k * b.y,
-            2.2, 0, Math.PI * 2
-          );
+          ctx.arc(0, 0, 26, 0, Math.PI * 2);
           ctx.fill();
+
+          ctx.rotate(Math.atan2(dy, dx));
+          ctx.scale(PLANE_SCALE, PLANE_SCALE);
+          // Near-white at the core so it reads as lit, not tinted.
+          ctx.fillStyle = `rgba(255,${Math.min(255, ag + 95)},${Math.min(255, ab + 120)},1)`;
+          ctx.fill(PLANE);
+          ctx.restore();
         }
 
         const pulse = reduce ? 0.5 : Math.sin(t * 1.6 + b.x) * 0.5 + 0.5;
@@ -307,6 +420,7 @@ export default function WorldBackdrop() {
         ctx.beginPath();
         ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
         ctx.fill();
+      }
       }
     }
 
@@ -327,12 +441,45 @@ export default function WorldBackdrop() {
 
     fetch(`${import.meta.env.BASE_URL || '/'}map/world.json`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
-      .then((world) => {
+      .then(async (world) => {
         if (!alive) return;
         texH = TEX_H;
         texW = Math.round((world.w / world.h) * TEX_H);
+
+        /*
+         * Built across several frames instead of in one go.
+         *
+         * Rasterising the mask, scattering ~9,000 dots and baking the texture
+         * used to be three calls on one line, so the browser was locked for the
+         * whole of it — measured as the single worst blocking task on the page.
+         * The work is unchanged; it is just handed back between slices so no
+         * frame is ever held for long. The canvas simply stays empty for a few
+         * extra frames, which nobody can see because it is a background.
+         */
         const mask = buildMask(world, texW, texH);
-        tex = bakeTexture(buildDots(mask, texW, texH, accent), texW, texH, accent);
+        const dots = [];
+        for (let gy = 0; gy < texH; gy += BAND) {
+          await frame();
+          if (!alive) return;
+          scatterBand(mask, texW, texH, accent, dots, gy, gy + BAND);
+        }
+        await frame();
+        if (!alive) return;
+
+        /*
+         * Painted in slices as well. Baking all nine thousand dots in one call
+         * was the single longest frame on the page even after the blur came
+         * out; sliced, the texture simply fills in over a few frames while the
+         * rest of the page stays responsive.
+         */
+        const baked = bakeTexture(texW, texH, accent);
+        const bc = baked.getContext('2d');
+        for (let i = 0; i < dots.length; i += DOT_CHUNK) {
+          await frame();
+          if (!alive) return;
+          paintDots(bc, dots, i, i + DOT_CHUNK);
+        }
+        tex = baked;
 
         const meta = { w: texW, latMax: world.latMax };
         const from = projectPoint(ORIGIN.lon, ORIGIN.lat, meta);

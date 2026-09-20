@@ -37,6 +37,7 @@ import StudentLoginPage from './features/student/StudentLoginPage.jsx';
  * page all over again. Both shells and the root have a boundary now, so a failed
  * chunk shows the retry and keeps the navigation.
  */
+const IntegrationCardDemo = lazy(() => import('./components/ui/integration-card.tsx'));
 const CourseFinder = lazy(() => import('./features/courseFinder/CourseFinder.jsx'));
 const PartnerDashboard = lazy(() => import('./features/partner/PartnerDashboard.jsx'));
 const CourseInquiryForm = lazy(() => import('./features/courseInquiries/CourseInquiryForm.jsx'));
@@ -142,6 +143,12 @@ export default function App() {
       {/* Was a redirect to /login, which meant anyone arriving at the bare
           domain was asked to sign in before being told what the company does. */}
       <Route path="/" element={<LandingPage />} />
+
+      {/* Preview route for the shadcn/Tailwind integration card. Lazy, so none
+          of Tailwind, motion or Base UI lands in the main chunk — nothing on the
+          public site pays for it. Delete this route and the component to remove
+          the whole stack addition. */}
+      <Route path="/ui-demo" element={<IntegrationCardDemo />} />
 
       {/* ── Student portal ────────────────────────────── */}
       <Route path="/login"    element={<StudentLoginPage />} />

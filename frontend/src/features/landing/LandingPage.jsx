@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useReveal, useCountUp } from './useReveal.js';
 import BoardingAnimation from './BoardingAnimation.jsx';
 import WorldBackdrop from './WorldBackdrop.jsx';
+import { HeroAurora, SplitHeadline, HeroPhotoRing } from './HeroMotion.jsx';
 import EnquiryDialog from './EnquiryDialog.jsx';
 import Icon from './Icons.jsx';
 // RouteMapScene, StampScene, GlobeScene and BoardingPassScene are no longer
@@ -302,12 +303,11 @@ export default function LandingPage() {
 
   return (
     <div className="lp">
+      <BoardingAnimation />
       {/* Fixed behind every section, so the continents drift on while the page
           scrolls over them. First in the DOM and z-index 0; everything else on
           this page sits on a layer above it. */}
       <WorldBackdrop />
-      <BoardingAnimation />
-
       <EnquiryDialog
         open={enquiryOpen}
         onClose={() => setEnquiryOpen(false)}
@@ -382,7 +382,14 @@ export default function LandingPage() {
           spanned the whole document, so it intersected the scroll spy's band at
           every position and the highlighted link was whichever section happened
           to fire last. */}
-      <section className="lp-hero" id="top">
+      {/* onMouseMove writes --mx/--my straight onto this element, which is what
+          .lp-hero-glow tracks. It is a CSS-variable write, not state, so moving
+          the pointer across the hero never triggers a React render. */}
+      <section className="lp-hero" id="top" onMouseMove={spotlight}>
+        {/* Ambient light, behind .lp-hero-inner (z-index 1) and above the
+            static mesh gradient on .lp-hero::before (z-index 0). */}
+        <HeroAurora />
+        <span className="lp-hero-glow" aria-hidden="true" />
         <div className="lp-wrap lp-hero-inner">
           <div>
             <Reveal>
@@ -391,11 +398,16 @@ export default function LandingPage() {
                 Trusted Immigration Partner · Surat
               </div>
             </Reveal>
-            <Reveal delay={80}>
-              <h1 className="lp-h1">
-                Our simple approach to <span className="lp-h1-accent">immigration</span> process
-              </h1>
-            </Reveal>
+            {/* Not wrapped in <Reveal>: that fades the whole block as one, which
+                would run on top of the per-character stagger and flatten it. */}
+            <SplitHeadline
+              className="lp-h1"
+              segments={[
+                { text: 'Our simple approach to ' },
+                { text: 'immigration', accent: true },
+                { text: ' process' },
+              ]}
+            />
             <Reveal delay={160}>
               <p className="lp-lead">
                 At NV Immigration we make visa applications simple and stress-free. Our experts guide
@@ -463,6 +475,9 @@ export default function LandingPage() {
                   fetchPriority="high"
                 />
               </div>
+              {/* Sibling of the photo, not a child: .lp-hero-photo clips to its
+                  own circle, which would cut the ring in half. */}
+              <HeroPhotoRing />
 
               {/* Concrete outcomes beside an abstract graphic — what makes a
                   hero feel like a product rather than a poster. */}

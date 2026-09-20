@@ -13,3 +13,8 @@
 @import './styles/primitives.css';
 @import './styles/landing.css';
 @import './styles/worldmap.css';
+
+/* Tailwind LAST, so its utilities can override the hand-written rules above
+   rather than lose to them. It carries no preflight, so nothing here restyles
+   the existing screens — see the header of tailwind.css. */
+@import './styles/tailwind.css';

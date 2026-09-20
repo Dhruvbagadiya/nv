@@ -45,9 +45,9 @@ function filesUnder(dir, test, out = []) {
 /**
  * Every class selector defined anywhere in the stylesheets.
  *
- * All of src/, not just src/styles/: BoardingAnimation keeps its CSS beside the
- * component, and scanning only the shared directory reported its whole class
- * family as undefined.
+ * All of src/, not just src/styles/: feature folders are allowed to keep a
+ * stylesheet beside their component, and scanning only the shared directory
+ * reported every such class as undefined.
  */
 const defined = (() => {
   const set = new Set();

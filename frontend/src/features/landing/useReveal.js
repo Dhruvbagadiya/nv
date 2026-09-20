@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from 'react';
  * renders paints the hidden state — a flash of missing content for exactly the
  * person who asked for less movement.
  */
-const prefersReducedMotion = () =>
+export const prefersReducedMotion = () =>
   typeof window !== 'undefined' &&
   Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 

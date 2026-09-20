@@ -1,0 +1,84 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   Tailwind v4 + shadcn token bridge
+   ══════════════════════════════════════════════════════════════════════════
+
+   TWO DELIBERATE CHOICES HERE, BOTH LOAD-BEARING.
+
+   1. NO PREFLIGHT. `@import "tailwindcss"` pulls in three layers — theme,
+      preflight and utilities — and preflight is a global reset: it zeroes every
+      margin, strips list styling, unstyles every heading and button, and
+      rewrites box-sizing. This app already ships ~124 kB of hand-written CSS
+      that assumes the browser defaults it was written against. Importing
+      preflight would restyle all 175 existing screens to fix one new card. The
+      layers are therefore imported individually, and preflight is left out.
+
+   2. THE THEME IS A BRIDGE, NOT A SECOND PALETTE. shadcn components are written
+      against --primary, --muted, --border and friends. This app has its own
+      token set in tokens.css, AND useTheme writes a partner agency's own accent
+      onto :root at runtime for white-labelling. Left alone, that would give the
+      page two parallel colour systems, and a shadcn card would render in
+      shadcn's blue-grey while everything around it followed the agency's brand.
+      Every shadcn name below is therefore aliased to an existing token rather
+      than given a value of its own, so the new components inherit white-
+      labelling for free and there is still exactly one source of truth.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* Class detection. The automatic source scan comes with the all-in-one
+   `@import "tailwindcss"`; importing the layers separately means naming the
+   tree explicitly, relative to THIS file. */
+@source '../**/*.{js,jsx,ts,tsx}';
+
+/*
+ * `inline` matters: it resolves each var() at theme-build time so the generated
+ * utility carries `var(--accent-700)` itself. Without it Tailwind emits a copy
+ * of the value, and the runtime accent swap would stop reaching these classes.
+ */
+@theme inline {
+  --color-background: var(--surface);
+  --color-foreground: var(--ink-800);
+
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink-800);
+
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink-800);
+
+  /* The one that carries white-labelling. */
+  --color-primary: var(--accent-700);
+  --color-primary-foreground: var(--accent-contrast);
+
+  --color-secondary: var(--canvas);
+  --color-secondary-foreground: var(--ink-800);
+
+  --color-muted: var(--canvas);
+  --color-muted-foreground: var(--ink-500);
+
+  --color-accent: var(--accent-100);
+  --color-accent-foreground: var(--accent-800);
+
+  --color-destructive: var(--danger-700);
+  --color-destructive-foreground: var(--surface);
+
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--accent-700);
+
+  /*
+   * Radii are aliased the same way, and this one is not optional: Tailwind's own
+   * theme defines --radius-sm/md/lg/xl on :root, and so does tokens.css. Whoever
+   * is imported later wins, so without pinning these to the app's values every
+   * rounded corner in the existing 175 screens would silently change the moment
+   * this file was added to the cascade.
+   */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-lg);
+
+  --font-sans: var(--font-sans);
+}
