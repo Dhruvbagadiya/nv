@@ -61,7 +61,7 @@ export default function StudentApplications() {
             <h1>My Applications</h1>
             <p>Track the status of every program you&apos;ve applied to</p>
           </div>
-          <Link to="/programs" className="student-apply-btn" style={{ textDecoration: 'none' }}>
+          <Link to="/programs" className="student-apply-btn">
             Browse programs
           </Link>
         </div>
@@ -124,7 +124,7 @@ export default function StudentApplications() {
               <Link
                 to="/programs"
                 className="student-apply-btn"
-                style={{ textDecoration: 'none', display: 'inline-block', marginTop: 12 }}
+                style={{ marginTop: 12 }}
               >
                 Browse programs
               </Link>

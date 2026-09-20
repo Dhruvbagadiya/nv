@@ -1,6 +1,7 @@
 import { prisma } from '../../utils/prisma.js';
 import { NotFoundError } from '../../utils/httpErrors.js';
 import { paginateQuery } from '../../utils/pagination.js';
+import { assertNotDuplicate } from './duplicateGuard.js';
 
 const APPLICATION_INCLUDE = {
   course: { include: { institution: { include: { country: true } } } },
@@ -30,6 +31,10 @@ export async function createApplication({
     select: { id: true },
   });
   if (!course) throw new NotFoundError('That course is not available for new applications');
+
+  // One application per PERSON per course for this agency. Keyed on the passport
+  // rather than the account, because one agent files for many students.
+  await assertNotDuplicate({ agentId, courseId, passportNo, byAccount: false });
 
   return prisma.application.create({
     data: {

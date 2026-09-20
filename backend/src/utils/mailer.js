@@ -77,6 +77,21 @@ export function passwordResetEmail({ name, resetUrl, ttlMinutes }) {
   };
 }
 
+export function emailVerificationEmail({ name, verifyUrl, ttlHours }) {
+  return {
+    subject: 'Confirm your email — NV Immigration',
+    html: `
+      <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;color:#0B0E14;line-height:1.5">
+        <p>Hi ${escapeHtml(name)},</p>
+        <p>Welcome to NV Immigration. Confirm this address to finish setting up your account and start submitting applications:</p>
+        <p><a href="${verifyUrl}" style="display:inline-block;padding:10px 18px;background:#C96E0E;color:#fff;border-radius:6px;text-decoration:none;font-weight:600">Confirm email</a></p>
+        <p style="color:#5A6472;font-size:12.5px">Or paste this into your browser:<br>${escapeHtml(verifyUrl)}</p>
+        <p style="color:#5A6472;font-size:12.5px">This link expires in ${ttlHours} hours and can only be used once. You can browse programs without confirming — you will just need to confirm before you can submit an application. If you did not create this account, you can ignore this email.</p>
+      </div>
+    `,
+  };
+}
+
 // The name comes from user input and is interpolated into HTML.
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => (

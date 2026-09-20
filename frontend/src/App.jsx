@@ -70,6 +70,7 @@ const AdminAnnouncements = lazy(() => import('./features/admin/AdminAnnouncement
 const AdminSupportContacts = lazy(() => import('./features/admin/AdminSupportContacts.jsx'));
 const AdminUsers = lazy(() => import('./features/admin/AdminUsers.jsx'));
 const AdminApplications = lazy(() => import('./features/admin/AdminApplications.jsx'));
+const VerifyEmailPage = lazy(() => import('./features/student/VerifyEmailPage.jsx'));
 const StudentShell = lazy(() => import('./features/student/StudentShell.jsx'));
 const StudentProgramBrowser = lazy(() => import('./features/student/StudentProgramBrowser.jsx'));
 const StudentProgramDetail = lazy(() => import('./features/student/StudentProgramDetail.jsx'));
@@ -158,6 +159,10 @@ export default function App() {
       <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
       {/* Public student routes (no auth needed to browse) */}
+      {/* Public: the confirmation link is clicked from an inbox, often on a
+          different device from the one that registered. */}
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
+
       <Route path="/programs" element={
         <StudentShell><StudentProgramBrowser /></StudentShell>
       } />

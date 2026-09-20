@@ -36,6 +36,15 @@ model User {
   role         Role     @default(AGENT)
   // When false the account exists but login is refused.
   isActive     Boolean  @default(true)
+  // When the address on this account was proved reachable, or null if it never
+  // has been. A timestamp rather than a boolean because "when" answers support
+  // questions a flag cannot — whether someone verified before or after an
+  // application was filed, and how long an account sat unverified.
+  //
+  // Nullable and defaulting to null, so every account that already exists stays
+  // unverified rather than being silently marked as proven.
+  emailVerifiedAt DateTime?
+
   // Optional profile fields — all roles can fill these in.
   phone        String?
   bio          String?
@@ -58,6 +67,7 @@ model User {
   courseInquiries   CourseInquiry[]
   refreshTokens     RefreshToken[]
   passwordResets    PasswordResetToken[]
+  emailVerifications EmailVerificationToken[]
   notifications     Notification[]
   studentProfile    StudentProfile?
   agencyProfile     AgencyProfile?
@@ -74,6 +84,29 @@ model User {
 // is a bearer credential that arrives over email and lives in an inbox
 // indefinitely.
 model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// Email verification. Deliberately the same shape as PasswordResetToken above,
+// because it is the same kind of object: a single-use bearer credential that
+// travels by email and then sits in an inbox. Only the SHA-256 is stored, it can
+// only be spent once (usedAt), and it expires.
+//
+// The TTL is far longer than a reset's thirty minutes — a day — because the two
+// are used differently. Somebody resetting a password is at the keyboard waiting
+// for the mail; somebody who has just signed up may not open it until tomorrow,
+// and an expired link there costs a real applicant.
+model EmailVerificationToken {
   id        String    @id @default(uuid())
   userId    String
   tokenHash String    @unique
@@ -808,6 +841,17 @@ model Application {
   course        Course                @relation(fields: [courseId], references: [id])
   notifications Notification[]
   documents     ApplicationDocument[]
+
+  // One application per person per course, per account. The service layer checks
+  // this first and returns a readable 409; this constraint is what holds when
+  // two requests race — a double-clicked submit button passes both checks before
+  // either has written, and only the database can serialise that.
+  //
+  // (agentId, courseId, passportNo) and not (agentId, courseId): an agent files
+  // for many different students under one account, so the passport is what
+  // distinguishes the people. A student has one passport, so the triple collapses
+  // to the pair for them.
+  @@unique([agentId, courseId, passportNo])
 
   @@index([agentId, createdAt])
   @@index([courseId])

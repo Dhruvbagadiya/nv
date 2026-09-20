@@ -15,6 +15,7 @@ import {
   listUsersQuery,
   adminResetPasswordBody,
   setUserActiveBody,
+  verifyEmailBody,
 } from './auth.schemas.js';
 import {
   loginHandler,
@@ -35,6 +36,8 @@ import {
   adminResetPasswordHandler,
   forgotPasswordHandler,
   resetPasswordHandler,
+  verifyEmailHandler,
+  resendVerificationHandler,
 } from './auth.controller.js';
 
 const router = Router();
@@ -54,6 +57,12 @@ router.post('/register/student', validate(registerSchema), asyncHandler(register
 // these two are added to that list there for the same reason.
 router.post('/forgot-password', validate(forgotPasswordBody), asyncHandler(forgotPasswordHandler));
 router.post('/reset-password',  validate(resetPasswordBody),  asyncHandler(resetPasswordHandler));
+
+// Email confirmation. The link is public because it is clicked from an inbox by
+// someone not yet signed in; the resend is behind a session so this server can
+// only ever be made to mail the caller's own address.
+router.post('/verify-email', validate(verifyEmailBody), asyncHandler(verifyEmailHandler));
+router.post('/resend-verification', requireAuth, asyncHandler(resendVerificationHandler));
 
 // Authenticated by the httpOnly cookie rather than the (expired) access token,
 // which is the whole point — this is what the client calls when the access token

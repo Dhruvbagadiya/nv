@@ -1,7 +1,8 @@
 import crypto from 'node:crypto';
 import { prisma } from '../../utils/prisma.js';
-import { NotFoundError } from '../../utils/httpErrors.js';
+import { NotFoundError, ForbiddenError } from '../../utils/httpErrors.js';
 import { paginateQuery } from '../../utils/pagination.js';
+import { assertNotDuplicate } from '../applications/duplicateGuard.js';
 
 const PROFILE_SELECT = {
   id: true, userId: true, nationality: true,
@@ -61,11 +62,36 @@ export async function listStudentApplications({ studentId, stage, page, pageSize
 }
 
 export async function createStudentApplication({ studentId, courseId, intakeLabel, studentName, passportNo }) {
+  /*
+   * The gate. Browsing programs needs no proof of anything, but filing an
+   * application does: these go to real partner institutions under NV's name, and
+   * an agency's relationship with those institutions is the asset that a stream
+   * of applications from unreachable addresses damages.
+   *
+   * Checked HERE rather than only by disabling the button. The button is a
+   * courtesy; this route takes a JSON body and is the thing that actually has to
+   * refuse.
+   */
+  const student = await prisma.user.findUnique({
+    where: { id: studentId },
+    select: { emailVerifiedAt: true },
+  });
+  if (!student?.emailVerifiedAt) {
+    throw new ForbiddenError(
+      'Confirm your email address before submitting an application. '
+      + 'Check your inbox for the confirmation link, or request a new one from your profile.'
+    );
+  }
+
   const course = await prisma.course.findFirst({
     where: { id: courseId, archivedAt: null },
     select: { id: true },
   });
   if (!course) throw new NotFoundError('Course not available');
+
+  // One application per student per course. byAccount, because a student IS the
+  // account — see the note in duplicateGuard.js.
+  await assertNotDuplicate({ agentId: studentId, courseId, byAccount: true });
 
   return prisma.application.create({
     data: {

@@ -107,7 +107,13 @@ describe('student portal', () => {
   beforeEach(() => {
     useAuth.setState({
       status: 'authenticated',
-      user: { id: 'u1', name: 'Flow Student', email: 'f@x.com', role: 'STUDENT', parentAgentId: null },
+      // emailVerifiedAt set: the apply form refuses to submit without it, so an
+      // unverified fixture would make every flow test here a test of the gate.
+      // The gate has its own test below.
+      user: {
+        id: 'u1', name: 'Flow Student', email: 'f@x.com', role: 'STUDENT',
+        parentAgentId: null, emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+      },
     });
     coursesApi.fetchCourses.mockResolvedValue({
       data: [PROGRAM],
@@ -228,6 +234,32 @@ describe('student portal', () => {
     expect(payload.courseId).toBe('p1');
     expect(payload.studentName).toBe('Flow Student');
     expect(payload.passportNo).toBe('P7654321');
+  });
+
+  /*
+   * The gate that stops unverified accounts filing applications against real
+   * partner institutions. The server refuses these outright; this asserts the
+   * client explains why rather than letting someone fill the form in and hit a
+   * 403 at the end.
+   */
+  it('refuses to submit an application until the email is confirmed', async () => {
+    useAuth.setState({
+      status: 'authenticated',
+      user: {
+        id: 'u1', name: 'Flow Student', email: 'f@x.com', role: 'STUDENT',
+        parentAgentId: null, emailVerifiedAt: null,
+      },
+    });
+    studentsApi.createStudentApplication.mockClear();
+    renderAt(<StudentApplyForm />, '/apply/p1', '/apply/:courseId');
+    await waitFor(() => expect(screen.getByDisplayValue('Flow Student')).toBeTruthy());
+
+    const submit = screen.getByRole('button', { name: 'Submit application' });
+    expect(submit.disabled).toBe(true);
+    expect(screen.getByText(/Confirm your email address before submitting/i)).toBeTruthy();
+
+    fireEvent.click(submit);
+    expect(studentsApi.createStudentApplication).not.toHaveBeenCalled();
   });
 
   it('profile seeds its form from the fetched profile', async () => {

@@ -52,6 +52,14 @@ export default function StudentApplyForm() {
     label: new Date(i.startDate).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
   }));
 
+  /*
+   * Mirrors the server, which refuses this submission outright — see the guard
+   * in students.service.js. Disabling the button is the courtesy that explains
+   * why; the server is the thing that actually enforces it, because this route
+   * takes a JSON body and a disabled attribute stops nobody.
+   */
+  const verified = Boolean(user?.emailVerifiedAt);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     mutation.mutate();
@@ -111,7 +119,18 @@ export default function StudentApplyForm() {
 
           <div className="student-apply-actions">
             <Link to={`/programs/${courseId}`} className="student-apply-cancel">Cancel</Link>
-            <button type="submit" className="student-apply-btn" disabled={mutation.isPending}>
+            {!verified && (
+              <p className="student-auth-sub" style={{ marginBottom: 10 }}>
+                Confirm your email address before submitting. Use the banner at the
+                top of the page to send a new link.
+              </p>
+            )}
+            <button
+              type="submit"
+              className="student-apply-btn"
+              disabled={mutation.isPending || !verified}
+              title={verified ? undefined : 'Confirm your email address first'}
+            >
               {mutation.isPending ? 'Submitting…' : 'Submit application'}
             </button>
           </div>

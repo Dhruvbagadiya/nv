@@ -11,13 +11,17 @@ import {
   NotFoundError,
   UnauthorizedError,
 } from '../../utils/httpErrors.js';
-import { sendMail, passwordResetEmail } from '../../utils/mailer.js';
+import { sendMail, passwordResetEmail, emailVerificationEmail } from '../../utils/mailer.js';
 
 // parentAgentId is included because the frontend needs it to decide whether to
 // offer sub-agent management — only a top-level agent can have sub-agents.
 const PUBLIC_USER_FIELDS = {
   id: true, name: true, email: true, role: true,
   isActive: true, phone: true, bio: true, avatarUrl: true,
+  // The client needs this to show the "confirm your email" banner and to
+  // explain why the apply button is disabled. A timestamp, not a boolean, so
+  // the UI can say when rather than only whether.
+  emailVerifiedAt: true,
   parentAgentId: true, createdAt: true,
 };
 
@@ -163,6 +167,11 @@ export async function registerStudent({ name, email, password }) {
   const user = await createUserWithRole({ name, email, password, role: 'STUDENT' });
   // Create a blank StudentProfile immediately so profile endpoints always find one.
   await prisma.studentProfile.create({ data: { id: crypto.randomUUID(), userId: user.id } });
+  // Not awaited for its result beyond the send: a mail provider being slow or
+  // down must not fail the registration the person just completed. sendMail
+  // never throws, and an account that exists with no mail sent is recoverable
+  // through "resend"; a registration that 500s after the row was written is not.
+  await sendEmailVerification(user.id);
   return user;
 }
 
@@ -451,6 +460,89 @@ export async function revokeAllUserSessions(id) {
   });
 
   return { revokedCount: count };
+}
+
+// ── Email verification ───────────────────────────────────────────────────────
+
+/*
+ * A day, not the reset flow's thirty minutes. The two links are used at
+ * different moments: somebody resetting a password is at the keyboard waiting
+ * for the mail, while somebody who just signed up may not open it until
+ * tomorrow. An expired confirmation link costs a real applicant.
+ */
+const VERIFY_TTL_HOURS = 24;
+
+/**
+ * Issue a confirmation link and mail it.
+ *
+ * Safe to call repeatedly — each call invalidates any outstanding link first, so
+ * only the newest email works and a forwarded older one is dead. Returns quietly
+ * for an account that is already verified or deactivated rather than throwing,
+ * so callers (registration, the resend button) need no special cases.
+ */
+export async function sendEmailVerification(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, name: true, email: true, isActive: true, emailVerifiedAt: true },
+  });
+  if (!user || !user.isActive || user.emailVerifiedAt) return;
+
+  const token = crypto.randomBytes(32).toString('base64url');
+  const expiresAt = new Date(Date.now() + VERIFY_TTL_HOURS * 60 * 60 * 1000);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.emailVerificationToken.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    await tx.emailVerificationToken.create({
+      data: { userId: user.id, tokenHash: hashToken(token), expiresAt },
+    });
+  });
+
+  const verifyUrl = `${config.appUrl}/verify-email?token=${token}`;
+  const { subject, html } = emailVerificationEmail({
+    name: user.name,
+    verifyUrl,
+    ttlHours: VERIFY_TTL_HOURS,
+  });
+
+  await sendMail({ to: user.email, subject, html });
+}
+
+/**
+ * Spend a confirmation link.
+ *
+ * Deliberately NOT idempotent-by-silence: a second click on the same link
+ * reports success if the account is already verified, because from the person's
+ * point of view it is — telling them "invalid link" when their email is
+ * confirmed is a support ticket, not security. A token that never existed, has
+ * expired, or belongs to a deactivated account still fails.
+ */
+export async function verifyEmail(token) {
+  const row = await prisma.emailVerificationToken.findUnique({
+    where: { tokenHash: hashToken(token) },
+    include: { user: { select: { id: true, isActive: true, emailVerifiedAt: true } } },
+  });
+
+  if (!row || !row.user.isActive) throw new BadRequestError('This confirmation link is not valid.');
+  if (row.user.emailVerifiedAt) return { alreadyVerified: true };
+  if (row.usedAt || row.expiresAt < new Date()) {
+    throw new BadRequestError('This confirmation link has expired. Request a new one.');
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.emailVerificationToken.update({
+      where: { id: row.id },
+      data: { usedAt: new Date() },
+    });
+    await tx.user.update({
+      where: { id: row.user.id },
+      data: { emailVerifiedAt: new Date() },
+    });
+  });
+
+  return { alreadyVerified: false };
 }
 
 // ── Self-service password reset ──────────────────────────────────────────────

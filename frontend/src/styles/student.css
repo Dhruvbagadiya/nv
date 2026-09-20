@@ -89,7 +89,15 @@
 .student-detail-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; padding: 14px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: 16px; }
 .student-detail-stat-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-400); margin-bottom: 3px; }
 .student-detail-stat-val { font-size: 15px; font-weight: 700; color: var(--ink-950); }
-.student-apply-btn { background: var(--accent-700); color: var(--accent-contrast); border: none; border-radius: var(--radius-sm); padding: 0 20px; height: 40px; font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: var(--font-sans); transition: background .13s; }
+/* display + centring are load-bearing, not decoration. This class is used on
+   <button> AND on react-router <Link>s. A button centres its own label and
+   respects `height`; an <a> is display:inline, which IGNORES height entirely and
+   leaves the text at the top — which is exactly how the "Browse programs" button
+   on My Applications rendered as a tall block with cramped text. One of the two
+   links on that page had a `display:'inline-block'` patched into it inline and
+   the other did not; this fixes both properly and makes the inline patch
+   unnecessary. text-decoration likewise: a link underlines by default. */
+.student-apply-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; background: var(--accent-700); color: var(--accent-contrast); border: none; border-radius: var(--radius-sm); padding: 0 20px; height: 40px; font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: var(--font-sans); transition: background .13s; }
 .student-apply-btn:hover { background: var(--accent-800); }
 .student-apply-btn:disabled { opacity: .6; cursor: not-allowed; }
 .student-detail-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow-xs); }
@@ -266,3 +274,29 @@
   0%, 100% { opacity: 1; }
   50%       { opacity: .5; }
 }
+
+/* ── Email verification ───────────────────────────────────────────────── */
+
+.student-auth-title { font-size: 18px; font-weight: 800; color: var(--ink-950); margin: 0 0 6px; }
+.student-auth-sub { font-size: 13px; color: var(--ink-500); margin: 0; line-height: 1.5; }
+
+/*
+ * The unverified banner. Warning colours rather than danger: nothing is broken
+ * and nothing has been lost — there is one action outstanding. Red here would
+ * tell a new applicant their account has a problem on the first screen they see.
+ */
+.student-verify-banner {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: var(--warning-100); border: 1px solid var(--warning-700);
+  border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 16px;
+  font-size: 13px; color: var(--warning-700);
+}
+.student-verify-banner strong { font-weight: 700; }
+.student-verify-banner p { margin: 0; flex: 1 1 260px; }
+.student-verify-resend {
+  background: var(--warning-700); color: #fff; border: none;
+  border-radius: var(--radius-xs); padding: 0 12px; height: 30px;
+  font-size: 12.5px; font-weight: 700; cursor: pointer;
+  font-family: var(--font-sans); white-space: nowrap;
+}
+.student-verify-resend:disabled { opacity: .6; cursor: not-allowed; }

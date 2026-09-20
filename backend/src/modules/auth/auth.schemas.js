@@ -13,6 +13,10 @@ export const loginSchema = z.object({
 //
 // `.strict()` makes that a 400 rather than a silent drop, so a caller probing
 // for the old behaviour gets told no instead of quietly getting an AGENT.
+export const verifyEmailBody = z
+  .object({ token: z.string().min(10).max(200) })
+  .strict();
+
 export const registerSchema = z
   .object({
     name: z.string().min(1).max(120).trim(),

@@ -59,6 +59,26 @@ export async function meHandler(req, res) {
   res.json({ user, agencyProfile });
 }
 
+// Public: the link arrives by email and is clicked by someone who is, by
+// definition, not yet signed in.
+export async function verifyEmailHandler(req, res) {
+  const result = await authService.verifyEmail(req.body.token);
+  res.json({ verified: true, ...result });
+}
+
+/*
+ * Requires a session on purpose. An unauthenticated "resend to this address"
+ * endpoint is both an account-enumeration oracle and a way to have this server
+ * mail anyone repeatedly; taking the address from the token instead means a
+ * caller can only ever trigger mail to themselves.
+ */
+export async function resendVerificationHandler(req, res) {
+  await authService.sendEmailVerification(req.user.sub);
+  // Same answer whether or not anything was sent — the account may already be
+  // verified, and that is not worth a different response.
+  res.json({ sent: true });
+}
+
 // Public. Always creates an AGENT; the schema rejects a `role` in the body.
 export async function registerHandler(req, res) {
   res.status(201).json(await authService.register(req.body));

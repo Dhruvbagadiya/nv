@@ -120,14 +120,15 @@ export default function StudentProgramDetail() {
           </div>
         )}
 
-        {/* Apply CTA */}
-        <div className="student-detail-cta">
-          <h2>Ready to apply?</h2>
-          <p>Submit your application in minutes. Track every step from your dashboard.</p>
-          <button className="student-apply-btn" onClick={handleApply}>
-            Start application
-          </button>
-        </div>
+        {/*
+          The second CTA that used to sit here — a navy "Ready to apply?" panel
+          with a "Start application" button — called the IDENTICAL handleApply as
+          the "Apply now" button above, and both were on screen at once. Two
+          buttons for one action is a choice the reader has to resolve before
+          acting, and the panel's --brand-800 navy had no relationship to the
+          orange it sat beside. The primary action stays where the fees and
+          duration it depends on are.
+        */}
       </div>
     </div>
   );

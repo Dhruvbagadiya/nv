@@ -1,6 +1,7 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/useAuth.js';
 import ErrorBoundary from '../../components/ui/ErrorBoundary.jsx';
+import VerifyEmailBanner from './VerifyEmailBanner.jsx';
 
 export default function StudentShell({ children }) {
   const user     = useAuth((s) => s.user);
@@ -55,6 +56,10 @@ export default function StudentShell({ children }) {
       <main className="student-main">
         {/* Same reasoning as PartnerShell: a throw in a programme list must
             not take the student portal's header and sign-in control with it. */}
+        {/* Renders nothing for a verified student, so it can sit here
+            unconditionally. Outside the ErrorBoundary deliberately: a crash in
+            a page must not take the "confirm your email" notice with it. */}
+        <VerifyEmailBanner />
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>
 

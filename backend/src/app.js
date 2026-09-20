@@ -105,6 +105,12 @@ app.use('/api/auth/register', authLimiter);
 // a token oracle to brute-force.
 app.use('/api/auth/forgot-password', authLimiter);
 app.use('/api/auth/reset-password', authLimiter);
+// Both verification routes share the credential limiter. verify-email takes a
+// bearer token and would otherwise be brute-forceable; resend-verification
+// sends mail, and without a limit a logged-in account is a free mail cannon
+// pointed at its own inbox.
+app.use('/api/auth/verify-email', authLimiter);
+app.use('/api/auth/resend-verification', authLimiter);
 app.use('/api/auth', authRoutes);
 // The endpoint whose absence left every country dropdown in the app empty.
 app.use('/api/countries', countryRoutes);
