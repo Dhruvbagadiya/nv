@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { ApplicationStage } from '@prisma/client';
+import { passportNumber } from '../applications/applications.schemas.js';
+import { phoneNumber } from '../auth/auth.schemas.js';
 
 export const updateProfileBody = z.object({
   // Nullable like its four siblings and like the column itself. It was the one
@@ -8,7 +10,19 @@ export const updateProfileBody = z.object({
   nationality:  z.string().trim().max(80).optional().nullable(),
   dateOfBirth:  z.coerce.date().optional().nullable(),
   passportNo:   z.string().trim().max(40).optional().nullable(),
-  phone:        z.string().trim().max(30).optional().nullable(),
+  /*
+   * Required, and NOT nullable — unlike its siblings.
+   *
+   * Registration now demands a mobile number, so allowing this form to clear it
+   * afterwards would make that requirement decorative: sign up with a number,
+   * blank it on the next screen, and the applicant is unreachable again.
+   *
+   * The cost is that a student who predates the requirement has to supply one
+   * before their next profile save succeeds. That is the intended nudge, and
+   * the message names the field, so it reads as "add your number" rather than
+   * as a broken form.
+   */
+  phone:        phoneNumber,
   address:      z.string().trim().max(300).optional().nullable(),
 }).strict();
 
@@ -16,7 +30,10 @@ export const createApplicationBody = z.object({
   courseId:    z.string().uuid(),
   intakeLabel: z.string().trim().max(80).optional(),
   studentName: z.string().trim().min(1).max(200),
-  passportNo:  z.string().trim().min(4).max(40),
+  // The shared rule, not a second copy of it. This schema kept its own
+  // `min(4)` when the agent-side one was tightened, so the student apply form
+  // was still accepting "aaaa" after that was supposedly fixed.
+  passportNo:  passportNumber,
 }).strict();
 
 export const listApplicationsQuery = z.object({

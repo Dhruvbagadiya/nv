@@ -38,16 +38,32 @@ describe('auth schemas', () => {
     const result = registerSchema.safeParse({
       name: 'Real Person',
       email: 'Real.Person@Example.COM',
+      phone: '+91 99259 13764',
       password: 'longenoughpassword',
     });
     expect(result.success).toBe(true);
     // Normalised, so two accounts cannot differ only by case.
     expect(result.data.email).toBe('real.person@example.com');
+    // The number is kept as typed. It is read back to a human — by a counsellor
+    // dialling it — and their own spacing is the version they recognise.
+    expect(result.data.phone).toBe('+91 99259 13764');
   });
 
   it('registerSchema enforces a minimum password length', () => {
-    const result = registerSchema.safeParse({ name: 'A', email: 'a@b.com', password: 'short' });
+    const result = registerSchema.safeParse({
+      name: 'A', email: 'a@b.com', phone: '9925913764', password: 'short',
+    });
     expect(result.success).toBe(false);
+  });
+
+  // A mobile number is now compulsory: an applicant nobody can call is one an
+  // agent cannot chase when a CAS deadline is days away.
+  it('registerSchema requires a mobile number', () => {
+    const result = registerSchema.safeParse({
+      name: 'A', email: 'a@b.com', password: 'longenoughpassword',
+    });
+    expect(result.success).toBe(false);
+    expect(JSON.stringify(result.error.issues)).toMatch(/phone/);
   });
 
   // The privileged path DOES take a role, and only accepts known ones.

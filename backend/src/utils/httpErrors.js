@@ -17,8 +17,13 @@ export class BadRequestError extends HttpError {
 }
 
 export class UnauthorizedError extends HttpError {
-  constructor(message = 'Authentication required') {
-    super(401, message);
+  // Takes `details` like every other error here. It did not, which meant a 401
+  // could carry no machine-readable reason — so a sign-in refused for an
+  // unconfirmed email was indistinguishable from a wrong password, and the
+  // client could only show "invalid email or password" to someone whose
+  // password was correct.
+  constructor(message = 'Authentication required', details) {
+    super(401, message, details);
   }
 }
 

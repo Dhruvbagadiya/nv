@@ -1,6 +1,4 @@
 import axios from 'axios';
-// The shared client, for the one call here that needs a session.
-import { api } from './client.js';
 
 // login/refresh/logout use a plain client rather than `api`, because `api`'s
 // response interceptor treats a 401 as "refresh and retry" — which is wrong for
@@ -48,15 +46,18 @@ export async function resetPassword(token, newPassword) {
  * 400 here is a real answer — "this link is spent" — not a stale access token
  * worth refreshing and retrying.
  *
- * resendVerification uses the ordinary `api` client, because it is only callable
- * with a session and a 401 there genuinely should trigger the refresh-and-retry.
+ * resendVerification is called from two places and must work in both. From the
+ * in-app banner there is a session and the server takes the address from the
+ * token; from the sign-in screen, after a login refused for an unconfirmed
+ * email, there is no session and the address comes from the body. It therefore
+ * uses authClient too — `api` would try to refresh a token that does not exist.
  */
 export async function verifyEmail(token) {
   const { data } = await authClient.post('/auth/verify-email', { token });
   return data;
 }
 
-export async function resendVerification() {
-  const { data } = await api.post('/auth/resend-verification');
+export async function resendVerification(email) {
+  const { data } = await authClient.post('/auth/resend-verification', { email });
   return data;
 }

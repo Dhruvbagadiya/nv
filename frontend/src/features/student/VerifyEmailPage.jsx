@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { verifyEmail } from '../../api/auth.js';
+import { verifyEmail, resendVerification } from '../../api/auth.js';
 import { useAuth } from '../../store/useAuth.js';
 
 /*
@@ -21,6 +21,15 @@ export default function VerifyEmailPage() {
 
   const [state, setState] = useState(token ? 'working' : 'missing');
   const [message, setMessage] = useState('');
+
+  // The way out of a dead link. Kept on this page rather than pointing at the
+  // sign-in screen: under the hard gate an unconfirmed account cannot sign in,
+  // so "sign in and use the banner" — which this page used to say — is advice
+  // that cannot be followed. Whoever is reading an expired link needs a new one
+  // sent from here, and the resend endpoint takes an address precisely so it
+  // can be called without a session.
+  const [resendEmail, setResendEmail] = useState('');
+  const [resendState, setResendState] = useState('idle'); // idle | sending | sent
 
   /*
    * React 18 mounts effects twice in development StrictMode. The token is
@@ -82,15 +91,53 @@ export default function VerifyEmailPage() {
                 ? 'This page needs a confirmation link from your email.'
                 : message}
             </p>
-            {/* Deliberately points at sign-in rather than offering a resend
-                button: resending needs a session, and whoever is looking at a
-                dead link may not have one. */}
-            <p className="student-auth-sub" style={{ marginTop: 10 }}>
-              Sign in and use the banner at the top of the page to send a new one.
+
+            {resendState === 'sent' ? (
+              <div className="student-auth-notice" style={{ marginTop: 16 }}>
+                <strong>Check your inbox.</strong> If {resendEmail} has an account
+                awaiting confirmation, a new link is on its way. It expires in 24 hours.
+              </div>
+            ) : (
+              <form
+                style={{ marginTop: 18, textAlign: 'left' }}
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setResendState('sending');
+                  // Deliberately no error branch. The endpoint answers
+                  // identically for a registered address, an unknown one and an
+                  // already-verified one so it cannot be used to discover who
+                  // has an account — so there is nothing truthful to report
+                  // except that it was sent.
+                  try { await resendVerification(resendEmail); } catch { /* see above */ }
+                  setResendState('sent');
+                }}
+              >
+                <div className="student-auth-field">
+                  <label htmlFor="v-email">Send a new link</label>
+                  <input
+                    id="v-email"
+                    type="email"
+                    value={resendEmail}
+                    onChange={(e) => setResendEmail(e.target.value)}
+                    placeholder="you@email.com"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="student-apply-btn"
+                  style={{ marginTop: 10, width: '100%' }}
+                  disabled={resendState === 'sending'}
+                >
+                  {resendState === 'sending' ? 'Sending…' : 'Email me a new link'}
+                </button>
+              </form>
+            )}
+
+            <p className="student-auth-sub" style={{ marginTop: 14 }}>
+              Already confirmed? <Link to="/login">Sign in</Link>.
             </p>
-            <Link to="/login" className="student-apply-btn" style={{ marginTop: 16 }}>
-              Sign in
-            </Link>
           </>
         )}
       </div>

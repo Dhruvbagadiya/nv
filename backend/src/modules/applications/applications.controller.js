@@ -3,6 +3,13 @@ import { agentScopeFor } from '../../utils/scope.js';
 import { prisma } from '../../utils/prisma.js';
 import { putObject } from '../../utils/storage.js';
 import { BadRequestError } from '../../utils/httpErrors.js';
+import { config } from '../../config.js';
+import {
+  sendMail,
+  applicationStageEmail,
+  applicationReceivedEmail,
+  newApplicationAlertEmail,
+} from '../../utils/mailer.js';
 
 const scopeFor = agentScopeFor;
 
@@ -17,6 +24,71 @@ async function notifyAgent(agentId, applicationId, kind, title, body) {
   } catch (err) {
     // Log but don't rethrow — notifications are best-effort.
     console.error('[notify] failed to create notification:', err?.message ?? err);
+  }
+}
+
+/*
+ * Email, beside the in-app notification and under the same rule: best-effort,
+ * never blocks the action that triggered it. sendMail already swallows its own
+ * failures; this adds the lookup and the try/catch around building the message.
+ *
+ * WHY THE EXTRA QUERY. APPLICATION_INCLUDE selects the agent as { id, name } —
+ * no address. Widening it would put an email on every application in every list
+ * response for every caller, to serve one write path. One lookup here is cheaper
+ * and leaks nothing.
+ *
+ * WHO GETS IT. `agentId` owns the application: for a self-submitted one that IS
+ * the student, for an agency-filed one it is the agent. An agency-filed
+ * application has a studentName and a passportNo but no student account and
+ * therefore no address, so the agent is the only person who can be told.
+ */
+async function ownerOf(agentId) {
+  try {
+    return await prisma.user.findUnique({
+      where: { id: agentId },
+      select: { id: true, name: true, email: true, role: true },
+    });
+  } catch (err) {
+    console.error('[notify] owner lookup failed:', err?.message ?? err);
+    return null;
+  }
+}
+
+const appUrlFor = (app) => `${config.appUrl}/my-applications/${app.id}`;
+
+async function emailOwner(app, build) {
+  try {
+    const owner = await ownerOf(app.agentId);
+    if (!owner?.email) return;
+    const { subject, html } = build(owner);
+    await sendMail({ to: owner.email, subject, html });
+  } catch (err) {
+    console.error('[notify] email failed:', err?.message ?? err);
+  }
+}
+
+/*
+ * Email C — the internal alert.
+ *
+ * Falls back to MAIL_FROM when MAIL_TEAM_TO is unset, because that is a
+ * monitored inbox (contact@): degrading to the wrong-but-watched address beats
+ * degrading to silence, which is how a self-submitted application sits unseen.
+ */
+export async function notifyTeamOfNewApplication(app) {
+  const to = config.mail.teamTo || config.mail.from;
+  if (!to) return;
+  try {
+    const owner = await ownerOf(app.agentId);
+    const { subject, html } = newApplicationAlertEmail({
+      reference: app.reference,
+      studentName: app.studentName,
+      program: app.course?.title,
+      institution: app.course?.institution?.name,
+      email: owner?.email,
+    });
+    await sendMail({ to, subject, html });
+  } catch (err) {
+    console.error('[notify] team alert failed:', err?.message ?? err);
   }
 }
 
@@ -35,6 +107,8 @@ export async function createApplicationHandler(req, res) {
     `POEC #${application.reference} – ${application.course.institution.name}`,
     `New application started for ${application.studentName}. Stage: Profile Assessment.`
   );
+
+  await notifyTeamOfNewApplication(application);
 
   res.status(201).json(application);
 }
@@ -75,6 +149,21 @@ export async function updateStageHandler(req, res) {
     req.body.stageNote
       ? `${stageLabel}: ${req.body.stageNote}`
       : `${application.studentName}'s application has moved to ${stageLabel}.`
+  );
+
+  // Email A. For a student this is the ONLY way they find out: the portal has no
+  // notification UI and nothing polls, so the row notifyAgent just wrote is
+  // invisible to them.
+  await emailOwner(application, (owner) =>
+    applicationStageEmail({
+      name: owner.name,
+      reference: application.reference,
+      program: application.course.title,
+      institution: application.course.institution.name,
+      stage: stageLabel,
+      note: req.body.stageNote,
+      url: owner.role === 'STUDENT' ? appUrlFor(application) : undefined,
+    })
   );
 
   res.json(application);

@@ -130,6 +130,10 @@
 .student-auth-field label { display: block; font-size: 11.5px; font-weight: 700; color: var(--ink-700); margin-bottom: 4px; }
 .student-auth-field input { width: 100%; height: 38px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0 10px; font-size: 13px; font-family: var(--font-sans); background: var(--canvas); transition: border-color .13s, box-shadow .13s; }
 .student-auth-field input:focus { outline: none; border-color: var(--accent-500); box-shadow: 0 0 0 3px var(--accent-100); }
+/* Helper text under a field. Sits below the input rather than in the
+   placeholder, which disappears the moment someone starts typing — exactly
+   when the reason for the field is worth having on screen. */
+.student-auth-hint { margin: 5px 0 0; font-size: 11px; line-height: 1.4; color: var(--ink-500); }
 .student-auth-btn { width: 100%; height: 40px; background: var(--accent-700); color: var(--accent-contrast); border: none; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: var(--font-sans); transition: background .13s; margin-top: 4px; }
 .student-auth-btn:hover { background: var(--accent-800); }
 .student-auth-btn:disabled { opacity: .6; cursor: not-allowed; }
@@ -300,3 +304,22 @@
   font-family: var(--font-sans); white-space: nowrap;
 }
 .student-verify-resend:disabled { opacity: .6; cursor: not-allowed; }
+
+/*
+ * Informational, not an error. Used where something has gone RIGHT but needs a
+ * next step — "check your inbox" after registering — and where a sign-in was
+ * refused for a reason the person can fix, which red would misrepresent as a
+ * failure on their part.
+ */
+.student-auth-notice {
+  background: var(--accent-50);
+  border: 1px solid var(--accent-100);
+  border-left: 3px solid var(--accent-700);
+  border-radius: var(--radius-xs);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  color: var(--ink-700);
+  line-height: 1.5;
+}
+.student-auth-notice strong { color: var(--ink-950); }

@@ -23,7 +23,9 @@ export default function VerifyEmailBanner() {
   const handleResend = async () => {
     setState('sending');
     try {
-      await resendVerification();
+      // Pass the address explicitly: the endpoint now accepts it in the body
+      // so the signed-out sign-in screen can use the same call.
+      await resendVerification(user.email);
       setState('sent');
     } catch {
       setState('failed');

@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useLocation, Navigate, Link } from 'react-router-dom';
 import { login } from '../../api/auth.js';
 import { registerStudent } from '../../api/students.js';
+import { resendVerification } from '../../api/auth.js';
 import { useAuth } from '../../store/useAuth.js';
 import { homePathFor } from '../../routes/homePath.js';
 
@@ -16,9 +17,12 @@ export default function StudentLoginPage() {
   const [mode, setMode]         = useState('login'); // 'login' | 'register'
   const [name, setName]         = useState('');
   const [email, setEmail]       = useState('');
+  const [phone, setPhone]       = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
   const [localErr, setLocalErr] = useState(null);
+  const [justRegistered, setJustRegistered] = useState(false);
+  const [resendState, setResendState] = useState('idle'); // idle | sending | sent
 
   const loginMutation = useMutation({
     mutationFn: () => login(email, password),
@@ -35,10 +39,18 @@ export default function StudentLoginPage() {
   });
 
   const registerMutation = useMutation({
-    mutationFn: () => registerStudent({ name, email, password }),
+    mutationFn: () => registerStudent({ name, email, phone, password }),
     onSuccess: () => {
-      // After registration, log them in automatically
-      loginMutation.mutate();
+      /*
+       * Deliberately NOT signing them in. This used to call loginMutation, which
+       * under the verification gate now fails with EMAIL_UNVERIFIED — so a
+       * successful registration would end on a red error, which reads as "your
+       * sign-up did not work" when in fact it did.
+       *
+       * Show the inbox instruction instead. It is also the one moment they are
+       * definitely paying attention to which address they typed.
+       */
+      setJustRegistered(true);
     },
   });
 
@@ -57,6 +69,17 @@ export default function StudentLoginPage() {
     e.preventDefault();
     setLocalErr(null);
     if (mode === 'register') {
+      /*
+       * Mirrors the server rule in auth.schemas.js rather than replacing it.
+       * The server is the one that decides; this exists so a mistyped number
+       * comes back as a message under the form instead of a round trip that
+       * returns a red 400 after the button has already said "Creating…".
+       */
+      const digits = phone.replace(/[\s()./-]/g, '').replace(/^\+/, '');
+      if (!/^\d{7,15}$/.test(digits) || new Set(digits).size === 1) {
+        setLocalErr('Enter a valid mobile number, including the country code.');
+        return;
+      }
       if (password !== confirm) { setLocalErr('Passwords do not match.'); return; }
       if (password.length < 10)  { setLocalErr('Password must be at least 10 characters.'); return; }
       registerMutation.mutate();
@@ -66,6 +89,24 @@ export default function StudentLoginPage() {
   };
 
   const isPending = loginMutation.isPending || registerMutation.isPending;
+  /*
+   * The server distinguishes "unconfirmed" from "wrong password" with a code, so
+   * this can offer the way forward instead of showing someone with a perfectly
+   * correct password a message telling them it is wrong.
+   */
+  const unverified =
+    loginMutation.error?.response?.data?.details?.code === 'EMAIL_UNVERIFIED';
+
+  const handleResend = async () => {
+    setResendState('sending');
+    try {
+      await resendVerification(email);
+      setResendState('sent');
+    } catch {
+      setResendState('idle');
+    }
+  };
+
   const errorMsg  = localErr
     || (loginMutation.isError    ? loginMutation.error?.response?.data?.error    ?? 'Sign in failed.'    : null)
     || (registerMutation.isError ? registerMutation.error?.response?.data?.error ?? 'Registration failed.' : null);
@@ -117,6 +158,20 @@ export default function StudentLoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@email.com" autoComplete="username" required />
           </div>
+          {mode === 'register' && (
+            <div className="student-auth-field">
+              <label htmlFor="s-phone">Mobile number</label>
+              {/* type="tel" so a phone keyboard opens the number pad, and
+                  autoComplete="tel" so the browser can fill it. */}
+              <input id="s-phone" type="tel" value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+91 99999 99999"
+                inputMode="tel" autoComplete="tel" required />
+              <p className="student-auth-hint">
+                Your counsellor calls this number about offers and visa deadlines.
+              </p>
+            </div>
+          )}
           <div className="student-auth-field">
             <label htmlFor="s-password">Password</label>
             <input id="s-password" type="password" value={password}
@@ -135,7 +190,42 @@ export default function StudentLoginPage() {
             </div>
           )}
 
-          {errorMsg && <div className="student-auth-error">{errorMsg}</div>}
+          {/* A successful registration ends here, not signed in — the account
+              exists but cannot be used until the address is confirmed. */}
+          {justRegistered && (
+            <div className="student-auth-notice">
+              <strong>Check your inbox.</strong> We sent a confirmation link to{' '}
+              {email}. Confirm it, then sign in.
+            </div>
+          )}
+
+          {errorMsg && !unverified && (
+            <div className="student-auth-error">{errorMsg}</div>
+          )}
+
+          {/* The way out of the gate. Without this, somebody whose confirmation
+              email never arrived has no route back in at all: the resend needs
+              no session precisely so it can be reached from here. */}
+          {unverified && (
+            <div className="student-auth-notice">
+              <strong>Confirm your email first.</strong> {errorMsg}
+              {resendState === 'sent' ? (
+                <p style={{ margin: '8px 0 0' }}>
+                  A new link is on its way to {email}.
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  className="student-verify-resend"
+                  style={{ marginTop: 8 }}
+                  onClick={handleResend}
+                  disabled={resendState === 'sending'}
+                >
+                  {resendState === 'sending' ? 'Sending…' : 'Send a new link'}
+                </button>
+              )}
+            </div>
+          )}
 
           <button type="submit" className="student-auth-btn" disabled={isPending}>
             {isPending

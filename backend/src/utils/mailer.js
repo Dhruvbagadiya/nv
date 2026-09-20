@@ -92,6 +92,117 @@ export function emailVerificationEmail({ name, verifyUrl, ttlHours }) {
   };
 }
 
+/*
+ * One shell for every transactional message, so they cannot drift apart in
+ * styling the way three hand-written <div>s would. `body` is trusted HTML the
+ * caller has already escaped; `cta` is optional.
+ */
+function shell({ name, intro, body = '', cta, footer }) {
+  return `
+      <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;color:#0B0E14;line-height:1.5">
+        <p>Hi ${escapeHtml(name)},</p>
+        <p>${intro}</p>
+        ${body}
+        ${cta ? `<p><a href="${cta.url}" style="display:inline-block;padding:10px 18px;background:#C96E0E;color:#fff;border-radius:6px;text-decoration:none;font-weight:600">${escapeHtml(cta.label)}</a></p>` : ''}
+        ${footer ? `<p style="color:#5A6472;font-size:12.5px">${footer}</p>` : ''}
+      </div>
+    `;
+}
+
+// A labelled fact table — reference number, program, stage. Plain rows rather
+// than a <table> with borders, because Outlook renders bordered tables badly.
+function facts(rows) {
+  return rows
+    .filter(([, v]) => v)
+    .map(([k, v]) =>
+      `<p style="margin:2px 0"><span style="color:#5A6472">${escapeHtml(k)}:</span> <strong>${escapeHtml(String(v))}</strong></p>`)
+    .join('');
+}
+
+/**
+ * A — the stage moved. The most important message this system sends.
+ *
+ * Students have no notification UI: their portal is Programs / My Applications /
+ * Profile, with no bell and nothing polling. Every STAGE_CHANGE notification is
+ * written to a table they cannot read. Until there is a bell, this email IS how
+ * a student learns their application progressed.
+ */
+export function applicationStageEmail({ name, reference, program, institution, stage, note, url }) {
+  return {
+    subject: `Your application #${reference} is now ${stage}`,
+    html: shell({
+      name,
+      intro: `There is an update on your application.`,
+      body: facts([
+        ['Reference', `#${reference}`],
+        ['Program', program],
+        ['Institution', institution],
+        ['New stage', stage],
+        ['Note', note],
+      ]),
+      cta: url ? { url, label: 'View application' } : undefined,
+      footer: 'You are receiving this because you applied through NV Immigration.',
+    }),
+  };
+}
+
+/** B — submission receipt, so the applicant has the reference to quote. */
+export function applicationReceivedEmail({ name, reference, program, institution, url }) {
+  return {
+    subject: `Application received — #${reference}`,
+    html: shell({
+      name,
+      intro: 'We have received your application and our team will begin reviewing it.',
+      body: facts([
+        ['Reference', `#${reference}`],
+        ['Program', program],
+        ['Institution', institution],
+      ]),
+      cta: url ? { url, label: 'Track your application' } : undefined,
+      footer: 'Quote your reference number if you contact us about this application.',
+    }),
+  };
+}
+
+/** C — internal alert, so a self-submitted application is not left unseen. */
+export function newApplicationAlertEmail({ reference, studentName, program, institution, email }) {
+  return {
+    subject: `New application #${reference} — ${studentName}`,
+    html: shell({
+      name: 'team',
+      intro: 'A student submitted an application through the portal.',
+      body: facts([
+        ['Reference', `#${reference}`],
+        ['Student', studentName],
+        ['Email', email],
+        ['Program', program],
+        ['Institution', institution],
+      ]),
+      footer: 'Sent automatically by the NV Immigration portal.',
+    }),
+  };
+}
+
+/**
+ * D — an account was created for someone. They choose their own password.
+ *
+ * The link is an ordinary password-reset token, which is why this says "set"
+ * rather than "reset": it is the same mechanism, used before a password the
+ * person knows has ever existed. It replaces an administrator picking a password
+ * and reading it down the phone.
+ */
+export function accountCreatedEmail({ name, setPasswordUrl, ttlHours, role }) {
+  return {
+    subject: 'Your NV Immigration account',
+    html: shell({
+      name,
+      intro: `An account has been created for you on the NV Immigration portal${role ? ` as ${escapeHtml(role.toLowerCase())}` : ''}. Choose a password to finish setting it up.`,
+      cta: { url: setPasswordUrl, label: 'Set your password' },
+      footer: `This link expires in ${ttlHours} hours and can only be used once. If it expires, use "Forgot password" on the sign-in page.`,
+    }),
+  };
+}
+
 // The name comes from user input and is interpolated into HTML.
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => (

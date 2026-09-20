@@ -82,6 +82,9 @@ const schema = z.object({
   MAIL_PROVIDER: z.enum(['resend', 'sendgrid']).optional(),
   MAIL_API_KEY: z.string().optional(),
   MAIL_FROM: z.string().optional(),
+  // Where the internal new-application alert goes. Falls back to MAIL_FROM,
+  // which is a monitored inbox, rather than going nowhere.
+  MAIL_TEAM_TO: z.string().optional(),
 
   // ---- Rate limiting ----
   // Unset means the in-memory store, which is correct for a single instance.
@@ -159,6 +162,7 @@ export const config = {
     provider: env.MAIL_PROVIDER,
     apiKey: env.MAIL_API_KEY,
     from: env.MAIL_FROM,
+    teamTo: env.MAIL_TEAM_TO,
   },
 
   appUrl: env.APP_URL ?? env.CORS_ORIGIN.split(',')[0].trim(),

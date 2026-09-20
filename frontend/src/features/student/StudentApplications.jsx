@@ -61,9 +61,11 @@ export default function StudentApplications() {
             <h1>My Applications</h1>
             <p>Track the status of every program you&apos;ve applied to</p>
           </div>
-          <Link to="/programs" className="student-apply-btn">
-            Browse programs
-          </Link>
+          {/* The "Browse programs" button that used to sit here was the second
+              one on this screen — the empty state below renders the same link,
+              and both were visible at once. Two buttons for one action is a
+              choice the reader has to resolve before acting. The empty-state one
+              is kept because it appears exactly when it is the thing to do. */}
         </div>
 
         {/* Stage filter chips */}

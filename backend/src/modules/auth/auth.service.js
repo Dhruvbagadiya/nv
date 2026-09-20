@@ -11,7 +11,12 @@ import {
   NotFoundError,
   UnauthorizedError,
 } from '../../utils/httpErrors.js';
-import { sendMail, passwordResetEmail, emailVerificationEmail } from '../../utils/mailer.js';
+import {
+  sendMail,
+  passwordResetEmail,
+  emailVerificationEmail,
+  accountCreatedEmail,
+} from '../../utils/mailer.js';
 
 // parentAgentId is included because the frontend needs it to decide whether to
 // offer sub-agent management — only a top-level agent can have sub-agents.
@@ -24,6 +29,23 @@ const PUBLIC_USER_FIELDS = {
   emailVerifiedAt: true,
   parentAgentId: true, createdAt: true,
 };
+
+/**
+ * The user object every endpoint hands the client.
+ *
+ * Derived from PUBLIC_USER_FIELDS rather than written out, so the two cannot
+ * drift: adding a field to the select above adds it to every response.
+ *
+ * This exists because they HAD drifted. /me selected ten fields while login and
+ * refresh hand-built five, and emailVerifiedAt was in the first set and not the
+ * other two. The effect was that confirming your email worked, the banner
+ * cleared, and then the next silent token refresh — fifteen minutes later —
+ * replaced the user object with one that had no emailVerifiedAt at all and the
+ * banner came back. Clicking the link again could never fix it, because the
+ * field was never the problem; the shape of the response was.
+ */
+const toClientUser = (u) =>
+  Object.fromEntries(Object.keys(PUBLIC_USER_FIELDS).map((k) => [k, u[k] ?? null]));
 
 // A hash of a value no password will ever produce. Used to spend comparable CPU
 // on a missing-user login so response time doesn't leak whether an email exists.
@@ -67,19 +89,33 @@ export async function login(email, password) {
     throw new UnauthorizedError('This account has been deactivated. Contact an administrator.');
   }
 
+  /*
+   * The verification gate.
+   *
+   * STUDENT ONLY, deliberately. Applied to every role it would lock out the
+   * super admin, the admin and both agents on day one — none of them has an
+   * emailVerifiedAt, because none of them self-registered: an administrator
+   * created them and vouched for the address. Self-registration is the risk this
+   * gate exists for, and students are the only ones who do it.
+   *
+   * The `code` matters. Without it the client shows "invalid email or password"
+   * to someone whose password is perfectly correct, and the only way out of that
+   * is to guess. With it, the sign-in screen can offer to send a new link.
+   */
+  if (user.role === 'STUDENT' && !user.emailVerifiedAt) {
+    throw new UnauthorizedError(
+      'Confirm your email address before signing in. Check your inbox for the link.',
+      { code: 'EMAIL_UNVERIFIED' }
+    );
+  }
+
   const { token: refreshToken, expiresAt } = await issueRefreshToken(user.id);
 
   return {
     accessToken: signAccessToken(user),
     refreshToken, // the controller puts this in an httpOnly cookie, never the body
     refreshExpiresAt: expiresAt,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      parentAgentId: user.parentAgentId,
-    },
+    user: toClientUser(user),
   };
 }
 
@@ -130,13 +166,7 @@ export async function refresh(presentedToken) {
     accessToken: signAccessToken(existing.user),
     refreshToken: nextToken,
     refreshExpiresAt: expiresAt,
-    user: {
-      id: existing.user.id,
-      name: existing.user.name,
-      email: existing.user.email,
-      role: existing.user.role,
-      parentAgentId: existing.user.parentAgentId,
-    },
+    user: toClientUser(existing.user),
   };
 }
 
@@ -163,10 +193,22 @@ export async function register({ name, email, password }) {
 }
 
 // PUBLIC self-registration for STUDENTS.
-export async function registerStudent({ name, email, password }) {
+export async function registerStudent({ name, email, phone, password }) {
   const user = await createUserWithRole({ name, email, password, role: 'STUDENT' });
-  // Create a blank StudentProfile immediately so profile endpoints always find one.
-  await prisma.studentProfile.create({ data: { id: crypto.randomUUID(), userId: user.id } });
+  /*
+   * Create the StudentProfile immediately so profile endpoints always find one,
+   * and seed it with the number they just gave.
+   *
+   * It goes on StudentProfile and NOT on User.phone, even though that column
+   * exists: PROFILE_SELECT in students.service.js is what every student and
+   * staff screen reads a student's phone through, and it does not select
+   * User.phone. Writing both would put the same number in two columns that
+   * nothing keeps in step — the student's profile form updates one of them, so
+   * the copies would disagree the first time anyone changed their number.
+   */
+  await prisma.studentProfile.create({
+    data: { id: crypto.randomUUID(), userId: user.id, phone },
+  });
   // Not awaited for its result beyond the send: a mail provider being slow or
   // down must not fail the registration the person just completed. sendMail
   // never throws, and an account that exists with no mail sent is recoverable
@@ -177,7 +219,9 @@ export async function registerStudent({ name, email, password }) {
 
 // PRIVILEGED. Callers must already be SUPER_ADMIN — enforced at the route.
 export async function createUser({ name, email, password, role }) {
-  return createUserWithRole({ name, email, password, role });
+  const user = await createUserWithRole({ name, email, password, role });
+  await sendAccountCreatedEmail(user.id);
+  return user;
 }
 
 // Sub-agents: an agency creates logins for its own staff. Enforced one level deep
@@ -198,12 +242,18 @@ export async function createSubAgent({ parentAgentId, name, email, password }) {
   if (existing) throw new ConflictError('Email already in use');
 
   const passwordHash = await bcrypt.hash(password, 12);
-  return prisma.user.create({
+  const created = await prisma.user.create({
     // role is hard-coded, exactly as in public registration: a sub-agent is always
     // an AGENT, and this endpoint is reachable by agents.
     data: { name, email, passwordHash, role: 'AGENT', parentAgentId },
     select: PUBLIC_USER_FIELDS,
   });
+
+  // Email D. Same reason as an admin-created account: somebody else chose this
+  // person's password, so send them a link to choose their own rather than
+  // leaving an agency owner to read one out.
+  await sendAccountCreatedEmail(created.id);
+  return created;
 }
 
 export async function listSubAgents({ parentAgentId }) {
@@ -276,6 +326,52 @@ export async function listAllUsers({ role, search, page = 1, pageSize = 25 } = {
       totalPages: Math.ceil(total / safePageSize),
     },
   };
+}
+
+/*
+ * Email D — an administrator made an account for someone.
+ *
+ * TTL is days, not the reset flow's thirty minutes: this is not a response to
+ * something the recipient just did, it lands unannounced and may sit unread over
+ * a weekend.
+ *
+ * Reuses PasswordResetToken rather than adding a model, because it IS a password
+ * reset — just one issued before any password the person knows has existed. The
+ * link points at the existing /reset-password page, which already handles
+ * expiry, single use and session revocation. The copy says "set" rather than
+ * "reset" because that is what it means to the reader.
+ */
+const SET_PASSWORD_TTL_HOURS = 72;
+
+export async function sendAccountCreatedEmail(userId) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true, role: true, isActive: true },
+    });
+    if (!user?.email || !user.isActive) return;
+
+    const token = crypto.randomBytes(32).toString('base64url');
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: hashToken(token),
+        expiresAt: new Date(Date.now() + SET_PASSWORD_TTL_HOURS * 60 * 60 * 1000),
+      },
+    });
+
+    const { subject, html } = accountCreatedEmail({
+      name: user.name,
+      setPasswordUrl: `${config.appUrl}/reset-password?token=${token}`,
+      ttlHours: SET_PASSWORD_TTL_HOURS,
+      role: user.role,
+    });
+    await sendMail({ to: user.email, subject, html });
+  } catch (err) {
+    // Best-effort, like every other send here: the account exists either way and
+    // "Forgot password" is always available as the way in.
+    console.error('[mail] account-created send failed:', err?.message ?? err);
+  }
 }
 
 async function createUserWithRole({ name, email, password, role }) {
@@ -511,6 +607,28 @@ export async function sendEmailVerification(userId) {
 }
 
 /**
+ * Resend a confirmation link, addressed by email rather than by session.
+ *
+ * This exists because the login gate above creates a deadlock otherwise: a
+ * student who cannot sign in cannot reach an authenticated resend endpoint, so
+ * a confirmation email that never arrives means no way back in at all.
+ *
+ * Returns nothing useful on purpose, exactly like requestPasswordReset — the
+ * controller answers identically whether the address is registered, already
+ * verified, deactivated or unknown, so this cannot be used to discover who has
+ * an account. Rate-limited at the route via authLimiter.
+ */
+export async function resendEmailVerificationByEmail(email) {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+  // sendEmailVerification already returns quietly for a verified or deactivated
+  // account, so there is no branching to leak here either.
+  if (user) await sendEmailVerification(user.id);
+}
+
+/**
  * Spend a confirmation link.
  *
  * Deliberately NOT idempotent-by-silence: a second click on the same link
@@ -542,6 +660,34 @@ export async function verifyEmail(token) {
     });
   });
 
+  return { alreadyVerified: false };
+}
+
+/**
+ * Super-admin override: stamp an address as verified without the email round
+ * trip. For the support case where delivery is genuinely broken — a corporate
+ * filter, a typo'd address the person can no longer receive at — which under a
+ * hard gate would otherwise mean the account is unreachable forever.
+ *
+ * Privileged. The route is behind requireRole('SUPER_ADMIN').
+ */
+export async function markEmailVerified(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, emailVerifiedAt: true },
+  });
+  if (!user) throw new NotFoundError('User not found');
+  if (user.emailVerifiedAt) return { alreadyVerified: true };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: userId }, data: { emailVerifiedAt: new Date() } });
+    // Any outstanding link is now pointless; spending them keeps the table from
+    // holding credentials that can no longer do anything useful.
+    await tx.emailVerificationToken.updateMany({
+      where: { userId, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+  });
   return { alreadyVerified: false };
 }
 

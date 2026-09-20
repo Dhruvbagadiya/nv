@@ -67,7 +67,7 @@ export default function StudentShell({ children }) {
         <div className="student-footer-inner">
           <span>© {new Date().getFullYear()} NV Immigration</span>
           <span style={{ color: 'var(--ink-400)' }}>·</span>
-          <a href="mailto:support@nvimmigration.com">Support</a>
+          <a href="mailto:contact@nvimmigrationpvtltd.com">Support</a>
         </div>
       </footer>
     </div>

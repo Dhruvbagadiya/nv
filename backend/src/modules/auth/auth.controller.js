@@ -67,16 +67,29 @@ export async function verifyEmailHandler(req, res) {
 }
 
 /*
- * Requires a session on purpose. An unauthenticated "resend to this address"
- * endpoint is both an account-enumeration oracle and a way to have this server
- * mail anyone repeatedly; taking the address from the token instead means a
- * caller can only ever trigger mail to themselves.
+ * Two ways in, because the login gate made one insufficient.
+ *
+ * With a session (the in-app banner) the address comes from the token, so a
+ * caller can only ever mail themselves. Without one (the sign-in screen, after
+ * an EMAIL_UNVERIFIED refusal) it comes from the body — which is the only way a
+ * locked-out student can get a new link at all.
+ *
+ * The unauthenticated path is an enumeration risk, so it is handled exactly like
+ * /forgot-password: the same response every time, whether the address is
+ * registered, already verified, deactivated or unknown. Rate-limited in app.js.
  */
 export async function resendVerificationHandler(req, res) {
-  await authService.sendEmailVerification(req.user.sub);
-  // Same answer whether or not anything was sent — the account may already be
-  // verified, and that is not worth a different response.
+  if (req.user?.sub) {
+    await authService.sendEmailVerification(req.user.sub);
+  } else {
+    await authService.resendEmailVerificationByEmail(req.body.email);
+  }
   res.json({ sent: true });
+}
+
+// PRIVILEGED. Route is behind requireRole('SUPER_ADMIN').
+export async function markEmailVerifiedHandler(req, res) {
+  res.json(await authService.markEmailVerified(req.params.id));
 }
 
 // Public. Always creates an AGENT; the schema rejects a `role` in the body.

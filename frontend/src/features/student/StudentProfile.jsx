@@ -100,8 +100,13 @@ export default function StudentProfile() {
                     placeholder="e.g. P1234567" />
                 </div>
                 <div className="student-apply-field">
-                  <label>Phone number</label>
-                  <input type="text" value={form.phone}
+                  {/* Required, and marked so. The server refuses a blank one
+                      here as well as at registration — see updateProfileBody —
+                      so leaving it looking optional would mean a save that
+                      fails with no warning that this was the reason. */}
+                  <label>Phone number <span aria-hidden="true" style={{ color: 'var(--danger-700)' }}>*</span></label>
+                  <input type="tel" value={form.phone} required
+                    inputMode="tel" autoComplete="tel"
                     onChange={(e) => set('phone', e.target.value)}
                     placeholder="+91 9000000000" />
                 </div>

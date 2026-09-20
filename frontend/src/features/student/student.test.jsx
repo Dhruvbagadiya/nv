@@ -20,10 +20,16 @@ vi.mock('../../api/courses.js', () => ({
   fetchCourses: vi.fn(),
   fetchCourse: vi.fn(),
 }));
-vi.mock('../../api/auth.js', () => ({ login: vi.fn(), refresh: vi.fn(), logout: vi.fn() }));
+vi.mock('../../api/auth.js', () => ({
+  login: vi.fn(), refresh: vi.fn(), logout: vi.fn(),
+  // Both the sign-in screen and the dead-link page offer a resend: under the
+  // hard gate they are the only two places someone locked out can reach.
+  resendVerification: vi.fn(), verifyEmail: vi.fn(),
+}));
 
 const studentsApi = await import('../../api/students.js');
 const coursesApi = await import('../../api/courses.js');
+const authApi = await import('../../api/auth.js');
 const { useAuth } = await import('../../store/useAuth.js');
 
 const StudentProgramBrowser = (await import('./StudentProgramBrowser.jsx')).default;
@@ -32,6 +38,7 @@ const StudentApplications = (await import('./StudentApplications.jsx')).default;
 const StudentApplyForm = (await import('./StudentApplyForm.jsx')).default;
 const StudentProfile = (await import('./StudentProfile.jsx')).default;
 const StudentLoginPage = (await import('./StudentLoginPage.jsx')).default;
+const VerifyEmailPage = (await import('./VerifyEmailPage.jsx')).default;
 
 const PROGRAM = {
   id: 'p1',
@@ -281,5 +288,86 @@ describe('student portal', () => {
     useAuth.setState({ status: 'authenticated', user: { id: 'x', role, parentAgentId: null } });
     renderAt(<StudentLoginPage />, '/login');
     expect(screen.getByText(expected)).toBeTruthy();
+  });
+
+  // ── Registration ─────────────────────────────────────────────────────────
+  describe('creating an account', () => {
+    // These render the form itself, so the session has to be empty. The outer
+    // beforeEach signs a student in, and this page redirects one straight out.
+    const openRegisterForm = () => {
+      useAuth.setState({ status: 'unauthenticated', user: null });
+      renderAt(<StudentLoginPage />, '/login');
+      fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    };
+
+    const fill = ({ phone }) => {
+      fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Asha Menon' } });
+      fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'asha@example.com' } });
+      fireEvent.change(screen.getByLabelText('Mobile number'), { target: { value: phone } });
+      fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'longenoughpassword' } });
+      fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'longenoughpassword' } });
+      // Submit the form rather than clicking by name: in register mode the tab
+      // and the submit button are both called "Create account".
+      fireEvent.submit(document.querySelector('.student-auth-form'));
+    };
+
+    it('sends the mobile number along with the account', async () => {
+      studentsApi.registerStudent.mockResolvedValue({ id: 'u9' });
+      openRegisterForm();
+      fill({ phone: '+91 99259 13764' });
+
+      await waitFor(() => expect(studentsApi.registerStudent).toHaveBeenCalledWith({
+        name: 'Asha Menon',
+        email: 'asha@example.com',
+        phone: '+91 99259 13764',
+        password: 'longenoughpassword',
+      }));
+    });
+
+    it('will not submit a number that cannot be one', async () => {
+      openRegisterForm();
+      fill({ phone: '0000000000' });
+
+      // Caught before the request, so the feedback is a message under the form
+      // rather than a red 400 after the button has already said "Creating…".
+      await waitFor(() => expect(screen.getByText(/valid mobile number/i)).toBeTruthy());
+      expect(studentsApi.registerStudent).not.toHaveBeenCalled();
+    });
+
+    /*
+     * Registering must NOT sign them in. It used to, which under the hard gate
+     * means the login immediately fails with EMAIL_UNVERIFIED — so a successful
+     * sign-up ended on a red error saying it had not worked, when it had.
+     */
+    it('ends on the inbox instruction, not a session', async () => {
+      studentsApi.registerStudent.mockResolvedValue({ id: 'u9' });
+      openRegisterForm();
+      fill({ phone: '9925913764' });
+
+      await waitFor(() => expect(screen.getByText(/Check your inbox/i)).toBeTruthy());
+      expect(useAuth.getState().status).toBe('unauthenticated');
+    });
+  });
+
+  // ── Getting unstuck ──────────────────────────────────────────────────────
+  /*
+   * A dead confirmation link used to say "sign in and use the banner at the top
+   * of the page". Under the hard gate that is advice nobody can follow: an
+   * unconfirmed account cannot sign in, so there is no banner to reach. The
+   * page has to be able to send a new link by itself.
+   */
+  it('a dead confirmation link offers a new one without a session', async () => {
+    useAuth.setState({ status: 'unauthenticated', user: null });
+    authApi.verifyEmail.mockRejectedValue({ response: { data: { error: 'This confirmation link has expired.' } } });
+    authApi.resendVerification.mockResolvedValue({});
+
+    renderAt(<VerifyEmailPage />, '/verify-email?token=dead');
+
+    await waitFor(() => expect(screen.getByText(/Link not valid/i)).toBeTruthy());
+    fireEvent.change(screen.getByLabelText(/Send a new link/i), { target: { value: 'asha@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: /Email me a new link/i }));
+
+    await waitFor(() => expect(authApi.resendVerification).toHaveBeenCalledWith('asha@example.com'));
+    await waitFor(() => expect(screen.getByText(/Check your inbox/i)).toBeTruthy());
   });
 });

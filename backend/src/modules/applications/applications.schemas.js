@@ -13,6 +13,34 @@ export const APPLICATION_STAGES = [
   'VISA_APPROVAL',
 ];
 
+/*
+ * Passport numbers, validated by what they CANNOT be rather than by format.
+ *
+ * There is no useful regex here. Numbering varies across ~190 issuing
+ * authorities — lengths differ, some are all digits, some mix letters, some
+ * carry checksums — and any pattern tight enough to reject junk also rejects
+ * real documents. A visa portal turning away a genuine applicant because their
+ * passport does not match our guess is far worse than accepting a bad one, which
+ * a human sees on the next screen anyway.
+ *
+ * So this only refuses strings that cannot be anybody's passport:
+ *   - fewer than 6 characters (the shortest national formats are 6-7)
+ *   - a single character repeated ("aaaa", "111111"), the shape placeholder
+ *     input actually takes
+ *
+ * The old rule was min(4), which accepted "aaaa".
+ */
+const PASSPORT_MIN = 6;
+
+export const passportNumber = z
+  .string()
+  .trim()
+  .min(PASSPORT_MIN, `Passport number must be at least ${PASSPORT_MIN} characters`)
+  .max(40)
+  .refine((v) => new Set(v.toUpperCase()).size > 1, {
+    message: 'That does not look like a passport number',
+  });
+
 export const listApplicationsQuery = z.object({
   country: optionalText(8),
   institutionId: optionalUuid(),
@@ -26,10 +54,9 @@ export const listApplicationsQuery = z.object({
 export const createApplicationBody = z
   .object({
     studentName: z.string().trim().min(1).max(160),
-    // Loose on format because passport numbering varies by country, but bounded
-    // and trimmed. Note it is NOT normalised to uppercase: it is copied from a
-    // document and should be stored as written.
-    passportNo: z.string().trim().min(4).max(40),
+    // NOT normalised to uppercase: it is copied from a document and should be
+    // stored as written. See passportNumber above for why there is no format check.
+    passportNo: passportNumber,
     courseId: z.string().uuid(),
     intakeLabel: optionalBody(z.string().trim().max(40)),
   })

@@ -17,10 +17,60 @@ export const verifyEmailBody = z
   .object({ token: z.string().min(10).max(200) })
   .strict();
 
+// Addressed by email, not by session — see resendEmailVerificationByEmail. The
+// same shape as forgotPasswordBody, and answered just as blandly.
+export const resendVerificationBody = z
+  .object({ email: z.string().trim().toLowerCase().email() })
+  .strict();
+
+/*
+ * Mobile number, required at student registration.
+ *
+ * Deliberately NOT a national format check. NV's applicants are Indian students
+ * applying abroad, but the number they can be reached on is often a foreign one
+ * by the time an offer lands, and a `^[6-9]\d{9}$` rule would reject it. So the
+ * rule is the same shape as the passport one: refuse what cannot be a phone
+ * number rather than guess at what is.
+ *
+ * Punctuation is stripped before counting, so "+91 99259 13764", "9925913764"
+ * and "(992) 591-3764" all pass; the stored value keeps whatever they typed,
+ * because a number is read back to a human and their own formatting is the
+ * version they recognise.
+ *
+ * 7 digits is the shortest real national number, 15 the E.164 maximum. A single
+ * repeated digit is placeholder junk — "0000000000" is what gets typed by
+ * someone who does not want to give a number, and it is worth catching at the
+ * boundary rather than discovering it when an agent tries to call.
+ */
+const PHONE_DIGITS_MIN = 7;
+const PHONE_DIGITS_MAX = 15;
+const stripPhonePunctuation = (v) => v.replace(/[\s()./-]/g, '');
+
+export const phoneNumber = z
+  .string()
+  .trim()
+  .min(1, 'Mobile number is required')
+  .max(30, 'Mobile number is too long')
+  .refine((v) => /^\+?\d+$/.test(stripPhonePunctuation(v)), {
+    message: 'Enter a valid mobile number — digits only, with an optional +country code',
+  })
+  .refine((v) => {
+    const digits = stripPhonePunctuation(v).replace(/^\+/, '');
+    return digits.length >= PHONE_DIGITS_MIN && digits.length <= PHONE_DIGITS_MAX;
+  }, {
+    message: `Mobile number must be between ${PHONE_DIGITS_MIN} and ${PHONE_DIGITS_MAX} digits`,
+  })
+  .refine((v) => new Set(stripPhonePunctuation(v).replace(/^\+/, '')).size > 1, {
+    message: 'That does not look like a mobile number',
+  });
+
 export const registerSchema = z
   .object({
     name: z.string().min(1).max(120).trim(),
     email: z.string().trim().toLowerCase().email(),
+    // Required. An applicant with no reachable number is one an agent cannot
+    // chase when a CAS deadline is days away, and that is the whole job.
+    phone: phoneNumber,
     password: z
       .string()
       .min(10, 'Password must be at least 10 characters')
