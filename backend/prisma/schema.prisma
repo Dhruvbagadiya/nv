@@ -124,6 +124,7 @@ enum RefreshRevokeReason {
   ROTATED // superseded by a newer token during a normal refresh
   LOGOUT // the user deliberately ended this session
   REPLAY // revoked as collateral when a rotated token was replayed
+  EXPIRED // hit the absolute session cap — still valid, but too old to renew
 }
 
 model RefreshToken {
@@ -133,6 +134,16 @@ model RefreshToken {
   // does not hand over live sessions.
   tokenHash     String               @unique
   expiresAt     DateTime
+
+  // When the SIGN-IN happened, not when this token was issued.
+  //
+  // Rotation replaces the row on every refresh and pushes expiresAt forward, so
+  // expiresAt only ever measures idleness: a session that is used stays alive
+  // for as long as somebody keeps using it, with no point at which the password
+  // is asked for again. This is carried across each rotation unchanged, so the
+  // absolute cap is measured from the original sign-in however many times the
+  // token has been exchanged since.
+  sessionStartedAt DateTime @default(now())
   revokedAt     DateTime?
   // Why it was revoked matters. Only a ROTATED token being presented again
   // implies theft — that token was replaced, so whoever still holds it either

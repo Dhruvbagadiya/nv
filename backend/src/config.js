@@ -45,7 +45,31 @@ const schema = z.object({
     .refine((v) => v !== 'change-me-too', 'JWT_REFRESH_SECRET is still the example placeholder'),
 
   ACCESS_TOKEN_TTL: z.string().default('15m'),
-  REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(7),
+
+  /*
+   * How long a session survives WITHOUT being used, split by what the account
+   * can see.
+   *
+   * Staff get 24 hours because an ADMIN or AGENT session can read every
+   * applicant's passport number, date of birth, email and phone. Left open on a
+   * shared machine — a college lab, an internet cafe — that is the whole
+   * database sitting behind an unlocked screen.
+   *
+   * Students get two weeks because their session can only reach their own
+   * record, and they come back every few weeks rather than every day. A
+   * 24-hour window would log them out before essentially every visit, and the
+   * cost of that is not friction but password resets: an applicant who cannot
+   * remember their password does not persist, they email and ask.
+   */
+  SESSION_IDLE_STAFF_HOURS: z.coerce.number().int().positive().default(24),
+  SESSION_IDLE_STUDENT_DAYS: z.coerce.number().int().positive().default(14),
+
+  /*
+   * The ceiling, regardless of activity. Refresh tokens rotate and each
+   * rotation pushes the idle window forward, so without this a session that is
+   * used regularly never ends and the password is never asked for again.
+   */
+  SESSION_ABSOLUTE_DAYS: z.coerce.number().int().positive().default(30),
 
   // Comma-separated so staging/preview origins can be added without a code change.
   // An explicit list, never a wildcard: `cors({ origin: undefined })` reflects
@@ -120,7 +144,10 @@ export const config = {
     accessSecret: env.JWT_ACCESS_SECRET,
     refreshSecret: env.JWT_REFRESH_SECRET,
     accessTtl: env.ACCESS_TOKEN_TTL,
-    refreshTtlDays: env.REFRESH_TOKEN_TTL_DAYS,
+    // Milliseconds at the boundary, so no call site repeats the arithmetic.
+    idleStaffMs: env.SESSION_IDLE_STAFF_HOURS * 60 * 60 * 1000,
+    idleStudentMs: env.SESSION_IDLE_STUDENT_DAYS * 24 * 60 * 60 * 1000,
+    absoluteMs: env.SESSION_ABSOLUTE_DAYS * 24 * 60 * 60 * 1000,
   },
 
   cookie: {

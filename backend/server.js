@@ -27,6 +27,23 @@ if (!config.mail.enabled) {
   );
 }
 
+/*
+ * REFRESH_TOKEN_TTL_DAYS was one window for everybody. It is now three settings
+ * — a staff idle window, a student idle window, and an absolute cap — so a
+ * leftover value in an env file is no longer read by anything.
+ *
+ * Said out loud rather than ignored: a variable that looks like it configures
+ * session length, sitting in .env.production doing nothing, is the kind of
+ * thing somebody edits during an incident and then trusts.
+ */
+if (process.env.REFRESH_TOKEN_TTL_DAYS) {
+  console.warn(
+    '[boot] REFRESH_TOKEN_TTL_DAYS is set but no longer used. Session length is now\n' +
+      '        SESSION_IDLE_STAFF_HOURS, SESSION_IDLE_STUDENT_DAYS and SESSION_ABSOLUTE_DAYS.\n' +
+      '        Remove it to avoid confusion.'
+  );
+}
+
 const server = app.listen(config.port, () => {
   console.log(`NV Immigration API (${config.env}) listening on http://localhost:${config.port}`);
 });

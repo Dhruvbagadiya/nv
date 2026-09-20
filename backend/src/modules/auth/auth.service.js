@@ -61,13 +61,37 @@ function signAccessToken(user) {
 // staying opaque means a leaked refresh token discloses no claims.
 const generateRefreshToken = () => crypto.randomBytes(48).toString('base64url');
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
-const refreshExpiry = () =>
-  new Date(Date.now() + config.jwt.refreshTtlDays * 24 * 60 * 60 * 1000);
+/*
+ * The idle window, by role.
+ *
+ * A student's session can reach one record — their own. A staff session can
+ * reach every applicant's passport number, date of birth and phone, so it is
+ * the one worth expiring quickly when it is left open somewhere.
+ *
+ * Anything that is not a STUDENT is treated as staff, deliberately: a role
+ * added later is short-lived until somebody decides otherwise, rather than
+ * silently inheriting the most generous window in the system.
+ */
+const idleWindowMs = (role) =>
+  role === 'STUDENT' ? config.jwt.idleStudentMs : config.jwt.idleStaffMs;
 
-async function issueRefreshToken(userId, tx = prisma) {
+const refreshExpiry = (role) => new Date(Date.now() + idleWindowMs(role));
+
+/*
+ * sessionStartedAt is passed in on rotation and defaults to now on sign-in.
+ * Carrying it forward unchanged is what makes the absolute cap absolute — if it
+ * were re-stamped here, every refresh would push the ceiling away and the cap
+ * would measure the same thing expiresAt already does.
+ */
+async function issueRefreshToken(userId, role, tx = prisma, sessionStartedAt = new Date()) {
   const token = generateRefreshToken();
   const row = await tx.refreshToken.create({
-    data: { userId, tokenHash: hashToken(token), expiresAt: refreshExpiry() },
+    data: {
+      userId,
+      tokenHash: hashToken(token),
+      expiresAt: refreshExpiry(role),
+      sessionStartedAt,
+    },
   });
   return { token, expiresAt: row.expiresAt };
 }
@@ -109,7 +133,7 @@ export async function login(email, password) {
     );
   }
 
-  const { token: refreshToken, expiresAt } = await issueRefreshToken(user.id);
+  const { token: refreshToken, expiresAt } = await issueRefreshToken(user.id, user.role);
 
   return {
     accessToken: signAccessToken(user),
@@ -152,6 +176,24 @@ export async function refresh(presentedToken) {
 
   if (existing.expiresAt < new Date()) throw new UnauthorizedError('Refresh token expired');
 
+  /*
+   * The absolute cap. Checked separately from expiresAt because they measure
+   * different things: expiresAt says "nobody has used this lately", this says
+   * "whoever is using it has not proved who they are in a long time".
+   *
+   * Without it, rotation makes a session immortal — every refresh issues a
+   * fresh idle window, so an account signed in once and used weekly is never
+   * asked for a password again, on any device, forever.
+   */
+  const sessionAge = Date.now() - existing.sessionStartedAt.getTime();
+  if (sessionAge > config.jwt.absoluteMs) {
+    await prisma.refreshToken.update({
+      where: { id: existing.id },
+      data: { revokedAt: new Date(), revokedReason: 'EXPIRED' },
+    });
+    throw new UnauthorizedError('Session expired — please sign in again');
+  }
+
   // Revoke-and-reissue atomically, so a crash between the two cannot leave the
   // user with no valid refresh token (logged out) or two (defeating rotation).
   const { token: nextToken, expiresAt } = await prisma.$transaction(async (tx) => {
@@ -159,7 +201,15 @@ export async function refresh(presentedToken) {
       where: { id: existing.id },
       data: { revokedAt: new Date(), revokedReason: 'ROTATED' },
     });
-    return issueRefreshToken(existing.userId, tx);
+    // The user's own role and the ORIGINAL sign-in time: a rotation must not
+    // quietly reset the ceiling, and must not hand a student's window to a
+    // staff account or the other way round.
+    return issueRefreshToken(
+      existing.userId,
+      existing.user.role,
+      tx,
+      existing.sessionStartedAt
+    );
   });
 
   return {
