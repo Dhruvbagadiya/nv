@@ -7,7 +7,10 @@ import { config } from '../../config.js';
 import {
   sendMail,
   applicationStageEmail,
-  applicationReceivedEmail,
+  // The submission receipt is NOT sent from here. It goes to the student, and
+  // an application filed by an agent has a studentName and a passportNo but no
+  // student account — so there is no address to send one to. The student path
+  // sends it, in students.controller.js.
   newApplicationAlertEmail,
 } from '../../utils/mailer.js';
 
