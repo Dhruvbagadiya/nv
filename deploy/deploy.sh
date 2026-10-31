@@ -8,6 +8,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 COMPOSE="docker compose -f deploy/docker-compose.prod.yml"
+# On the Hostinger box Postgres runs locally; .env.db exists only there.
+if [ -f backend/.env.db ]; then
+  COMPOSE="$COMPOSE -f deploy/docker-compose.hostinger.yml"
+fi
 
 if [ ! -f backend/.env.production ]; then
   echo "backend/.env.production is missing." >&2
